@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Post Cockpit v23 — 配信デスク</title>
+<title>Post Cockpit v25 — アカウント育成</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -98,6 +98,8 @@ tailwind.config={theme:{extend:{
       <button data-view="accounts" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>
         <span class="text-[13px] font-bold">アカウント管理</span><span id="navAccCount" class="tag ml-auto text-ink-dim">0</span></button>
+      <button data-view="growth" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
+        <span class="w-4 text-center">🌱</span><span class="text-[13px] font-bold">アカウント育成</span><span id="navGrowthCount" class="tag ml-auto text-ink-dim">0</span></button>
       <button data-view="history" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
         <span class="text-[13px] font-bold">投稿履歴</span><span id="navHistCount" class="tag ml-auto text-ink-dim">0</span></button>
@@ -393,6 +395,31 @@ tailwind.config={theme:{extend:{
       <div id="accountList" class="space-y-6"></div>
     </div>
 
+    <!-- ==================== ACCOUNT GROWTH ==================== -->
+    <div id="viewGrowth" class="hidden max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-6">
+      <section class="glass p-6 sm:p-7">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div><div class="eyebrow mb-1.5">account growth</div><h2 class="text-[17px] font-bold">🌱 アカウント育成デスク</h2>
+            <p class="text-[12.5px] text-ink-mute mt-1 max-w-[720px] leading-relaxed">子アカウントごとに独立したペルソナ・投稿テーマ・頻度を管理し、日々の投稿候補をAIで生成します。投稿は内容を確認してからXへ送信できます。</p></div>
+          <button id="growthExport" class="btn-ghost text-[12px] px-3 py-2 rounded-lg">育成データ書出</button>
+        </div>
+      </section>
+      <section class="grid lg:grid-cols-[340px_1fr] gap-5">
+        <div class="glass p-5 sm:p-6">
+          <div class="eyebrow mb-2">account</div><select id="growthAccount" class="inp w-full"></select>
+          <div id="growthAccountMeta" class="glass-sub p-3 mt-3 text-[11.5px] leading-relaxed text-ink-mute"></div>
+          <div class="eyebrow mt-5 mb-2">投稿テーマ</div><div id="growthThemes" class="grid grid-cols-2 gap-2"></div>
+          <div class="flex items-center justify-between mt-4"><label class="text-[12px] text-ink-mute">1日の投稿数</label><select id="growthDailyCount" class="inp !w-24"><option value="1">1件</option><option value="2">2件</option><option value="3">3件</option></select></div>
+          <div class="flex items-center justify-between mt-3"><label class="text-[12px] text-ink-mute">投稿時刻</label><input id="growthTime" type="time" value="20:00" class="inp !w-28"></div>
+          <button id="growthSavePlan" class="btn-primary w-full mt-5 px-4 py-2.5 rounded-lg text-[12.5px] font-bold">育成設定を保存</button>
+        </div>
+        <div class="space-y-5">
+          <section class="glass p-5 sm:p-6"><div class="flex flex-wrap items-center justify-between gap-3 mb-4"><div><div class="eyebrow mb-1">today</div><h3 class="text-[14px] font-bold">今日の投稿候補</h3></div><button id="growthGenerate" class="btn-primary text-[12px] px-3.5 py-2 rounded-lg">AIで3案生成</button></div><div id="growthCandidates" class="space-y-3"><div class="glass-sub p-5 text-[12px] text-ink-dim">アカウントを選択して「AIで3案生成」を押してください。</div></div></section>
+          <section class="glass p-5 sm:p-6"><div class="flex items-center justify-between mb-4"><div><div class="eyebrow mb-1">schedule</div><h3 class="text-[14px] font-bold">育成スケジュール</h3></div><span id="growthScheduleCount" class="tag text-ink-dim">0件</span></div><div id="growthSchedule" class="space-y-2"></div></section>
+        </div>
+      </section>
+    </div>
+
     <!-- ==================== 投稿履歴 ==================== -->
     <div id="viewHistory" class="hidden max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-6">
       <section class="glass p-6 sm:p-7">
@@ -610,6 +637,24 @@ tailwind.config={theme:{extend:{
         </div>
       </div>
 
+      <div class="pt-5 mt-1 border-t border-hair">
+        <div class="eyebrow mb-1">X API（OAuth 2.0 PKCE）</div>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">
+          XのアクセストークンはGitHub Pagesやブラウザには保存せず、バックエンド側で暗号化して管理します。接続後も各アクションはこの画面で確認してから個別実行します。
+        </p>
+        <div class="space-y-4">
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">X APIバックエンドURL</div>
+            <input id="fXBackendUrl" class="inp font-mono" placeholder="https://your-backend.example.com">
+            <p class="text-[11px] text-ink-dim mt-1.5">GitHub Pagesとは別に配置するPost CockpitバックエンドのURLです。</p></label>
+          <label class="flex items-center gap-2.5 cursor-pointer"><input id="fXConfirm" type="checkbox" checked class="w-4 h-4">
+            <span class="text-[13px] text-ink-700">Xへの実行前に必ず確認ダイアログを表示する</span></label>
+          <div class="rounded-xl p-3" style="background:#EFF6FF;border:1px solid #BFDBFE">
+            <p class="text-[11.5px] leading-relaxed" style="color:#1E3A8A">
+              必要スコープ：tweet.read / tweet.write / users.read / like.write / bookmark.write / offline.access。X側の権限と料金体系はDeveloper Consoleで確認してください。</p></div>
+          <div class="flex gap-2"><button id="xRefresh" class="btn-ghost text-[11.5px] px-3 py-2 rounded-lg">接続状態を更新</button><span id="xStatus" class="text-[11.5px] text-ink-dim self-center">未確認</span></div>
+        </div>
+      </div>
+
       <p id="setMsg" class="hidden text-[12.5px] font-bold"></p>
     </div>
 
@@ -723,6 +768,7 @@ const REVIEW_ROLES=[
 const RATIOS={'9:16':[1080,1920],'1:1':[1080,1080],'16:9':[1920,1080]};
 
 const EXTERNAL_PERSONA_URL='post-cockpit-personas.json';
+const X_API_DEFAULT_BASE='';
 
 function structuredCloneSafe(o){ return JSON.parse(JSON.stringify(o)); }
 
@@ -885,7 +931,8 @@ function saveAccounts(){
 const DEFAULT_API={key:'',model:'claude-sonnet-5',temp:1,vision:true,
   openaiKey:'',imageModel:'gpt-image-1',imageQuality:'medium',
   backend:'direct',proxyUrl:'/api/claude',imageProxyUrl:'/api/image',appToken:'',
-  webhooks:[],webhookMode:'direct',webhookProxyUrl:'/api/webhook',webhookIncludeMedia:false};
+  webhooks:[],webhookMode:'direct',webhookProxyUrl:'/api/webhook',webhookIncludeMedia:false,
+  xBackendUrl:'',xRequireConfirm:true};
 function loadApi(){
   const a={...DEFAULT_API,...(Store.read(STORE.api,null)||{})};
   a.webhooks=Array.isArray(a.webhooks)?a.webhooks.filter(w=>w&&w.url).map(w=>({
@@ -964,7 +1011,7 @@ const state={
   selected:new Set(), vSelected:new Set(),
   media:[], vision:null, drafts:[],
   backgrounds:[], bgIndex:0, accountBg:{}, vSets:[],
-  logs:[], editingId:null, search:'', actionGenerating:false
+  logs:[], editingId:null, search:'', actionGenerating:false, growth:loadGrowth()
 };
 normalizeHierarchy();
 state.accounts.filter(a=>a.active&&isMainAccount(a)).slice(0,3).forEach(a=>{state.selected.add(a.id);state.vSelected.add(a.id)});
@@ -1311,6 +1358,7 @@ function actionSummaryHTML(d,i){
       ${acts.length?acts.map(x=>{const c=getAcc(x.accountId);return c?`<div class="glass-sub p-3.5">
         <div class="flex flex-wrap items-center gap-2 mb-2"><span class="tag" style="color:${c.hue}">${esc(c.name)}</span><span class="tag text-ink-dim">${esc(actionLabel(x.action||x.role))}</span><span class="font-mono text-[11px] text-ink-dim">${esc(c.handle)}</span><span class="tag ml-auto text-ink-dim">手動確認</span></div>
         ${(x.action==='reply'||x.action==='quote')?`<textarea data-actiontext="${i}-${esc(c.id)}" rows="3" class="w-full bg-transparent resize-y outline-none text-[12.5px] leading-relaxed" placeholder="${x.action==='quote'?'紹介・PRまたは要点補足の引用文':'投稿内容への感想・補足・質問などのリプライ文案'}">${esc(x.text||'')}</textarea>`:`<div class="text-[12px] text-ink-mute py-1.5">このアクションは文章入力不要です。実行時にX上で確認してください。</div>`}
+        ${x.action!=='skip'?`<div class="mt-3 flex flex-wrap items-center gap-2"><button data-x-execute="${i}-${esc(c.id)}" class="btn-primary text-[11.5px] px-3 py-2 rounded-lg font-bold">Xで実行</button><button data-x-skip="${i}-${esc(c.id)}" class="btn-ghost text-[11.5px] px-3 py-2 rounded-lg">今回はスキップ</button><span data-x-result="${i}-${esc(c.id)}" class="text-[11px] text-ink-dim"></span></div>`:''}
       </div>`:''}).join(''):''}
     </div>
   </details>`;
@@ -1358,7 +1406,7 @@ function buildDeliveryPayload({includeMedia=true}={}){
       publish:{ status:d.status, ready:R.ready, blockers:R.blockers,
         recorded_url:d.recordedUrl||null },
       actions:(d.actions||[]).map(x=>{const c=getAcc(x.accountId);return{account:accountRef(c||{id:x.accountId,name:'',handle:'',team:'',voice:'',stance:'',length:'標準',layout:'',persona:{}}),action:x.action||x.role||'skip',role:x.role||actionLabel(x.action),text:x.text||'',status:x.status||'draft',planned_at:x.plannedAt||null};}),
-      // X API v2 の POST /2/tweets にほぼそのまま渡せる形
+      // X API v2 の POST /2/tweets に渡すための下書き。実行はバックエンド経由で人間確認後に行う。
       x_api_payload:{ text:out, ...(L.quote.ok?{ quote_tweet_id:L.quote.id }:{}) }
     });
 
@@ -1827,6 +1875,39 @@ async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
 }
 
 /* ============================================================
+   6b. アカウント育成デスク
+   ============================================================ */
+const GROWTH_KEY='postcockpit.growth.v1';
+const GROWTH_THEMES=[['daily','日常'],['learning','学び'],['work','仕事'],['hobby','趣味'],['market','マーケット'],['news','ニュース感想'],['question','問いかけ'],['reflection','振り返り']];
+function defaultGrowth(){return {plans:{},schedules:[],candidates:{}}}
+function loadGrowth(){try{const x=JSON.parse(localStorage.getItem('postcockpit.growth.v1')||'null');return x&&typeof x==='object'?{...defaultGrowth(),...x}:defaultGrowth()}catch(e){return defaultGrowth()}}
+function saveGrowth(){try{localStorage.setItem('postcockpit.growth.v1',JSON.stringify(state.growth));return true}catch(e){toast('育成データを保存できませんでした','warn');return false}}
+function growthChildren(){return state.accounts.filter(a=>a.parentId&&a.active)}
+function growthPlan(acc){const p=state.growth.plans[acc.id]||{};return {themes:Array.isArray(p.themes)&&p.themes.length?p.themes:['daily','learning','hobby'],dailyCount:+p.dailyCount||1,time:p.time||'20:00'}}
+function renderGrowth(){
+  const children=growthChildren();
+  $('#navGrowthCount').textContent=state.growth.schedules.filter(x=>x.status!=='posted').length;
+  const sel=$('#growthAccount');
+  if(!children.length){sel.innerHTML='<option value="">子アカウントがありません</option>';$('#growthAccountMeta').textContent='アカウント管理でメインアカウントの子を登録してください。';$('#growthCandidates').innerHTML='<div class="glass-sub p-5 text-[12px] text-ink-dim">子アカウントを登録するとここから育成投稿を作成できます。</div>';renderGrowthSchedule();return}
+  const prev=sel.value;sel.innerHTML=children.map(a=>`<option value="${esc(a.id)}">${esc(a.name)}（${esc(a.handle)}）</option>`).join('');sel.value=children.some(a=>a.id===prev)?prev:children[0].id;
+  const acc=getAcc(sel.value),plan=growthPlan(acc);$('#growthAccountMeta').innerHTML=`<b>${esc(acc.name)}</b> ${esc(acc.handle)}<br><span class="text-ink-dim">親：${esc(parentAccount(acc)?.name||'未設定')} ・ ${esc(acc.voice||'')} ・ ${esc(acc.stance||'')}</span>`;
+  $('#growthThemes').innerHTML=GROWTH_THEMES.map(([id,label])=>`<label class="glass-sub p-2.5 flex items-center gap-2 text-[11.5px] cursor-pointer"><input type="checkbox" data-growth-theme="${id}" ${plan.themes.includes(id)?'checked':''} class="w-3.5 h-3.5">${label}</label>`).join('');$('#growthDailyCount').value=String(plan.dailyCount);$('#growthTime').value=plan.time;renderGrowthSchedule();
+}
+function growthThemeLabels(ids){return ids.map(id=>GROWTH_THEMES.find(x=>x[0]===id)?.[1]||id)}
+function growthPrompt(acc,theme,count){const p=acc.persona||{};const recent=state.growth.schedules.filter(x=>x.accountId===acc.id&&x.text).slice(-10).map(x=>x.text).join('\n---\n');return `あなたはSNS投稿の編集者です。以下のアカウント本人として、独立した日常・学習・仕事・趣味などの投稿案を作成してください。特定の第三者を装った体験談、架空の実績・利益、虚偽の推薦、他アカウントのエンゲージメントを誘導する文面は作らないでください。\n\n【アカウント】\n名前:${acc.name}\nハンドル:${acc.handle}\n一人称:${p.firstPerson||'私'}\n人物像:${p.speaker||''}\n口調:${p.tone||''}\n読者:${p.reader||''}\n避ける表現:${p.ng||''}\nプロフィール:${p.bio||''}\n独自プロンプト:${acc.actionPrompt||''}\n\n【今日のテーマ】${theme}\n【投稿数】${count}\n【希望】自然な日本語、1投稿140〜240字程度、同じ言い回しを繰り返さない。\n【直近投稿】\n${recent||'なし'}\n\nJSON配列だけを返してください。形式：["投稿本文1","投稿本文2","投稿本文3"]`}
+async function generateGrowthCandidates(){const id=$('#growthAccount').value,acc=getAcc(id);if(!acc)return;const plan=growthPlan(acc);const themes=growthThemeLabels(plan.themes);if(!apiReady()){toast('先に文章生成APIを設定してください','warn');openSettings();return}$('#growthGenerate').disabled=true;$('#growthGenerate').textContent='生成中…';try{const theme=themes[Math.floor(Math.random()*themes.length)]||'日常';const r=await callAnthropicAPI(growthPrompt(acc,theme,3),acc.persona,{max_tokens:1200,temperature:.9});const arr=parseLooseJSON(r.text);state.growth.candidates[id]=Array.isArray(arr)?arr.slice(0,3).map(x=>String(x)):[];saveGrowth();renderGrowthCandidates();log(`${acc.name}の育成投稿候補を生成`,'act')}catch(e){toast('育成投稿の生成に失敗：'+e.message,'err')}finally{$('#growthGenerate').disabled=false;$('#growthGenerate').textContent='AIで3案生成'}}
+function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.growth.candidates[id]||[];$('#growthCandidates').innerHTML=arr.length?arr.map((text,i)=>`<div class="glass-sub p-4"><textarea data-growth-text="${i}" class="inp w-full min-h-[110px] resize-y text-[12.5px] leading-relaxed">${esc(text)}</textarea><div class="flex flex-wrap gap-2 mt-3"><button data-growth-schedule="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">今日の予定に追加</button><button data-growth-post="${i}" class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg">確認してXへ投稿</button><button data-growth-open="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">X投稿画面を開く</button></div></div>`).join(''):'<div class="glass-sub p-5 text-[12px] text-ink-dim">まだ候補がありません。</div>'}
+function growthEditedText(i){const el=document.querySelector(`[data-growth-text="${i}"]`);return el?el.value.trim():''}
+function addGrowthSchedule(text){const id=$('#growthAccount').value,acc=getAcc(id),plan=growthPlan(acc);if(!text)return;const now=new Date(),[hh,mm]=plan.time.split(':').map(Number);const at=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm);if(at<now)at.setDate(at.getDate()+1);state.growth.schedules.unshift({id:'g'+Date.now().toString(36),accountId:id,handle:acc.handle,text,scheduledAt:at.toISOString(),status:'scheduled'});saveGrowth();renderGrowthSchedule();toast('育成スケジュールに追加しました')}
+function renderGrowthSchedule(){const list=state.growth.schedules.slice().sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));$('#growthScheduleCount').textContent=`${list.length}件`;$('#growthSchedule').innerHTML=list.length?list.slice(0,30).map(x=>{const a=getAcc(x.accountId);return `<div class="glass-sub p-3 flex flex-wrap gap-3 items-start"><div class="min-w-0 flex-1"><div class="flex gap-2 items-center"><b class="text-[12px]">${esc(a?.name||x.handle)}</b><span class="tag text-ink-dim">${x.status==='posted'?'投稿済み':'予約'}</span><span class="tag text-ink-dim">${new Date(x.scheduledAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div><div class="text-[12px] leading-relaxed mt-1">${esc(x.text)}</div></div>${x.status!=='posted'?`<div class="flex gap-1.5"><button data-growth-schedule-post="${x.id}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">投稿</button><button data-growth-schedule-open="${x.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">開く</button></div>`:''}</div>`}).join(''):'<div class="text-[12px] text-ink-dim">予約はまだありません。</div>'}
+async function growthPost(accountId,text,scheduleId){const acc=getAcc(accountId);if(!acc||!text)return;if(!state.api.xBackendUrl){growthOpen(text);return}if(state.api.xRequireConfirm!==false&&!confirm(`${acc.name}（${acc.handle}）からXへ投稿します。\n\n${text}\n\n投稿してよろしいですか？`))return;try{await xFetch('/api/x/action',{method:'POST',body:JSON.stringify({accountId:acc.id,action:'post',text})});if(scheduleId){const x=state.growth.schedules.find(x=>x.id===scheduleId);if(x)x.status='posted'}saveGrowth();renderGrowthSchedule();toast('Xへの投稿が完了しました');log(`${acc.name}の育成投稿をXへ送信`,'ok')}catch(e){toast('X投稿に失敗：'+e.message,'err');log(`${acc.name}の育成投稿失敗：${e.message}`,'err')}}
+function growthOpen(text){const u='https://x.com/intent/post?text='+encodeURIComponent(text);window.open(u,'_blank','noopener');copyText(text)}
+$('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCandidates()});$('#growthGenerate').onclick=generateGrowthCandidates;
+$('#growthSavePlan').onclick=()=>{const id=$('#growthAccount').value;if(!id)return;const themes=$$('#growthThemes [data-growth-theme]:checked').map(x=>x.dataset.growthTheme);state.growth.plans[id]={themes:themes.length?themes:['daily'],dailyCount:+$('#growthDailyCount').value,time:$('#growthTime').value};saveGrowth();renderGrowth();toast('育成設定を保存しました');log('育成設定を更新','act')};
+$('#growthExport').onclick=()=>downloadJSON(state.growth,`post-cockpit-growth-${new Date().toISOString().slice(0,10)}.json`);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-growth-schedule]');if(b){addGrowthSchedule(growthEditedText(+b.dataset.growthSchedule));return}const p=e.target.closest('[data-growth-post]');if(p){growthPost($('#growthAccount').value,growthEditedText(+p.dataset.growthPost));return}const o=e.target.closest('[data-growth-open]');if(o){growthOpen(growthEditedText(+o.dataset.growthOpen));return}const sp=e.target.closest('[data-growth-schedule-post]');if(sp){const x=state.growth.schedules.find(x=>x.id===sp.dataset.growthSchedulePost);if(x)growthPost(x.accountId,x.text,x.id);return}const so=e.target.closest('[data-growth-schedule-open]');if(so){const x=state.growth.schedules.find(x=>x.id===so.dataset.growthScheduleOpen);if(x)growthOpen(x.text)}});
+
+/* ============================================================
    7. サイドバー / タブ / ビュー
    ============================================================ */
 function openNav(){ $('#sidebar').classList.remove('-translate-x-full'); $('#navScrim').classList.remove('hidden'); }
@@ -1852,6 +1933,7 @@ function setView(v){
   const main=v==='main';
   $('#tabWrap').classList.toggle('hidden',!main);
   $('#viewAccounts').classList.toggle('hidden',v!=='accounts');
+  $('#viewGrowth').classList.toggle('hidden',v!=='growth');
   $('#viewHistory').classList.toggle('hidden',v!=='history');
   $('#tabImage').classList.toggle('hidden',!main||state.tab!=='image');
   $('#tabVideo').classList.toggle('hidden',!main||state.tab!=='video');
@@ -1861,6 +1943,7 @@ function setView(v){
   if(main){ $('#headEyebrow').textContent='対象マーケット';
     $('#marketTitle').innerHTML=`${esc(m.label)} <span class="font-mono text-[13px] font-medium text-ink-mute">${esc(m.sym)}</span>`; }
   else if(v==='accounts'){ $('#headEyebrow').textContent='registry'; $('#marketTitle').textContent='アカウント管理'; renderAccounts(); }
+  else if(v==='growth'){ $('#headEyebrow').textContent='account growth'; $('#marketTitle').textContent='アカウント育成'; renderGrowth(); renderGrowthCandidates(); }
   else{ $('#headEyebrow').textContent='history'; $('#marketTitle').textContent='投稿履歴'; renderHistory(); }
   window.scrollTo({top:0,behavior:'smooth'}); closeNav();
 }
@@ -1895,6 +1978,7 @@ function renderApiState(){
   $('#apiDot').style.background=a?'#0F766E':'#94A3B8';
 }
 function openSettings(){
+  $('#fXBackendUrl').value=state.api.xBackendUrl||''; $('#fXConfirm').checked=state.api.xRequireConfirm!==false; refreshXStatus();
   $('#fKey').value=state.api.key; $('#fModel').value=state.api.model;
   $('#fTemp').value=Math.round(state.api.temp*10); $('#tempVal').textContent=state.api.temp.toFixed(1);
   $('#fVisionOn').checked=state.api.vision;
@@ -2077,6 +2161,8 @@ $('#setSave').onclick=()=>{
   state.api.webhookMode=$('#fWebhookMode').value;
   state.api.webhookProxyUrl=$('#fWebhookProxyUrl').value.trim()||'/api/webhook';
   state.api.webhookIncludeMedia=$('#fWebhookMedia').checked;
+  state.api.xBackendUrl=$('#fXBackendUrl').value.trim();
+  state.api.xRequireConfirm=$('#fXConfirm').checked;
   state.api.webhooks=whDraft.filter(w=>w.url).map(w=>({...w,name:w.name||w.url.slice(0,24)}));
   state.api.openaiKey=$('#fOpenAIKey').value.trim();
   state.api.imageModel=$('#fImageModel').value;
@@ -2120,6 +2206,67 @@ $('#keyTest').onclick=async()=>{
 };
 
 /* ============================================================
+   8b. X API連携
+   ------------------------------------------------------------
+   X OAuth 2.0 PKCE はバックエンドで処理。ブラウザにはXアクセストークンを保存しない。
+   実行は必ず1アクションずつ、ユーザー確認を経て行う。
+   ============================================================ */
+function xBackendUrl(){ return String(state.api.xBackendUrl||'').replace(/\/$/,''); }
+async function xFetch(path,options={}){
+  const base=xBackendUrl(); if(!base) throw new Error('X APIバックエンドURLが未設定です');
+  const headers={'Content-Type':'application/json',...(options.headers||{})};
+  if(state.api.appToken) headers['x-app-token']=state.api.appToken;
+  const r=await fetch(base+path,{...options,headers});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error||j.detail||`Xバックエンド HTTP ${r.status}`);
+  return j;
+}
+async function refreshXStatus(){
+  const el=document.querySelector('#xStatus'); if(!el)return;
+  if(!xBackendUrl()){el.textContent='バックエンドURL未設定';return;}
+  try{const j=await xFetch('/api/x/accounts'); el.textContent=`接続済み ${j.accounts?.filter(a=>a.connected).length||0}件 / 登録 ${j.accounts?.length||0}件`;}
+  catch(e){el.textContent='接続確認失敗';}
+}
+function connectXAccount(accountId){
+  const base=xBackendUrl(); if(!base){openSettings();toast('先にX APIバックエンドURLを設定してください','warn');return;}
+  const url=base+'/api/x/connect?accountId='+encodeURIComponent(accountId)+'&returnTo='+encodeURIComponent(location.href.split('#')[0]);
+  window.location.href=url;
+}
+async function executeXAction(d,act){
+  const c=getAcc(act.accountId); if(!c)return;
+  const tweetId=act.targetTweetId||d.xTweetId||d.recordedTweetId||null;
+  if(!tweetId && ['reply','quote','like','repost','bookmark'].includes(act.action)){
+    const L=linkState(d);
+    if(act.action==='quote'&&L.quote.ok) act.targetTweetId=L.quote.id;
+  }
+  const target=act.targetTweetId||d.xTweetId||d.recordedTweetId||null;
+  if(!target && act.action!=='post') { toast('対象Post IDがありません。まずメイン投稿をXへ公開し、Post IDを登録してください','warn'); return; }
+  if(['reply','quote'].includes(act.action)&&!act.text.trim()){toast('リプライ／引用文案を入力してください','warn');return;}
+  if(state.api.xRequireConfirm!==false){
+    const label=actionLabel(act.action);
+    if(!confirm(`Xで「${label}」を ${c.handle} から実行します。\n\n${act.text||'文章なし'}\n\n実行してよろしいですか？`))return;
+  }
+  const result=document.querySelector(`[data-x-result="${state.drafts.indexOf(d)}-${CSS.escape(c.id)}"]`);
+  if(result)result.textContent='送信中…';
+  try{
+    const payload={accountId:c.id,action:act.action,tweetId:target,text:act.text||'',quoteTweetId:act.action==='quote'?target:null};
+    const j=await xFetch('/api/x/action',{method:'POST',body:JSON.stringify(payload)});
+    act.status='executed'; act.executedAt=new Date().toISOString(); act.result=j;
+    if(j.data?.id){act.resultTweetId=j.data.id;}
+    if(result)result.textContent='✓ 実行成功';
+    renderLane(); log(`${c.name} の ${actionLabel(act.action)} をX APIで実行`,'ok');
+  }catch(e){
+    act.status='failed'; act.error=e.message; if(result)result.textContent='失敗：'+e.message; renderLane(); log(`${c.name} のX実行失敗：${e.message}`,'err');
+  }
+}
+function bindXActionButtons(){}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-x-connect]'); if(c){connectXAccount(c.dataset.xConnect);return;}
+  const ex=e.target.closest('[data-x-execute]'); if(ex){const [i,id]=ex.dataset.xExecute.split('-');const d=state.drafts[+i];const act=(d?.actions||[]).find(x=>x.accountId===id);if(act)executeXAction(d,act);return;}
+  const sk=e.target.closest('[data-x-skip]'); if(sk){const [i,id]=sk.dataset.xSkip.split('-');const d=state.drafts[+i];const act=(d?.actions||[]).find(x=>x.accountId===id);if(act){act.status='skipped';renderLane();}}
+});
+
+/* ============================================================
    9. アカウント管理
    ============================================================ */
 function renderAccounts(){
@@ -2144,6 +2291,7 @@ function renderAccounts(){
         <span class="tag ml-auto text-ink-dim">子 ${allChildren.length} / 10</span>
         <label class="flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer"><input type="checkbox" data-toggle="${a.id}" ${a.active?'checked':''} class="w-3.5 h-3.5">有効</label>
         <button data-addchild="${a.id}" ${allChildren.length>=10?'disabled':''} class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg font-bold">子を追加</button>
+        <button data-x-connect="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">X連携</button>
         <button data-dup="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">複製</button>
         <button data-edit="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">編集</button>
       </div>
@@ -2160,6 +2308,7 @@ function renderAccounts(){
             <div class="flex flex-wrap gap-1.5 mt-1"><span class="tag" style="color:${c.hue}">サポート</span><span class="tag text-ink-dim">親全体の配分を適用</span>${c.actionPrompt?'<span class="tag text-ink-dim">独自プロンプトあり</span>':''}</div></div>
           <div class="ml-auto flex items-center gap-2 shrink-0">
             <label class="flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer"><input type="checkbox" data-toggle="${c.id}" ${c.active?'checked':''} class="w-3.5 h-3.5">有効</label>
+            <button data-x-connect="${c.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">X連携</button>
             <button data-dup="${c.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">複製</button>
             <button data-edit="${c.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">編集</button></div>
         </div>`).join('')}</div>`:`<div class="glass-sub p-4 text-[12px] text-ink-dim">フォロワー／サポートアカウントはまだありません。右上の「子を追加」から登録できます。</div>`}
@@ -2170,6 +2319,7 @@ function renderAccounts(){
   const orphanBlock=orphan.length?`<section class="glass p-5 sm:p-6"><div class="text-[13px] font-bold mb-3">親未設定のサポート候補</div><div class="space-y-2">${orphan.map(a=>`<div class="glass-sub p-3 flex items-center gap-3"><span class="tag">SUPPORT</span><div class="min-w-0"><b>${esc(a.name)}</b><span class="font-mono text-[11px] text-ink-dim ml-2">${esc(a.handle)}</span></div><button data-edit="${a.id}" class="btn-ghost ml-auto text-[11px] px-2.5 py-1.5 rounded-lg">編集</button></div>`).join('')}</div></section>`:'';
   $('#accountList').innerHTML=mainBlocks+orphanBlock || `<div class="glass p-12 text-center"><p class="text-[13.5px] text-ink-mute">検索条件に合うアカウントがありません。</p></div>`;
   $$('#accountList [data-edit]').forEach(b=>b.onclick=()=>openModal(b.dataset.edit));
+  bindXActionButtons();
   $$('#accountList [data-addchild]').forEach(b=>b.onclick=()=>openModal(null,b.dataset.addchild));
   $$('#accountList [data-toggle]').forEach(cb=>cb.onchange=()=>{
     const a=getAcc(cb.dataset.toggle); if(!a)return; a.active=cb.checked;
@@ -3431,9 +3581,15 @@ renderPicker();
 renderVPicker();
 renderBgGrid();
 renderAccounts();
+renderGrowth();
 $('#navHistCount').textContent=state.history.length;
 renderLog();
 log('デスクを起動しました');
 </script>
 </body>
 </html>
+
+<script>
+// v24 X API UI bootstrap
+window.addEventListener('load',()=>{try{refreshXStatus();}catch(e){}});
+</script>
