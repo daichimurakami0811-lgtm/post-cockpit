@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Post Cockpit v22 — 配信デスク</title>
+<title>Post Cockpit v23 — 配信デスク</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -448,14 +448,14 @@ tailwind.config={theme:{extend:{
       </div>
       <div id="childSettings" class="hidden pt-4 border-t border-hair">
         <div class="eyebrow mb-1">support account</div>
-        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">このアカウントはメインアカウントを支援するフォロワー／サポートアカウントです。固定の役割は持たず、投稿ごとに許可されたアクションからランダムに1つを選びます。文章は実際の投稿内容に基づく感想・補足・紹介を基本とし、架空の利益体験や第三者の推薦を作りません。実行は手動確認を前提にします。</p>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">このアカウントはメインアカウントを支援するフォロワー／サポートアカウントです。固定の役割は持たず、親に紐づくサポートアカウント全体へ、投稿ごとにアクション数を配分します。文章は実際の投稿内容に基づく感想・補足・紹介を基本とし、架空の利益体験や第三者の推薦を作りません。実行は手動確認を前提にします。</p>
         <div class="glass-sub p-3.5 mb-4">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5"><div class="text-[12px] font-bold text-ink-700">許可するアクション</div><span class="tag text-ink-dim">最大10アカウント / 親</span></div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5"><div class="text-[12px] font-bold text-ink-700">親アカウント全体のアクション配分</div><span class="tag text-ink-dim">有効な子アカウント全体に配分</span></div>
           <div id="actionPolicyFields" class="space-y-2"></div>
-          <label class="flex items-center gap-2 mt-3 text-[12px] text-ink-700"><input id="fActionRandom" type="checkbox" class="w-3.5 h-3.5" checked>投稿ごとにランダム選択する</label>
+          <label class="flex items-center gap-2 mt-3 text-[12px] text-ink-700"><input id="fActionRandom" type="checkbox" class="w-3.5 h-3.5" checked>投稿ごとに割り当てをランダムに入れ替える</label>
           <div class="grid sm:grid-cols-2 gap-3 mt-3"><label class="block"><div class="text-[11px] font-bold text-ink-700 mb-1">リプライ文の基本方針</div><select id="fReplyStyle" class="inp py-2 text-[12px]"><option>感想・補足</option><option>質問・会話</option><option>事実ベースのレビュー</option></select></label><label class="block"><div class="text-[11px] font-bold text-ink-700 mb-1">引用文の基本方針</div><select id="fQuoteStyle" class="inp py-2 text-[12px]"><option>紹介・PR</option><option>要点の補足</option></select></label></div>
           <label class="flex items-center gap-2 mt-3 text-[12px] text-ink-700"><input id="fDisclosure" type="checkbox" class="w-3.5 h-3.5" checked>引用・紹介文にはPR／紹介であることを明示する</label>
-          <div class="text-[10.5px] text-ink-dim mt-2 leading-relaxed">実在しない利益体験・第三者の推薦・「みんなが勝った」などの架空レビューは生成しません。</div>
+          <div class="text-[10.5px] text-ink-dim mt-2 leading-relaxed">実在しない利益体験・第三者の推薦・「みんなが勝った」などの架空レビューは生成しません。数字はアクション数の配分比率として使用します。</div>
         </div>
         <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">独自プロンプト設定</div>
           <textarea id="fActionPrompt" rows="4" class="inp resize-y" placeholder="例：投稿内容のうち実際に書かれているポイントへの感想を短く添える。架空の利益体験・第三者の推薦・「みんなが勝った」等は作らない。"></textarea></label>
@@ -740,7 +740,7 @@ function structuredCloneSafe(o){ return JSON.parse(JSON.stringify(o)); }
    サーバー保存に移行するときは Store.read / Store.write の中身を
    fetch に差し替えるだけでよい。
    ============================================================ */
-const SCHEMA_VERSION=6;
+const SCHEMA_VERSION=7;
 const STORE={acc:'postcockpit.accounts',api:'postcockpit.api',settings:'postcockpit.settings',history:'postcockpit.history'};
 const LEGACY_KEYS={acc:['postcockpit.accounts.v2','postcockpit.accounts.v1'],api:['postcockpit.api.v2','postcockpit.api.v1']};
 
@@ -780,21 +780,37 @@ const ACTION_TYPES=[
   {id:'reply',label:'リプライ',needsText:true},{id:'quote',label:'引用ポスト',needsText:true},{id:'skip',label:'今回は見送り',needsText:false}
 ];
 const ACTION_LABELS=Object.fromEntries(ACTION_TYPES.map(x=>[x.id,x.label]));
-function defaultActionPolicy(){return{randomize:true,allowedActions:['like','repost','bookmark','reply','quote','skip'],weights:{like:30,repost:20,bookmark:10,reply:25,quote:15,skip:20},replyStyle:'感想・補足',quoteStyle:'紹介・PR',disclosureRequired:true}}
-function normalizeActionPolicy(p){
-  const d=defaultActionPolicy(), src=(p&&typeof p==='object')?p:{};
+function defaultActionDistribution(){return{randomize:true,allowedActions:['like','repost','bookmark','reply','quote','skip'],weights:{like:30,repost:20,bookmark:10,reply:25,quote:15,skip:20},replyStyle:'感想・補足',quoteStyle:'紹介・PR',disclosureRequired:true}}
+function normalizeActionDistribution(p){
+  const d=defaultActionDistribution(), src=(p&&typeof p==='object')?p:{};
   const allowed=Array.isArray(src.allowedActions)?src.allowedActions.filter(x=>ACTION_LABELS[x]):d.allowedActions.slice();
   const finalAllowed=allowed.length?allowed:d.allowedActions.slice();
   const weights={...d.weights,...(src.weights||{})};
   ACTION_TYPES.forEach(x=>{const n=Number(weights[x.id]);weights[x.id]=Number.isFinite(n)&&n>=0?n:d.weights[x.id]});
   return{randomize:src.randomize!==false,allowedActions:finalAllowed,weights,replyStyle:['感想・補足','質問・会話','事実ベースのレビュー'].includes(src.replyStyle)?src.replyStyle:d.replyStyle,quoteStyle:['紹介・PR','要点の補足'].includes(src.quoteStyle)?src.quoteStyle:d.quoteStyle,disclosureRequired:src.disclosureRequired!==false};
 }
+// v22までの子アカウント単位 actionPolicy を読み込める後方互換用
+function normalizeActionPolicy(p){return normalizeActionDistribution(p)}
 function actionLabel(id){return ACTION_LABELS[id]||id||'未設定'}
-function weightedAction(policy){
-  const allowed=policy.allowedActions.length?policy.allowedActions:['skip'];
-  const weights=allowed.map(id=>Math.max(0,Number(policy.weights?.[id]??1)));
-  let total=weights.reduce((a,b)=>a+b,0); if(total<=0)return allowed[Math.floor(Math.random()*allowed.length)];
-  let r=Math.random()*total; for(let i=0;i<allowed.length;i++){r-=weights[i];if(r<=0)return allowed[i]} return allowed[allowed.length-1];
+function shuffleInPlace(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+function allocateWeightedActions(count,distribution){
+  const allowed=(distribution.allowedActions||[]).filter(x=>ACTION_LABELS[x]);
+  if(!allowed.length)return Array.from({length:count},()=> 'skip');
+  if(!count)return [];
+  const weights=allowed.map(id=>Math.max(0,Number(distribution.weights?.[id]??0)));
+  let total=weights.reduce((a,b)=>a+b,0);
+  if(total<=0) return Array.from({length:count},(_,i)=>allowed[i%allowed.length]);
+  const quotas=weights.map(w=>count*w/total);
+  const counts=quotas.map(q=>Math.floor(q));
+  let remain=count-counts.reduce((a,b)=>a+b,0);
+  const order=allowed.map((id,i)=>({i,frac:quotas[i]-counts[i],tie:Math.random()})).sort((a,b)=>b.frac-a.frac||b.tie-a.tie);
+  for(let i=0;i<remain;i++)counts[order[i%order.length].i]++;
+  const actions=[]; allowed.forEach((id,i)=>{for(let n=0;n<counts[i];n++)actions.push(id)});
+  return distribution.randomize?shuffleInPlace(actions):actions;
+}
+function parentActionDistribution(parent){
+  if(!parent)return defaultActionDistribution();
+  return normalizeActionDistribution(parent.actionDistribution||parent.actionPolicy);
 }
 const ACTION_ROLES=['引用ポスト用','リプライ用','拡散用','補足コメント用','質問・会話用','その他'];
 function normalizeAccount(a){
@@ -808,6 +824,7 @@ function normalizeAccount(a){
     actionRole:ACTION_ROLES.includes(a.actionRole)?a.actionRole:null,
     actionPrompt:String(a.actionPrompt||''),
     actionPolicy:normalizeActionPolicy(a.actionPolicy),
+    actionDistribution:normalizeActionDistribution(a.actionDistribution||a.actionPolicy),
     persona:{...blankPersona(),...(a.persona||{})} };
 }
 function childrenOf(parentId){ return state.accounts.filter(a=>a.parentId===parentId); }
@@ -821,6 +838,13 @@ function normalizeHierarchy(){
     a.actionRole=ACTION_ROLES.includes(a.actionRole)?a.actionRole:null;
     a.actionPrompt=String(a.actionPrompt||'');
     a.actionPolicy=normalizeActionPolicy(a.actionPolicy);
+    a.actionDistribution=normalizeActionDistribution(a.actionDistribution||a.actionPolicy);
+  });
+  state.accounts.filter(a=>isMainAccount(a)).forEach(parent=>{
+    if(!parent.actionDistribution || !parent.actionDistribution.allowedActions?.length){
+      const legacy=childrenOf(parent.id)[0]?.actionPolicy;
+      parent.actionDistribution=normalizeActionDistribution(legacy);
+    }
   });
   state.accounts.filter(a=>a.parentId).forEach(child=>{
     const siblings=state.accounts.filter(x=>x.parentId===child.parentId);
@@ -1203,7 +1227,7 @@ function splitHashtags(text){
 }
 function accountRef(a){
   return{ id:a.id, name:a.name, handle:a.handle, team:a.team, parentId:a.parentId||null,
-    accountType:a.parentId?'support':'main', actionRole:a.actionRole||null, action_policy:a.parentId?normalizeActionPolicy(a.actionPolicy):null,
+    accountType:a.parentId?'support':'main', actionRole:a.actionRole||null, action_policy:null, action_distribution:isMainAccount(a)?normalizeActionDistribution(a.actionDistribution):null,
     persona:{ voice:a.voice, stance:a.stance, length:a.length, layout:a.layout, ...a.persona } };
 }
 /* 公開して問題ない状態か。自動化ツール側で弾けるように理由も返す */
@@ -1246,13 +1270,13 @@ function actionPromptSystem(){
 function createRandomActionPlan(d){
   const children=childrenOf(d.acc.id).filter(a=>a.active);
   if(!children.length){ d.actions=[]; renderLane(); toast('このメインアカウントには有効なサポートアカウントがありません','warn'); return; }
+  const distribution=parentActionDistribution(d.acc);
+  const actions=allocateWeightedActions(children.length,distribution);
+  const childOrder=distribution.randomize?shuffleInPlace(children.slice()):children.slice();
   const usedAt=new Date().toISOString();
-  d.actions=children.map(c=>{
-    const policy=normalizeActionPolicy(c.actionPolicy);
-    const action=policy.randomize?weightedAction(policy):(policy.allowedActions[0]||'skip');
-    return{accountId:c.id,action,role:actionLabel(action),text:'',status:'planned',plannedAt:usedAt};
-  });
-  renderLane(); log(`${d.acc.name} のサポートアクションを ${children.length} 件ランダム計画`,'ok'); toast('フォロワー／サポートアクションのプランを作成しました');
+  d.actions=childOrder.map((c,i)=>{const action=actions[i]||'skip';return{accountId:c.id,action,role:actionLabel(action),text:'',status:'planned',plannedAt:usedAt}});
+  const counts=Object.fromEntries(ACTION_TYPES.map(x=>[x.id,d.actions.filter(a=>a.action===x.id).length]));
+  renderLane(); log(`${d.acc.name} の ${children.length} アカウント全体へアクション配分を作成：${Object.entries(counts).filter(([,n])=>n).map(([k,n])=>`${actionLabel(k)} ${n}`).join(' / ')}`,'ok'); toast('フォロワー／サポートアカウント全体へアクションを配分しました');
 }
 async function generateActionTextsForDraft(d){
   const acts=Array.isArray(d.actions)?d.actions:[];
@@ -1262,7 +1286,7 @@ async function generateActionTextsForDraft(d){
   const btn=document.querySelector(`[data-actions-ai="${state.drafts.indexOf(d)}"]`);
   if(btn){btn.disabled=true;btn.textContent='文案生成中…';}
   try{
-    const payload=targets.map(x=>{const c=getAcc(x.accountId);const p=normalizeActionPolicy(c?.actionPolicy);return{accountId:x.accountId,name:c?.name||'',handle:c?.handle||'',action:x.action,customPrompt:c?.actionPrompt||'',persona:personaLines(c||{}),replyStyle:p.replyStyle,quoteStyle:p.quoteStyle,disclosureRequired:p.disclosureRequired}});
+    const groupPolicy=parentActionDistribution(d.acc); const payload=targets.map(x=>{const c=getAcc(x.accountId);return{accountId:x.accountId,name:c?.name||'',handle:c?.handle||'',action:x.action,customPrompt:c?.actionPrompt||'',persona:personaLines(c||{}),replyStyle:groupPolicy.replyStyle,quoteStyle:groupPolicy.quoteStyle,disclosureRequired:groupPolicy.disclosureRequired}});
     const user=[`【メインアカウント】${d.acc.name} ${d.acc.handle}`,'【メイン投稿】',d.text,'','【今回のアクション対象】',JSON.stringify(payload,null,2),'',`【マーケット】${MARKETS[state.market].label}（${MARKETS[state.market].sym}）`,'reply は感想・補足・質問・事実ベースのレビュー、quote は紹介・PRまたは要点補足として各1件作成してください。架空の成功体験・第三者推薦は不可です。disclosureRequired が true の quote では広告・紹介であることが分かる表現を入れてください。like / repost / bookmark / skip は対象外です。'].join('\\n');
     const {text}=await callClaude({system:actionPromptSystem(),messages:[{role:'user',content:user}],max_tokens:2200,temperature:0.9});
     const parsed=parseLooseJSON(text); if(!Array.isArray(parsed))throw new Error('アクション文案のJSONを解析できませんでした');
@@ -1283,7 +1307,7 @@ function actionSummaryHTML(d,i){
       ${acts.length?`<span class="tag px-2 py-0.5 rounded-full" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">${planned}件アクション</span>`:''}
     </summary>
     <div class="mt-3 space-y-3">
-      ${children.length?`<div class="flex flex-wrap items-center gap-2"><button data-actions-plan="${i}" class="btn-primary text-[11.5px] px-3.5 py-2 rounded-lg font-bold">ランダムにアクションプランを作成</button>${textTargets?`<button data-actions-ai="${i}" class="btn-ghost text-[11.5px] px-3.5 py-2 rounded-lg font-bold">リプライ・引用文案をAI生成</button>`:''}<span class="text-[11px] text-ink-dim">いいね・リポスト・保存・リプライ・引用・見送りから1つを選択。実行は手動確認です。</span></div>`:`<div class="glass-sub p-3 text-[12px] text-ink-dim">このメインアカウントには有効なサポートアカウントがありません。</div>`}
+      ${children.length?`<div class="flex flex-wrap items-center gap-2"><button data-actions-plan="${i}" class="btn-primary text-[11.5px] px-3.5 py-2 rounded-lg font-bold">ランダムにアクションプランを作成</button>${textTargets?`<button data-actions-ai="${i}" class="btn-ghost text-[11.5px] px-3.5 py-2 rounded-lg font-bold">リプライ・引用文案をAI生成</button>`:''}<span class="text-[11px] text-ink-dim">親に紐づく有効なサポートアカウント全体へ、設定した重みに応じてアクション数を配分。実行は手動確認です。</span></div>`:`<div class="glass-sub p-3 text-[12px] text-ink-dim">このメインアカウントには有効なサポートアカウントがありません。</div>`}
       ${acts.length?acts.map(x=>{const c=getAcc(x.accountId);return c?`<div class="glass-sub p-3.5">
         <div class="flex flex-wrap items-center gap-2 mb-2"><span class="tag" style="color:${c.hue}">${esc(c.name)}</span><span class="tag text-ink-dim">${esc(actionLabel(x.action||x.role))}</span><span class="font-mono text-[11px] text-ink-dim">${esc(c.handle)}</span><span class="tag ml-auto text-ink-dim">手動確認</span></div>
         ${(x.action==='reply'||x.action==='quote')?`<textarea data-actiontext="${i}-${esc(c.id)}" rows="3" class="w-full bg-transparent resize-y outline-none text-[12.5px] leading-relaxed" placeholder="${x.action==='quote'?'紹介・PRまたは要点補足の引用文':'投稿内容への感想・補足・質問などのリプライ文案'}">${esc(x.text||'')}</textarea>`:`<div class="text-[12px] text-ink-mute py-1.5">このアクションは文章入力不要です。実行時にX上で確認してください。</div>`}
@@ -1294,7 +1318,7 @@ function actionSummaryHTML(d,i){
 function selectedProfileForAccount(a){
   if(!a) return null;
   return {id:a.id,name:a.name,handle:a.handle,team:a.team,account_type:isMainAccount(a)?'main':'support',parent_id:a.parentId||null,
-    action_role:a.actionRole||null,action_policy:isActionAccount(a)?normalizeActionPolicy(a.actionPolicy):null,action_prompt:a.actionPrompt||'',persona:{...(a.persona||{})},voice:a.voice,stance:a.stance,length:a.length,layout:a.layout,note:a.note||''};
+    action_role:a.actionRole||null,action_policy:null,action_distribution:isMainAccount(a)?normalizeActionDistribution(a.actionDistribution):null,action_prompt:a.actionPrompt||'',persona:{...(a.persona||{})},voice:a.voice,stance:a.stance,length:a.length,layout:a.layout,note:a.note||''};
 }
 
 function buildDeliveryPayload({includeMedia=true}={}){
@@ -2126,13 +2150,14 @@ function renderAccounts(){
       <div class="flex flex-wrap items-center gap-2 mb-4 text-[11px] text-ink-mute">
         <span class="tag">メイン投稿の生成対象</span>
         ${a.persona?.speaker?`<span class="tag">${esc(a.persona.speaker)}</span>`:''}
+        <span class="tag">アクション配分：${esc(normalizeActionDistribution(a.actionDistribution).allowedActions.map(id=>`${actionLabel(id)} ${normalizeActionDistribution(a.actionDistribution).weights[id]}`).join(' / '))}</span>
       </div>
       <div class="pl-3 sm:pl-6 border-l-2" style="border-color:${a.hue}35">
         ${children.length?`<div class="space-y-2.5">${children.map(c=>`<div class="glass-sub p-3.5 flex flex-wrap items-center gap-3 ${c.active?'':'opacity-55'}">
           <span class="tag" style="background:${a.hue}12;color:${a.hue}">ACTION</span>
           <span class="w-8 h-8 rounded-lg grid place-items-center font-bold text-[12px] shrink-0" style="background:${c.hue}1f;color:${c.hue}">${esc((c.name||'?').slice(0,1))}</span>
           <div class="min-w-0"><div class="text-[13px] font-bold truncate">${esc(c.name)} <span class="font-mono text-[11px] font-normal text-ink-dim">${esc(c.handle)}</span></div>
-            <div class="flex flex-wrap gap-1.5 mt-1"><span class="tag" style="color:${c.hue}">ランダム対応</span><span class="tag text-ink-dim">${esc(normalizeActionPolicy(c.actionPolicy).allowedActions.map(actionLabel).join(' / '))}</span><span class="tag text-ink-dim">返信:${esc(normalizeActionPolicy(c.actionPolicy).replyStyle)}</span><span class="tag text-ink-dim">引用:${esc(normalizeActionPolicy(c.actionPolicy).quoteStyle)}</span>${c.actionPrompt?'<span class="tag text-ink-dim">独自プロンプトあり</span>':''}</div></div>
+            <div class="flex flex-wrap gap-1.5 mt-1"><span class="tag" style="color:${c.hue}">サポート</span><span class="tag text-ink-dim">親全体の配分を適用</span>${c.actionPrompt?'<span class="tag text-ink-dim">独自プロンプトあり</span>':''}</div></div>
           <div class="ml-auto flex items-center gap-2 shrink-0">
             <label class="flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer"><input type="checkbox" data-toggle="${c.id}" ${c.active?'checked':''} class="w-3.5 h-3.5">有効</label>
             <button data-dup="${c.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">複製</button>
@@ -2178,14 +2203,15 @@ function openModal(id,parentId=null){
   const currentParent=a?.parentId||parentId||'';
   const parentOptions=state.accounts.filter(x=>isMainAccount(x)&&x.id!==id);
   $('#fParentId').innerHTML=`<option value="">メインアカウント（親）</option>`+parentOptions.map(x=>{const n=childrenOf(x.id).length;return `<option value="${esc(x.id)}" ${currentParent===x.id?'selected':''} ${n>=10&&currentParent!==x.id?'disabled':''}>${esc(x.name)}（${esc(x.handle)}）${n>=10?' — 上限10件':''}</option>`}).join('');
-  const policy=normalizeActionPolicy(a?.actionPolicy);
+  const distributionOwner=currentParent?getAcc(currentParent):(a&&isMainAccount(a)?a:null);
+  const policy=parentActionDistribution(distributionOwner);
   $('#actionPolicyFields').innerHTML=ACTION_TYPES.map(x=>`<div class="grid grid-cols-[auto_1fr_72px] items-center gap-2"><label class="flex items-center gap-2 text-[12px] text-ink-700"><input type="checkbox" data-action-policy="${x.id}" class="w-3.5 h-3.5" ${policy.allowedActions.includes(x.id)?'checked':''}><span>${x.label}</span></label><span class="text-[10.5px] text-ink-dim">${x.needsText?'文案生成可':'実行指示のみ'}</span><input data-action-weight="${x.id}" type="number" min="0" max="100" step="1" value="${policy.weights[x.id]}" class="inp py-1.5 text-[12px]"></div>`).join('');
   $$('#actionPolicyFields [data-action-policy]').forEach(cb=>cb.onchange=()=>{ if(!$$('#actionPolicyFields [data-action-policy]:checked').length){cb.checked=true;toast('少なくとも1つのアクションを選択してください','warn')}});
   $('#fActionRandom').checked=policy.randomize;
   $('#fReplyStyle').value=policy.replyStyle; $('#fQuoteStyle').value=policy.quoteStyle; $('#fDisclosure').checked=policy.disclosureRequired!==false;
   $('#fActionPrompt').value=a?(a.actionPrompt||''):'';
-  $('#childSettings').classList.toggle('hidden',!currentParent);
-  $('#fParentId').onchange=()=>$('#childSettings').classList.toggle('hidden',!$('#fParentId').value);
+  $('#childSettings').classList.toggle('hidden',!distributionOwner);
+  $('#fParentId').onchange=()=>{const owner=$('#fParentId').value?getAcc($('#fParentId').value):(state.editingId&&isMainAccount(getAcc(state.editingId))?getAcc(state.editingId):null); const p=parentActionDistribution(owner); $$('#actionPolicyFields [data-action-policy]').forEach(cb=>cb.checked=p.allowedActions.includes(cb.dataset.actionPolicy)); $$('#actionPolicyFields [data-action-weight]').forEach(x=>x.value=p.weights[x.dataset.actionWeight]); $('#fActionRandom').checked=p.randomize; $('#fReplyStyle').value=p.replyStyle; $('#fQuoteStyle').value=p.quoteStyle; $('#fDisclosure').checked=p.disclosureRequired!==false; $('#childSettings').classList.toggle('hidden',!owner)};
   $('#fNote').value=a?(a.note||''):''; $('#fActive').checked=a?a.active:true;
   $('#fVoice').innerHTML=VOICES.map(v=>`<option ${a&&a.voice===v?'selected':''}>${esc(v)}</option>`).join('');
   $('#fStance').innerHTML=STANCES.map(v=>`<option ${a&&a.stance===v?'selected':''}>${esc(v)}</option>`).join('');
@@ -2231,14 +2257,16 @@ $('#modalSave').onclick=()=>{
   }
   const allowedActions=$$('#actionPolicyFields [data-action-policy]:checked').map(x=>x.dataset.actionPolicy);
   const weights={}; $$('#actionPolicyFields [data-action-weight]').forEach(x=>weights[x.dataset.actionWeight]=Math.max(0,Number(x.value)||0));
-  const actionPolicy=normalizeActionPolicy({randomize:$('#fActionRandom').checked,allowedActions,weights,replyStyle:$('#fReplyStyle').value,quoteStyle:$('#fQuoteStyle').value,disclosureRequired:$('#fDisclosure').checked});
+  const actionDistribution=normalizeActionDistribution({randomize:$('#fActionRandom').checked,allowedActions,weights,replyStyle:$('#fReplyStyle').value,quoteStyle:$('#fQuoteStyle').value,disclosureRequired:$('#fDisclosure').checked});
   const data={ name,handle,team:$('#fTeam').value.trim()||'未分類',voice:$('#fVoice').value,stance:$('#fStance').value,
     length:$('#fLength').value,layout:$('#fLayout').value,hue:$('#fHue').value,note:$('#fNote').value.trim(),active:$('#fActive').checked,
-    parentId:selectedParent, actionRole:null, actionPolicy, actionPrompt:$('#fActionPrompt').value.trim(),
+    parentId:selectedParent, actionRole:null, actionPolicy:normalizeActionPolicy(actionDistribution), actionDistribution:selectedParent?null:actionDistribution, actionPrompt:$('#fActionPrompt').value.trim(),
     persona:{firstPerson:$('#pFirst').value.trim(),speaker:$('#pSpeaker').value.trim(),tone:$('#pTone').value.trim(),
       reader:$('#pReader').value.trim(),ng:$('#pNG').value.trim(),emoji:$('#pEmoji').value,bio:$('#pBio').value.trim()} };
   if(state.editingId) Object.assign(getAcc(state.editingId),data);
   else{ const a=normalizeAccount({id:uid(),...data}); state.accounts.push(a); if(a.active&&!a.parentId){state.selected.add(a.id);state.vSelected.add(a.id)} }
+  const ownerId=selectedParent||(state.editingId&&isMainAccount(getAcc(state.editingId))?state.editingId:null);
+  if(ownerId){const owner=getAcc(ownerId); if(owner){owner.actionDistribution=actionDistribution; owner.actionPolicy=normalizeActionPolicy(actionDistribution)}}
   saveAccounts(); closeModal(); renderAccounts(); renderPicker(); renderVPicker(); toast('保存しました');
 };
 $('#modalDelete').onclick=()=>{
