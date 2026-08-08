@@ -1,0 +1,3362 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post Cockpit — 配信デスク</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{
+  colors:{ink:{DEFAULT:'#0F172A',700:'#334155',mute:'#64748B',dim:'#94A3B8'},hair:'#E2E8F0'},
+  fontFamily:{sans:['"Zen Kaku Gothic New"','system-ui','sans-serif'],mono:['"JetBrains Mono"','ui-monospace','monospace']}
+}}}
+</script>
+<style>
+  :root{ --ac:#2563EB; --ac2:#60A5FA; --hair:#E4E9F2; }
+  html,body{height:100%}
+  body{color:#0F172A;background:#F4F6FB;
+    background-image:radial-gradient(1100px 600px at 82% -10%, color-mix(in srgb,var(--ac) 16%,transparent), transparent 62%),
+                     radial-gradient(800px 500px at -5% 100%, color-mix(in srgb,var(--ac2) 14%,transparent), transparent 60%);
+    background-attachment:fixed;transition:background-image .6s ease}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+  .glass{background:rgba(255,255,255,.74);backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);
+    border:1px solid rgba(255,255,255,.9);border-radius:20px;
+    box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 32px -18px rgba(15,23,42,.28),0 0 0 1px rgba(15,23,42,.045)}
+  .glass-sub{background:rgba(255,255,255,.6);border:1px solid rgba(15,23,42,.07);border-radius:14px}
+  .btn-primary{background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 62%,#000 12%));color:#fff;
+    box-shadow:0 6px 18px -8px color-mix(in srgb,var(--ac) 85%,transparent),0 1px 0 rgba(255,255,255,.4) inset;transition:all .16s ease}
+  .btn-primary:hover:not(:disabled){transform:translateY(-1px)}
+  .btn-primary:disabled{filter:grayscale(.7) opacity(.55);cursor:not-allowed;box-shadow:none}
+  .btn-ghost{background:rgba(255,255,255,.75);border:1px solid var(--hair);color:#334155;transition:all .15s ease}
+  .btn-ghost:hover:not(:disabled){border-color:var(--ac);color:var(--ac);background:#fff}
+  .btn-ghost:disabled{opacity:.45;cursor:not-allowed}
+  .btn-danger{background:rgba(255,255,255,.75);border:1px solid var(--hair);color:#B91C1C;transition:all .15s ease}
+  .btn-danger:hover{border-color:#EF4444;background:#FEF2F2}
+  :focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:8px}
+  .field{background:rgba(255,255,255,.85);border:1px solid var(--hair);border-radius:14px;transition:all .15s ease}
+  .field:focus-within{border-color:var(--ac);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 14%,transparent)}
+  .inp{width:100%;background:#fff;border:1px solid var(--hair);border-radius:10px;padding:.55rem .75rem;font-size:13.5px;outline:none;transition:all .15s ease}
+  .inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 13%,transparent)}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#94A3B8}
+  .tag{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.05em}
+
+  .tabbar{background:rgba(255,255,255,.7);border:1px solid var(--hair);border-radius:14px;padding:4px;display:flex;gap:4px}
+  .tabbtn{flex:1;border-radius:10px;padding:.6rem 1rem;font-size:13px;font-weight:700;color:#64748B;transition:all .18s ease;white-space:nowrap}
+  .tabbtn:hover{color:#0F172A}
+  .tabbtn.on{color:#fff;background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 65%,#000 10%));
+    box-shadow:0 6px 16px -8px color-mix(in srgb,var(--ac) 90%,transparent)}
+
+  .chip{border:1px solid var(--hair);background:rgba(255,255,255,.8);border-radius:999px;transition:all .15s ease;cursor:pointer}
+  .chip:hover{border-color:var(--ac)}
+  .chip.on{border-color:transparent;color:#fff;background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 65%,#000 10%))}
+  .mkt{border:1px solid var(--hair);background:rgba(255,255,255,.7);border-radius:14px;transition:all .18s ease;cursor:pointer}
+  .mkt.on{border-color:var(--ac);background:#fff;box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 13%,transparent)}
+  .navitem{border-radius:12px;transition:all .15s ease;cursor:pointer}
+  .navitem:hover{background:rgba(255,255,255,.8)}
+  .navitem.on{background:#fff;box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 30%,transparent)}
+  .bgpick{border:2px solid transparent;border-radius:12px;overflow:hidden;cursor:pointer;transition:all .15s ease;position:relative}
+  .bgpick:hover{border-color:var(--ac2)}
+  .bgpick.on{border-color:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 15%,transparent)}
+
+  @keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .rise{animation:riseIn .5s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes popIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+  .pop{animation:popIn .28s cubic-bezier(.2,.7,.3,1) both}
+  .shimmer{background:linear-gradient(90deg,rgba(15,23,42,.05) 25%,color-mix(in srgb,var(--ac) 18%,transparent) 50%,rgba(15,23,42,.05) 75%);
+    background-size:200% 100%;animation:sweep 1.25s linear infinite;border-radius:10px}
+  @keyframes sweep{from{background-position:200% 0}to{background-position:-200% 0}}
+  .spin{animation:rot .8s linear infinite}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+  input[type=range]{accent-color:var(--ac)} input[type=checkbox]{accent-color:var(--ac)}
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<div class="flex min-h-screen">
+  <div id="navScrim" class="hidden fixed inset-0 z-40 lg:hidden" style="background:rgba(15,23,42,.4);backdrop-filter:blur(3px)"></div>
+
+  <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-[300px] flex flex-col border-r border-white/60 bg-white/90 lg:bg-white/55 backdrop-blur-xl transition-transform duration-300 -translate-x-full lg:translate-x-0">
+    <div class="px-6 pt-6 pb-5 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl grid place-items-center text-white font-mono text-[13px] font-bold"
+           style="background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 60%,#000 12%))">PC</div>
+      <div><div class="text-[15px] font-bold leading-tight">Post Cockpit</div><div class="eyebrow mt-0.5">multi-brand desk</div></div>
+      <button id="navClose" class="lg:hidden ml-auto w-8 h-8 rounded-lg btn-ghost grid place-items-center text-[15px]">×</button>
+    </div>
+
+    <div class="px-4 mb-4 space-y-1">
+      <button data-view="main" class="navitem on w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg>
+        <span class="text-[13px] font-bold">配信デスク</span></button>
+      <button data-view="accounts" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>
+        <span class="text-[13px] font-bold">アカウント管理</span><span id="navAccCount" class="tag ml-auto text-ink-dim">0</span></button>
+      <button data-view="history" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        <span class="text-[13px] font-bold">投稿履歴</span><span id="navHistCount" class="tag ml-auto text-ink-dim">0</span></button>
+      <button id="openSettings" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/></svg>
+        <span class="text-[13px] font-bold">API設定</span><span id="navApiState" class="tag ml-auto text-ink-dim">未設定</span></button>
+    </div>
+
+    <nav class="px-4 space-y-6 flex-1 overflow-y-auto pb-6">
+      <section><div class="eyebrow px-2 mb-2.5">対象マーケット</div><div id="marketList" class="space-y-2"></div></section>
+      <section id="deliverySettings">
+        <div class="eyebrow px-2 mb-2.5">配信設定</div>
+        <div class="px-2 space-y-4 text-[12.5px]">
+          <label class="block"><div class="flex justify-between text-ink-mute mb-1.5"><span>1件目までの待ち</span><span id="offsetVal" class="font-mono" style="color:var(--ac)">3分</span></div>
+            <input id="offsetRange" type="range" min="0" max="30" value="3" class="w-full"></label>
+          <label class="block"><div class="flex justify-between text-ink-mute mb-1.5"><span>投稿間隔（最小）</span><span id="gapMinVal" class="font-mono" style="color:var(--ac)">7分</span></div>
+            <input id="gapMinRange" type="range" min="1" max="30" value="7" class="w-full"></label>
+          <label class="block"><div class="flex justify-between text-ink-mute mb-1.5"><span>投稿間隔（最大）</span><span id="gapMaxVal" class="font-mono" style="color:var(--ac)">16分</span></div>
+            <input id="gapMaxRange" type="range" min="2" max="60" value="16" class="w-full"></label>
+          <label class="flex items-center justify-between cursor-pointer pt-1"><span class="text-ink-mute">ハッシュタグを付ける</span>
+            <input id="tagToggle" type="checkbox" checked class="w-4 h-4"></label>
+        </div>
+      </section>
+      <section>
+        <div class="flex items-center justify-between px-2 mb-2.5"><div class="eyebrow">ログ</div>
+          <button id="clearLog" class="text-[11px] text-ink-dim hover:text-ink transition">消去</button></div>
+        <div id="logList" class="px-2 space-y-2 max-h-[200px] overflow-y-auto text-[11.5px] leading-relaxed"></div>
+      </section>
+    </nav>
+    <div class="px-6 py-4 border-t border-hair text-[11px] text-ink-dim leading-relaxed">
+      看板を出して運用しているブランドアカウント専用のデスクです。
+    </div>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <header class="sticky top-0 z-30 backdrop-blur-xl bg-white/70 border-b border-white/70">
+      <div class="max-w-[1200px] mx-auto px-5 sm:px-8 pt-4 pb-3 flex items-center gap-4">
+        <button id="navOpen" class="lg:hidden shrink-0 w-10 h-10 rounded-xl btn-ghost grid place-items-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="min-w-0"><div class="eyebrow" id="headEyebrow">対象マーケット</div>
+          <h1 id="marketTitle" class="text-[19px] font-bold truncate"></h1></div>
+        <div class="ml-auto flex items-center gap-2.5">
+          <button id="apiPill" class="flex items-center gap-2 px-3 py-1.5 rounded-full glass-sub hover:border-[color:var(--ac)] transition">
+            <span id="apiDot" class="w-1.5 h-1.5 rounded-full bg-ink-dim"></span>
+            <span class="tag text-ink-mute" id="apiPillText">未設定</span></button>
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full glass-sub">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--ac)"></span><span class="tag text-ink-mute" id="clock">--:--</span></div>
+        </div>
+      </div>
+      <div id="tabWrap" class="max-w-[1200px] mx-auto px-5 sm:px-8 pb-4">
+        <div class="tabbar">
+          <button data-tab="image" class="tabbtn on">① 画像・チャート配信</button>
+          <button data-tab="video" class="tabbtn">② 動画（背景＋テロップ）</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================== TAB 1 ==================== -->
+    <div id="tabImage" class="max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-8">
+      <section class="glass p-6 sm:p-7">
+        <div class="flex items-start justify-between gap-4 mb-5">
+          <div><div class="eyebrow mb-1.5">step 01</div>
+            <h2 class="text-[17px] font-bold">投稿内容の参考例</h2>
+            <p class="text-[12.5px] text-ink-mute mt-1">ここに入れた文章を材料に、各アカウントのペルソナで書き分けます。長文でもかまいません。</p></div>
+          <button id="sampleBtn" class="btn-ghost shrink-0 text-[12px] px-3 py-1.5 rounded-lg">例を入れる</button>
+        </div>
+        <div class="field p-4">
+          <textarea id="baseText" rows="9" placeholder="参考文章を入れてください。原稿の下書き、メルマガ、配信台本、記事の抜粋など、そのまま貼り付けて構いません。"
+            class="w-full bg-transparent resize-y outline-none text-[14.5px] leading-relaxed placeholder:text-ink-dim min-h-[180px] max-h-[520px]"></textarea>
+          <div class="flex items-center justify-between mt-3 pt-3 border-t border-hair">
+            <span id="baseFlags" class="tag text-ink-dim">表現チェック：問題なし</span>
+            <span id="baseCount" class="tag text-ink-dim">0 文字</span></div>
+        </div>
+        <details id="linkPanel" class="mt-4 rounded-2xl border border-hair bg-white/60">
+          <summary class="cursor-pointer select-none px-4 py-3 flex items-center gap-2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" class="text-ink-mute">
+              <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/></svg>
+            <span class="text-[13px] font-bold">引用ポスト・記事リンク</span>
+            <span id="linkBadge" class="tag px-2 py-0.5 rounded-full glass-sub text-ink-dim">未設定</span>
+            <span class="ml-auto text-[11.5px] text-ink-dim">任意</span>
+          </summary>
+          <div class="px-4 pb-4 pt-1 space-y-3">
+            <label class="block">
+              <div class="text-[12px] font-bold text-ink-700 mb-1.5">引用したい元ポストのURL</div>
+              <input id="quoteUrl" class="inp font-mono text-[12.5px]" placeholder="https://x.com/username/status/1234567890">
+              <p id="quoteHint" class="text-[11.5px] text-ink-dim mt-1.5 leading-relaxed">
+                Xの作成画面を開くとき、このURLを url パラメータに載せて引用ポストとして開きます。</p>
+            </label>
+            <label class="block">
+              <div class="text-[12px] font-bold text-ink-700 mb-1.5">一緒に紹介する記事・note等のURL</div>
+              <input id="articleUrl" class="inp font-mono text-[12.5px]" placeholder="https://note.com/... または自社ブログのURL">
+              <p class="text-[11.5px] text-ink-dim mt-1.5 leading-relaxed">
+                本文の末尾に自動で追記されます。Xではリンクは23文字として数えられます。</p>
+            </label>
+            <p class="text-[11.5px] text-ink-dim leading-relaxed pt-1 border-t border-hair">
+              ここで入れたリンクは、次に生成する全カードの初期値になります。カードごとの差し替えは各カードの「リンク」から。
+            </p>
+          </div>
+        </details>
+
+        <div id="dropzone" class="mt-4 rounded-2xl border-2 border-dashed border-hair transition cursor-pointer p-6 text-center">
+          <input id="fileInput" type="file" accept="image/*" multiple class="hidden">
+          <div class="text-[13px] text-ink-mute">元画像（チャート・図解）をドラッグ、またはクリックして選択</div>
+          <div class="tag text-ink-dim mt-1">各アカウント用のブランド版画像はブラウザ内で合成します</div>
+        </div>
+        <div id="thumbs" class="mt-4 flex flex-wrap gap-3"></div>
+        <div id="visionBox" class="hidden mt-4"></div>
+      </section>
+
+      <section class="glass p-6 sm:p-7">
+        <div class="flex items-start justify-between gap-4 mb-5">
+          <div><div class="eyebrow mb-1.5">step 02</div><h2 class="text-[17px] font-bold">配信するアカウントを選ぶ</h2>
+            <p class="text-[12.5px] text-ink-mute mt-1">キャラクターはアカウント管理のペルソナ設定に従います。</p></div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="goManage" class="btn-ghost text-[12px] px-3 py-1.5 rounded-lg">アカウントを追加・編集</button>
+            <div id="pickCount" class="tag px-3 py-1.5 rounded-full glass-sub text-ink-mute">0 件</div></div>
+        </div>
+        <div id="teamPicker" class="space-y-5"></div>
+        <div class="mt-6 pt-5 border-t border-hair flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <button id="tuneBtn" class="btn-primary px-6 py-3 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2.5">
+            <svg id="tuneIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+            <span id="tuneLabel">キャラクター別に書き分ける</span></button>
+          <button id="reshuffleBtn" class="btn-ghost px-5 py-3 rounded-xl text-[13px] font-medium" disabled>時刻を組み直す</button>
+          <p class="text-[11.5px] text-ink-dim sm:ml-auto max-w-[280px] leading-relaxed">下書きは必ず自分で読んでから公開してください。</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-4 px-1">
+          <div><div class="eyebrow mb-1.5">step 03</div><h2 class="text-[17px] font-bold">配信レーン</h2></div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer">
+              <input id="expMedia" type="checkbox" checked class="w-3.5 h-3.5">画像をJSONに含める</label>
+            <button id="expLaneCopy" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg hidden">全件JSONをコピー</button>
+            <button id="expLaneDl" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg hidden">全件JSONを保存</button>
+            <span id="laneWebhook" class="flex items-center gap-2"></span>
+            <div id="laneMeta" class="tag text-ink-dim"></div></div></div>
+
+        <div id="bulkBar" class="hidden glass p-4 mb-4">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <label class="flex items-center gap-2 text-[12.5px] font-bold cursor-pointer">
+              <input id="bulkAll" type="checkbox" class="w-4 h-4">全選択</label>
+            <span id="bulkCount" class="tag px-2.5 py-1 rounded-full glass-sub text-ink-mute">0 件選択</span>
+
+            <div class="h-5 w-px bg-hair mx-1"></div>
+
+            <span class="tag text-ink-dim">時刻をずらす</span>
+            <button data-shift="-30" class="btn-ghost text-[11.5px] px-2 py-1.5 rounded-lg font-mono">-30</button>
+            <button data-shift="-10" class="btn-ghost text-[11.5px] px-2 py-1.5 rounded-lg font-mono">-10</button>
+            <button data-shift="10" class="btn-ghost text-[11.5px] px-2 py-1.5 rounded-lg font-mono">+10</button>
+            <button data-shift="30" class="btn-ghost text-[11.5px] px-2 py-1.5 rounded-lg font-mono">+30</button>
+            <div class="flex items-center gap-1">
+              <input id="shiftCustom" type="number" value="5" class="w-16 bg-white border border-hair rounded-lg px-2 py-1.5 font-mono text-[12px]">
+              <span class="tag text-ink-dim">分</span>
+              <button id="shiftApply" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">ずらす</button></div>
+
+            <div class="h-5 w-px bg-hair mx-1"></div>
+
+            <button id="bulkSend" class="btn-primary text-[12px] px-4 py-2 rounded-lg font-bold">まとめて公開済みにする</button>
+            <button id="bulkUnsend" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">下書きに戻す</button>
+          </div>
+          <p id="bulkHint" class="text-[11.5px] text-ink-dim mt-2.5 leading-relaxed"></p>
+        </div>
+
+        <div id="emptyState" class="glass p-12 text-center">
+          <p class="text-[13.5px] text-ink-mute">参考文章を入れてアカウントを選ぶと、ここにカードが並びます。</p></div>
+        <div id="loadingState" class="hidden glass p-6 space-y-5"></div>
+        <div id="lane" class="hidden space-y-5"></div>
+      </section>
+    </div>
+
+    <!-- ==================== TAB 2 ==================== -->
+    <div id="tabVideo" class="hidden max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-8">
+      <section class="glass p-6 sm:p-7">
+        <div class="mb-5"><div class="eyebrow mb-1.5">step 01</div>
+          <h2 class="text-[17px] font-bold">テロップの元になる文章</h2>
+          <p class="text-[12.5px] text-ink-mute mt-1">タブ①の参考文章をそのまま引き継げます。動画向けに短く割った台本をキャラクター別に作ります。</p></div>
+        <div class="field p-4">
+          <textarea id="vBaseText" rows="7" placeholder="テロップにしたい内容を入れてください。"
+            class="w-full bg-transparent resize-y outline-none text-[14.5px] leading-relaxed placeholder:text-ink-dim min-h-[150px] max-h-[420px]"></textarea>
+          <div class="flex items-center justify-between mt-3 pt-3 border-t border-hair">
+            <button id="pullFromT1" class="btn-ghost text-[11.5px] px-2.5 py-1 rounded-lg">タブ①の文章を読み込む</button>
+            <span id="vBaseCount" class="tag text-ink-dim">0 文字</span></div>
+        </div>
+      </section>
+
+      <section class="glass p-6 sm:p-7">
+        <div class="flex items-start justify-between gap-4 mb-5">
+          <div><div class="eyebrow mb-1.5">step 02</div><h2 class="text-[17px] font-bold">背景画像を選ぶ</h2>
+            <p class="text-[12.5px] text-ink-mute mt-1">タブ①でアップロード・合成した画像もそのまま使えます。</p></div>
+          <div class="flex gap-2 shrink-0">
+            <button id="bgAiBtn" class="btn-ghost text-[12px] px-3 py-1.5 rounded-lg">AIで背景を作る</button>
+            <button id="bgUploadBtn" class="btn-ghost text-[12px] px-3 py-1.5 rounded-lg">背景を追加</button>
+          </div>
+          <input id="bgFile" type="file" accept="image/*" multiple class="hidden">
+        </div>
+
+        <div id="bgAiPanel" class="hidden glass-sub p-4 mb-4">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="eyebrow">背景生成プロンプト（英語）</span>
+            <button id="bgPromptBtn" class="btn-ghost ml-auto text-[11.5px] px-2.5 py-1 rounded-lg">文章から自動で書く</button>
+          </div>
+          <textarea id="bgPrompt" rows="4" class="inp resize-y text-[12.5px] leading-relaxed font-mono"
+            placeholder="Abstract editorial background, deep navy gradient with soft amber light..."></textarea>
+          <div class="flex flex-wrap items-center gap-2 mt-3">
+            <label class="flex items-center gap-2 text-[12px] text-ink-700 cursor-pointer">
+              <input id="bgPerAccount" type="checkbox" class="w-4 h-4">
+              選択中のアカウントごとに1枚ずつ作る</label>
+            <span class="tag text-ink-dim">文字・数値・チャートは描かせません</span>
+            <button id="bgGenBtn" class="btn-primary ml-auto text-[12px] px-4 py-2 rounded-lg font-bold">この内容で生成</button>
+          </div>
+          <div id="bgGenState" class="hidden mt-3"></div>
+        </div>
+
+        <div id="accBgPanel" class="hidden glass-sub p-4 mb-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="eyebrow">アカウント別の背景</span>
+            <button id="accBgClearAll" class="btn-ghost ml-auto text-[11.5px] px-2.5 py-1 rounded-lg">すべて共通背景に戻す</button>
+          </div>
+          <div id="accBgList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
+        </div>
+        <div id="bgGrid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3"></div>
+
+        <div class="mt-6 pt-5 border-t border-hair grid sm:grid-cols-3 gap-4">
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">画面比率</div>
+            <select id="vRatio" class="inp">
+              <option value="9:16">縦 9:16（リール・ショート）</option>
+              <option value="1:1">正方形 1:1</option>
+              <option value="16:9">横 16:9</option>
+            </select></label>
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">スライド枚数</div>
+            <select id="vSlides" class="inp"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+          <label class="block"><div class="flex justify-between text-[12px] font-bold text-ink-700 mb-1.5">
+              <span>1枚あたりの秒数</span><span id="vSecVal" class="font-mono" style="color:var(--ac)">3.0秒</span></div>
+            <input id="vSec" type="range" min="15" max="80" value="30" class="w-full mt-2"></label>
+        </div>
+
+        <div class="mt-6 pt-5 border-t border-hair">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div class="eyebrow">配信するアカウント</div>
+            <div id="vPickCount" class="tag px-3 py-1.5 rounded-full glass-sub text-ink-mute">0 件</div></div>
+          <div id="vPicker" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="mt-6 pt-5 border-t border-hair flex flex-col sm:flex-row gap-3">
+          <button id="vGenBtn" class="btn-primary px-6 py-3 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2.5">
+            <svg id="vIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 3 14 9-14 9z"/></svg>
+            <span id="vLabel">テロップを作って合成する</span></button>
+          <button id="vRecomposeBtn" class="btn-ghost px-5 py-3 rounded-xl text-[13px] font-medium" disabled>背景だけ差し替える</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="flex items-end justify-between gap-4 mb-4 px-1">
+          <div><div class="eyebrow mb-1.5">step 03</div><h2 class="text-[17px] font-bold">プレビューと書き出し</h2></div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="vWebhook" class="flex items-center gap-2"></span>
+            <button id="vExportJson" class="btn-ghost text-[12px] px-3 py-1.5 rounded-lg hidden">全件JSONを保存</button>
+            <button id="vExportAll" class="btn-ghost text-[12px] px-3 py-1.5 rounded-lg hidden">全アカウント分のPNGを書き出す</button></div></div>
+        <div id="vEmpty" class="glass p-12 text-center">
+          <p class="text-[13.5px] text-ink-mute">文章と背景を用意してボタンを押すと、カードごとにスライドが並びます。</p></div>
+        <div id="vLoading" class="hidden glass p-6 space-y-5"></div>
+        <div id="vCards" class="hidden space-y-5"></div>
+      </section>
+    </div>
+
+    <!-- ==================== ACCOUNTS ==================== -->
+    <div id="viewAccounts" class="hidden max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-6">
+      <section class="glass p-6 sm:p-7">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div><div class="eyebrow mb-1.5">registry</div><h2 class="text-[17px] font-bold">アカウント台帳</h2>
+            <p class="text-[12.5px] text-ink-mute mt-1 max-w-[560px] leading-relaxed">
+              ここでは「メインアカウント（親）」と「アクション用アカウント（子）」を階層で管理します。1つの親には最大10個までの子を紐付けられます。子には役割と独自プロンプトを設定できます。</p></div>
+          <div class="flex flex-wrap gap-2">
+            <button id="exportBtn" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">台帳を書き出す</button>
+            <button id="exportWsBtn" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">設定ごと書き出す</button>
+            <button id="importBtn" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">JSONを読み込む</button>
+            <button id="personaExportBtn" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">ペルソナJSONを書き出す</button>
+            <button id="personaImportBtn" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">ペルソナJSONを読み込む</button>
+            <input id="personaImportFile" type="file" accept="application/json,.json" class="hidden">
+            <input id="importFile" type="file" accept="application/json,.json" class="hidden">
+            <button id="addBtn" class="btn-primary text-[12.5px] px-4 py-2 rounded-lg font-bold">アカウントを追加</button></div>
+        </div>
+        <div class="mt-5 field flex items-center gap-2 px-3 py-2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="accSearch" placeholder="表示名・ハンドル・グループで絞り込み" class="flex-1 bg-transparent outline-none text-[13px]">
+          <span id="accStat" class="tag text-ink-dim"></span></div>
+        <div class="mt-3 flex flex-wrap items-center gap-2 text-[11.5px] text-ink-mute">
+          <span class="tag">親 = 配信主体</span><span class="tag">子 = リプライ・引用・拡散などのアクション</span><span class="tag">子は配信本文の生成対象から除外</span>
+        </div>
+      </section>
+      <div id="accountList" class="space-y-6"></div>
+    </div>
+
+    <!-- ==================== 投稿履歴 ==================== -->
+    <div id="viewHistory" class="hidden max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-6">
+      <section class="glass p-6 sm:p-7">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div><div class="eyebrow mb-1.5">history</div><h2 class="text-[17px] font-bold">投稿履歴</h2>
+            <p class="text-[12.5px] text-ink-mute mt-1 max-w-[600px] leading-relaxed">
+              公開した投稿のURLを貯めておくと、次の投稿でその中から引用先を選べます。
+              いまは手で貼る運用です。X APIを繋ぐと、投稿時のレスポンスから自動で貯まります。</p></div>
+          <div class="flex flex-wrap gap-2">
+            <button id="histExport" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">書き出す</button>
+            <button id="histImport" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">読み込む</button>
+            <input id="histFile" type="file" accept="application/json,.json" class="hidden">
+          </div>
+        </div>
+
+        <div class="mt-5 pt-5 border-t border-hair">
+          <div class="text-[12px] font-bold text-ink-700 mb-2.5">履歴に追加する</div>
+          <div class="grid sm:grid-cols-[200px_1fr_auto] gap-2.5">
+            <select id="histAcc" class="inp"></select>
+            <input id="histUrl" class="inp font-mono text-[12.5px]" placeholder="https://x.com/username/status/...">
+            <button id="histAdd" class="btn-primary text-[12.5px] px-4 py-2 rounded-lg font-bold">追加</button>
+          </div>
+          <input id="histMemo" class="inp text-[12.5px] mt-2.5" placeholder="メモ（投稿の冒頭など。引用先を選ぶときの目印になります）">
+          <div id="histMsg" class="tag mt-2"></div>
+        </div>
+      </section>
+      <div id="historyList" class="space-y-6"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ MODAL: ACCOUNT ============ -->
+<div id="modal" class="hidden fixed inset-0 z-50 grid place-items-center p-4" style="background:rgba(15,23,42,.35);backdrop-filter:blur(4px)">
+  <div class="pop glass w-full max-w-[560px] p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-5">
+      <h3 id="modalTitle" class="text-[16px] font-bold">アカウントを追加</h3>
+      <button id="modalClose" class="w-8 h-8 rounded-lg btn-ghost grid place-items-center text-[14px]">×</button></div>
+
+    <div class="mb-5">
+      <div class="text-[12px] font-bold text-ink-700 mb-2">キャラクターのひな形から入れる</div>
+      <div id="archetypeBtns" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <div class="space-y-4">
+      <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">表示名</div><input id="fName" class="inp" placeholder="例：ドル円A"></label>
+      <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">ハンドル</div><input id="fHandle" class="inp font-mono" placeholder="@usdjpy_a"></label>
+      <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">グループ</div>
+        <input id="fTeam" class="inp" list="teamOptions" placeholder="例：ドル円 / ゴールド / ビットコイン"><datalist id="teamOptions"></datalist></label>
+      <div class="pt-1">
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">アカウント階層</div>
+          <select id="fParentId" class="inp"></select>
+          <p class="text-[11px] text-ink-dim mt-1.5">「メインアカウント」を選ぶと親になります。親を指定するとアクション用アカウント（子）になります。</p></label>
+      </div>
+      <div id="childSettings" class="hidden pt-4 border-t border-hair">
+        <div class="eyebrow mb-1">action account</div>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">親アカウントの投稿に対して実行する役割を指定します。独自プロンプトはアクション生成時に追加条件として使われます。</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">役割</div><select id="fActionRole" class="inp"></select></label>
+          <div class="flex items-end"><span class="tag text-ink-dim">最大10アカウント / 親</span></div>
+        </div>
+        <label class="block mt-4"><div class="text-[12px] font-bold text-ink-700 mb-1.5">独自プロンプト設定</div>
+          <textarea id="fActionPrompt" rows="4" class="inp resize-y" placeholder="例：相手を否定せず、補足情報を1点だけ添える。絵文字は使わない。"></textarea></label>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">声のトーン</div><select id="fVoice" class="inp"></select></label>
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">ニュアンス</div><select id="fStance" class="inp"></select></label>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">投稿の長さ</div><select id="fLength" class="inp"></select></label>
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">組み方</div><select id="fLayout" class="inp"></select></label>
+      </div>
+
+      <div class="pt-4 mt-1 border-t border-hair">
+        <div class="eyebrow mb-1">ペルソナ設定</div>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">
+          このアカウントの書き手像です。運用者を明示しているブランドアカウントの、文章の書き分けに使います。</p>
+        <div class="space-y-4">
+          <div class="grid sm:grid-cols-2 gap-4">
+            <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">一人称</div><input id="pFirst" class="inp" placeholder="私 / 僕 / わたし"></label>
+            <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">絵文字</div><select id="pEmoji" class="inp"></select></label>
+          </div>
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">話し手の設定</div>
+            <input id="pSpeaker" class="inp" placeholder="例：30代・元金融機関のディーリング担当"></label>
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">口調・語尾</div>
+            <input id="pTone" class="inp" placeholder="例：「〜ですね」「〜と考えています」。断定を避ける"></label>
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">読者像</div>
+            <input id="pReader" class="inp" placeholder="例：兼業で日中は値動きを追えない人"></label>
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">使わない表現</div>
+            <input id="pNG" class="inp" placeholder="例：煽り文句、勝ち負けの断定"></label>
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">背景・書いている内容</div>
+            <textarea id="pBio" rows="3" class="inp resize-y" placeholder="例：指標と金利差を軸に、翌週の想定レンジを共有している。"></textarea></label>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-hair flex gap-4">
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">識別色</div>
+          <input id="fHue" type="color" value="#2563EB" class="w-16 h-10 rounded-lg border border-hair bg-white cursor-pointer"></label>
+        <label class="flex-1"><div class="text-[12px] font-bold text-ink-700 mb-1.5">メモ</div><input id="fNote" class="inp" placeholder="任意"></label>
+      </div>
+      <label class="flex items-center gap-2.5 pt-1 cursor-pointer">
+        <input id="fActive" type="checkbox" checked class="w-4 h-4">
+        <span class="text-[13px] text-ink-700">配信の選択肢に表示する</span></label>
+      <p id="modalErr" class="hidden text-[12.5px] font-bold" style="color:#B91C1C"></p>
+    </div>
+
+    <div class="flex gap-2 mt-6 pt-5 border-t border-hair">
+      <button id="modalDelete" class="btn-danger text-[12.5px] px-3.5 py-2 rounded-lg hidden">削除</button>
+      <button id="modalCancel" class="btn-ghost ml-auto text-[12.5px] px-4 py-2 rounded-lg">やめる</button>
+      <button id="modalSave" class="btn-primary text-[12.5px] px-5 py-2 rounded-lg font-bold">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: SETTINGS ============ -->
+<div id="setModal" class="hidden fixed inset-0 z-50 grid place-items-center p-4" style="background:rgba(15,23,42,.35);backdrop-filter:blur(4px)">
+  <div class="pop glass w-full max-w-[560px] p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-5"><h3 class="text-[16px] font-bold">API設定</h3>
+      <button id="setClose" class="w-8 h-8 rounded-lg btn-ghost grid place-items-center text-[14px]">×</button></div>
+
+    <div class="rounded-xl p-4 mb-5" style="background:#FEF3C7;border:1px solid #FCD34D">
+      <div class="text-[12.5px] font-bold mb-1.5" style="color:#92400E">APIキーの扱いについて</div>
+      <p class="text-[12px] leading-relaxed" style="color:#78350F">
+        キーはこのブラウザの localStorage に保存され、リクエストはブラウザから直接 Anthropic / OpenAI に送られます。
+        このファイルを公開サーバーに置いたり、共有PCで使ったりしないでください。
+        チームで使うなら、両方のキーをサーバー側（Netlify Functions など）に置いて中継する構成に変えてください。</p>
+    </div>
+
+    <div class="space-y-4">
+      <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">呼び出し方法</div>
+        <select id="fBackend" class="inp">
+          <option value="direct">ブラウザから直接（キーをこの端末に保存）</option>
+          <option value="proxy">バックエンド中継（キーはサーバー側）</option>
+        </select></label>
+      <div id="proxyRow" class="hidden space-y-4">
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">中継エンドポイント（文章）</div>
+          <input id="fProxyUrl" class="inp font-mono" placeholder="/api/claude">
+          <p class="text-[11.5px] text-ink-dim mt-1.5 leading-relaxed">
+            Vercel なら <span class="font-mono">/api/claude</span>、Netlify なら <span class="font-mono">/.netlify/functions/claude</span>。</p></label>
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">中継エンドポイント（画像）</div>
+          <input id="fImageProxyUrl" class="inp font-mono" placeholder="/api/image"></label>
+        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">アプリトークン（任意）</div>
+          <input id="fAppToken" type="password" class="inp font-mono" placeholder="APP_TOKEN と同じ値">
+          <p class="text-[11.5px] text-ink-dim mt-1.5 leading-relaxed">
+            サーバー側で APP_TOKEN を設定した場合のみ必要です。x-app-token ヘッダーで送られます。</p></label>
+        <div class="rounded-xl p-3" style="background:#ECFDF5;border:1px solid #A7F3D0">
+          <p class="text-[11.5px] leading-relaxed" style="color:#065F46">
+            中継モードでは、下のAPIキー欄は使われません。キーはサーバーの環境変数から付きます。</p></div>
+      </div>
+      <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">Anthropic APIキー</div>
+        <input id="fKey" type="password" class="inp font-mono" placeholder="sk-ant-..."></label>
+      <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">モデル</div>
+        <input id="fModel" class="inp font-mono" list="modelOptions" placeholder="claude-sonnet-5">
+        <datalist id="modelOptions"><option value="claude-sonnet-5"></option><option value="claude-opus-5"></option><option value="claude-haiku-4-5-20251001"></option></datalist></label>
+      <label class="block"><div class="flex justify-between text-[12px] font-bold text-ink-700 mb-1.5">
+          <span>ばらつき（temperature）</span><span id="tempVal" class="font-mono" style="color:var(--ac)">1.0</span></div>
+        <input id="fTemp" type="range" min="0" max="10" value="10" class="w-full"></label>
+      <label class="flex items-center gap-2.5 cursor-pointer"><input id="fVisionOn" type="checkbox" checked class="w-4 h-4">
+        <span class="text-[13px] text-ink-700">添付画像をVisionで解析して下書きに反映する</span></label>
+      <p class="text-[11.5px] text-ink-dim leading-relaxed">
+        テロップの合成・スライド・動画の書き出しはブラウザ内で処理します。Anthropicは文章生成と画像解析に使います。</p>
+
+      <div class="pt-5 mt-1 border-t border-hair">
+        <div class="eyebrow mb-1">OpenAI（背景画像の生成）</div>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">
+          背景ビジュアルの生成だけに使います。日本語テロップと数値はCanvas側で重ねるため、画像には文字を描かせません。
+          未設定でも、アップロード画像を背景にすれば全機能が動きます。</p>
+        <div class="space-y-4">
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">OpenAI APIキー</div>
+            <input id="fOpenAIKey" type="password" class="inp font-mono" placeholder="sk-..."></label>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">画像モデル</div>
+              <select id="fImageModel" class="inp">
+                <option value="gpt-image-1">gpt-image-1</option>
+                <option value="dall-e-3">dall-e-3</option>
+              </select></label>
+            <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">画質</div>
+              <select id="fImageQuality" class="inp">
+                <option value="low">低（速い・安い）</option>
+                <option value="medium">中</option>
+                <option value="high">高（遅い・高い）</option>
+              </select></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-5 mt-1 border-t border-hair">
+        <div class="eyebrow mb-1">Webhook連携</div>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">
+          作成したJSONを Make / GAS / n8n などへ直接POSTします。
+          GASのWeb Appはブラウザから直接POSTするとCORSで弾かれるので、
+          その場合は形式を text/plain にするか、中継経由にしてください。</p>
+
+        <div class="space-y-4">
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">送信方法</div>
+            <select id="fWebhookMode" class="inp">
+              <option value="direct">ブラウザから直接POST</option>
+              <option value="proxy">バックエンド経由（CORS回避・URLをサーバーで制限）</option>
+            </select></label>
+          <label id="whProxyRow" class="block hidden"><div class="text-[12px] font-bold text-ink-700 mb-1.5">中継エンドポイント（Webhook）</div>
+            <input id="fWebhookProxyUrl" class="inp font-mono" placeholder="/api/webhook"></label>
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input id="fWebhookMedia" type="checkbox" class="w-4 h-4">
+            <span class="text-[13px] text-ink-700">送信するJSONに画像のbase64を含める（サイズが大きくなります）</span></label>
+
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-[12px] font-bold text-ink-700">送信先</span>
+              <button id="whAdd" class="btn-ghost ml-auto text-[11.5px] px-2.5 py-1 rounded-lg">追加</button></div>
+            <div id="whList" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <p id="setMsg" class="hidden text-[12.5px] font-bold"></p>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-6 pt-5 border-t border-hair">
+      <button id="keyClear" class="btn-danger text-[12.5px] px-3.5 py-2 rounded-lg">キーを消す</button>
+      <button id="keyTest" class="btn-ghost text-[12.5px] px-3.5 py-2 rounded-lg">接続テスト</button>
+      <button id="setCancel" class="btn-ghost ml-auto text-[12.5px] px-4 py-2 rounded-lg">やめる</button>
+      <button id="setSave" class="btn-primary text-[12.5px] px-5 py-2 rounded-lg font-bold">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: 引用する投稿を選ぶ ============ -->
+<div id="quoteModal" class="hidden fixed inset-0 z-50 grid place-items-center p-4" style="background:rgba(15,23,42,.35);backdrop-filter:blur(4px)">
+  <div class="pop glass w-full max-w-[640px] p-6 sm:p-7 max-h-[88vh] flex flex-col">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-[16px] font-bold">引用する投稿を選ぶ</h3>
+      <button id="qmClose" class="w-8 h-8 rounded-lg btn-ghost grid place-items-center text-[14px]">×</button></div>
+    <p id="qmSub" class="text-[12.5px] text-ink-mute mb-4"></p>
+
+    <div class="field flex items-center gap-2 px-3 py-2 mb-3">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="qmSearch" placeholder="本文で絞り込み" class="flex-1 bg-transparent outline-none text-[13px]"></div>
+
+    <div id="qmList" class="flex-1 overflow-y-auto space-y-2.5 -mx-1 px-1"></div>
+
+    <div class="mt-4 pt-4 border-t border-hair">
+      <div class="text-[12px] font-bold text-ink-700 mb-1.5">履歴にない投稿を引用する</div>
+      <div class="flex gap-2">
+        <input id="qmManual" class="inp font-mono text-[12px]" placeholder="https://x.com/username/status/...">
+        <button id="qmManualUse" class="btn-ghost shrink-0 text-[12px] px-3 py-2 rounded-lg">使う</button></div>
+      <div id="qmManualMsg" class="tag mt-1.5"></div>
+    </div>
+  </div>
+</div>
+
+<div id="reactOpsRoot" class="fixed bottom-20 right-6 z-[55] pointer-events-none"></div>
+<div id="toastWrap" class="fixed bottom-6 right-6 z-[60] space-y-2.5 pointer-events-none"></div>
+
+<script>
+/* ============================================================
+   1. 定義
+   ============================================================ */
+const MARKETS={
+  usdjpy:{label:'ドル円',sym:'USD/JPY',ac:'#2563EB',ac2:'#60A5FA',tags:['#ドル円','#USDJPY'],
+    angles:['日米の金利差','日銀の政策スタンス','実需とオプションの節目'],caution:'指標発表前後はスプレッドが広がります。'},
+  xauusd:{label:'ゴールド',sym:'XAU/USD',ac:'#B45309',ac2:'#F59E0B',tags:['#ゴールド','#XAUUSD'],
+    angles:['実質金利の方向','各国中銀の買い','ドル指数との逆相関'],caution:'値幅が大きいのでロット設計を先に決めてください。'},
+  btc:{label:'ビットコイン',sym:'BTC',ac:'#EA580C',ac2:'#FB923C',tags:['#ビットコイン','#BTC'],
+    angles:['現物ETFの資金流入','半減期サイクルの位置','株式市場との連動'],caution:'24時間動くため就寝前のポジション管理が要ります。'}
+};
+const VOICES=['寄り添い・体験ベース','熱量・結論先出し','データ・分解型','初心者向け・やさしい','落ち着いた解説'];
+const STANCES=['冷静な分析','やや強気の見立て','慎重・リスク寄り','初心者向けの解説','中立の事実整理'];
+const EMOJI_MODES=['使わない','控えめ（1つまで）','多め'];
+const LENGTHS={
+  '短め':{label:'短め（〜140字）',max:140,target:'100〜140字',keepAll:false},
+  '標準':{label:'標準（〜300字）',max:300,target:'200〜300字',keepAll:false},
+  '長文':{label:'長文（600〜900字）',max:900,target:'600〜900字',keepAll:false},
+  '超長文':{label:'超長文（1200〜2000字）',max:2000,target:'1200〜2000字',keepAll:false},
+  '元データ準拠':{label:'元データ準拠（全要素を残す）',max:25000,target:'字数は問わない。元データの情報量を保つ',keepAll:true}
+};
+const X_HARD_LIMIT=25000;
+const LAYOUTS={
+  '見出し＋区切り線':[
+    '内容のまとまりごとに見出しを立て、その直前に区切り線を1行入れる。区切り線は ━━━━━━━━━ を使う。',
+    '見出しは「結論」「チャート根拠」「ファンダメンタルズ」「サブシナリオ」のように短く。元データに見出しがあればその名前を使う。',
+    '見出しの先頭に内容と合う絵文字を1つ置く（例: 📌 結論 / 📊 チャート根拠 / 🌍 ファンダメンタルズ / ⚠️ サブシナリオ）。',
+    '本文は1〜2文ごとに改行し、2〜3行のかたまりごとに空行を入れる。',
+    '数値・価格帯・条件は行頭に置くか単独行にして目立たせる。'],
+  '箇条書き中心':[
+    'まとまりごとに短い見出しを立て、中身は「・」で始まる箇条書きにする。',
+    '1項目は1〜2行に収める。長い説明は項目を分ける。',
+    'まとまりの間に空行を入れる。区切り線は使わない。',
+    '重要な項目の行頭に絵文字を1つ置く。'],
+  'プレーン':['見出しや区切り線は使わず段落だけで組む。','1〜2文ごとに改行し、話題が変わるところで空行を入れる。']
+};
+
+/* キャラクターのひな形。アカウント管理からワンタッチで流し込む */
+const ARCHETYPES={
+  '冷静なデータ派':{ voice:'データ・分解型', stance:'冷静な分析', length:'元データ準拠', layout:'見出し＋区切り線', hue:'#2563EB',
+    persona:{firstPerson:'私',speaker:'30代・元金融機関のディーリング担当',
+      tone:'「〜です」「〜と見ています」。結論と数字を先に置き、修飾を削る。一文は短く。',
+      reader:'根拠を確認してから動きたい人',ng:'煽り文句、勝ち負けの断定、感情的な表現',emoji:'使わない',
+      bio:'指標と金利差を軸に、数字の裏取りをしてから見立てを共有している。'} },
+  '熱量トレンド派':{ voice:'熱量・結論先出し', stance:'やや強気の見立て', length:'超長文', layout:'見出し＋区切り線', hue:'#EA580C',
+    persona:{firstPerson:'僕',speaker:'30代・専業トレーダー',
+      tone:'「〜です」「〜なんですよ」。短文を畳みかけ、問いかけを挟む。市場の空気や板の緊張感を描写する。',
+      reader:'日中もチャートを見ていて、今の温度感を知りたい人',ng:'保証・断定の表現、他者の批判',emoji:'控えめ（1つまで）',
+      bio:'その日の値動きの初動と、参加者の心理がどう動いたかを実況に近い温度で書いている。'} },
+  '初心者かみ砕き派':{ voice:'初心者向け・やさしい', stance:'初心者向けの解説', length:'長文', layout:'箇条書き中心', hue:'#0EA5E9',
+    persona:{firstPerson:'わたし',speaker:'20代後半・投資歴3年',
+      tone:'「〜なんです」「〜してみてくださいね」。専門用語は必ず言い換え、不安に一言添えてから説明に入る。',
+      reader:'始めて半年以内で、値動きが怖いと感じている人',ng:'専門用語の連発、上から目線、突き放す言い方',emoji:'控えめ（1つまで）',
+      bio:'自分がつまずいた順番で、用語と仕組みを噛み砕いて説明している。'} }
+};
+
+const RISK_TERMS=['必ず','絶対','確実','保証','元本保証','儲かる','稼げる','ノーリスク','損しない','100%','一撃','爆益','誰でも'];
+const REVIEW_ROLES=[
+  {role:'編集',notes:['冒頭2行で結論が分かるか確認してください。','1文が長い箇所があります。切ると読みやすくなります。']},
+  {role:'表現チェック',notes:['断定に近い言い回しが残っていないか見てください。','「勝てる」に読める表現がないか確認を。']},
+  {role:'数値の裏取り',notes:['本文の数字の出典を1つ添えてください。','日付が古い数値が混ざっていないか確認を。']},
+  {role:'初心者目線',notes:['前提知識なしで読めるか、用語を1つ補足しては。','専門用語が3つ以上続いている箇所があります。']},
+  {role:'リスク記載',notes:['損失可能性への言及が本文にあるか確認してください。','ロット・資金管理への一言があると安全です。']},
+  {role:'導線確認',notes:['固定ポスト・リンク先が現在も生きているか確認を。','誘導先の内容と本文の話題が一致しているか。']},
+  {role:'画像との整合',notes:['添付チャートの期間と本文の話が合っているか確認を。','画像内の文字が小さすぎないか。']},
+  {role:'重複チェック',notes:['直近7日に同趣旨の投稿がなかったか確認してください。','他アカウントと文面が近すぎないか。']},
+  {role:'ブランド一貫性',notes:['このアカウントの普段の口調から離れていないか。','一人称・語尾が過去投稿と揃っているか。']},
+  {role:'公開可否',notes:['上記が解消されていれば公開して問題ありません。','未解決の指摘が残っていないか最終確認を。']}
+];
+
+const RATIOS={'9:16':[1080,1920],'1:1':[1080,1080],'16:9':[1920,1080]};
+
+const EXTERNAL_PERSONA_URL='post-cockpit-personas.json';
+
+function structuredCloneSafe(o){ return JSON.parse(JSON.stringify(o)); }
+
+/* ============================================================
+   2. 保存
+   ============================================================ */
+/* ============================================================
+   2. 永続化レイヤー
+   ------------------------------------------------------------
+   保存されるものは3つだけに整理してある。
+     accounts  … アカウント台帳（ペルソナを含む）
+     api       … APIキーと接続設定
+     settings  … 画面の設定（マーケット、配信間隔、比率など）
+   すべて SCHEMA_VERSION 付きで保存し、読み込み時に migrate() を通す。
+   サーバー保存に移行するときは Store.read / Store.write の中身を
+   fetch に差し替えるだけでよい。
+   ============================================================ */
+const SCHEMA_VERSION=5;
+const STORE={acc:'postcockpit.accounts',api:'postcockpit.api',settings:'postcockpit.settings',history:'postcockpit.history'};
+const LEGACY_KEYS={acc:['postcockpit.accounts.v2','postcockpit.accounts.v1'],api:['postcockpit.api.v2','postcockpit.api.v1']};
+
+const Store={
+  available(){ try{ localStorage.setItem('__pc_t','1'); localStorage.removeItem('__pc_t'); return true; }catch(e){ return false; } },
+  read(key,fallback){
+    try{
+      let raw=localStorage.getItem(key);
+      if(raw===null){
+        for(const old of (LEGACY_KEYS[Object.keys(STORE).find(k=>STORE[k]===key)]||[])){
+          const v=localStorage.getItem(old);
+          if(v!==null){ raw=v; break; }
+        }
+      }
+      if(raw===null) return fallback;
+      const parsed=JSON.parse(raw);
+      return migrate(key,parsed) ?? fallback;
+    }catch(e){ console.warn('[store] read failed',key,e); return fallback; }
+  },
+  write(key,data){
+    try{ localStorage.setItem(key,JSON.stringify({v:SCHEMA_VERSION,data})); return true; }
+    catch(e){ console.warn('[store] write failed',key,e); return false; }
+  },
+  remove(key){ try{ localStorage.removeItem(key); }catch(e){} }
+};
+
+/* 旧フォーマット（生の配列・オブジェクト）も読めるようにする */
+function migrate(key,parsed){
+  if(parsed&&typeof parsed==='object'&&'v' in parsed&&'data' in parsed) return parsed.data;
+  return parsed; // v1/v2 は素のまま保存されていた
+}
+
+function blankPersona(){return{firstPerson:'',speaker:'',tone:'',reader:'',ng:'',emoji:'控えめ（1つまで）',bio:''}}
+function uid(){return 'a'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36)}
+const ACTION_ROLES=['引用ポスト用','リプライ用','拡散用','補足コメント用','質問・会話用','その他'];
+function normalizeAccount(a){
+  const parentId=a.parentId&&a.parentId!==a.id?String(a.parentId):null;
+  return{ id:a.id||uid(), name:String(a.name||'名称未設定'), handle:String(a.handle||'@unknown'),
+    team:String(a.team||'未分類'), voice:VOICES.includes(a.voice)?a.voice:'落ち着いた解説',
+    stance:STANCES.includes(a.stance)?a.stance:'中立の事実整理',
+    length:LENGTHS[a.length]?a.length:'標準', layout:LAYOUTS[a.layout]?a.layout:'見出し＋区切り線',
+    hue:a.hue||'#2563EB', note:a.note||'', active:a.active!==false,
+    parentId, actionRole:ACTION_ROLES.includes(a.actionRole)?a.actionRole:'リプライ用',
+    actionPrompt:String(a.actionPrompt||''),
+    persona:{...blankPersona(),...(a.persona||{})} };
+}
+function childrenOf(parentId){ return state.accounts.filter(a=>a.parentId===parentId); }
+function isMainAccount(a){ return !a.parentId; }
+function isActionAccount(a){ return !!a.parentId; }
+function parentAccount(a){ return a?.parentId?getAcc(a.parentId):null; }
+function normalizeHierarchy(){
+  const ids=new Set(state.accounts.map(a=>a.id));
+  state.accounts.forEach(a=>{
+    if(a.parentId===a.id||!ids.has(a.parentId)) a.parentId=null;
+    a.actionRole=ACTION_ROLES.includes(a.actionRole)?a.actionRole:'リプライ用';
+    a.actionPrompt=String(a.actionPrompt||'');
+  });
+  state.accounts.filter(a=>a.parentId).forEach(child=>{
+    const siblings=state.accounts.filter(x=>x.parentId===child.parentId);
+    if(siblings.indexOf(child)>=10) child.parentId=null;
+  });
+}
+
+function loadAccounts(){
+  const arr=Store.read(STORE.acc,null);
+  if(Array.isArray(arr)&&arr.length){ return arr.map(normalizeAccount); }
+  // 初期ペルソナは外部JSONから読み込む。コード改変なしで差し替え可能。
+  return [];
+}
+async function loadExternalPersonaAccounts(){
+  if(state.accounts.length) return;
+  try{
+    const res=await fetch(EXTERNAL_PERSONA_URL,{cache:'no-store'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j=await res.json();
+    const arr=Array.isArray(j)?j:(Array.isArray(j.accounts)?j.accounts:[]);
+    if(!arr.length) throw new Error('accounts が空です');
+    state.accounts=arr.map(normalizeAccount);
+    normalizeHierarchy();
+    state.accounts.filter(a=>a.active&&isMainAccount(a)).slice(0,3).forEach(a=>{state.selected.add(a.id);state.vSelected.add(a.id)});
+    saveAccounts(); renderAccounts(); renderPicker(); renderVPicker();
+    log(`外部ペルソナJSONを読み込み（${state.accounts.length}件）`,'ok');
+  }catch(e){
+    log(`外部ペルソナJSONを読み込めませんでした：${e.message}`,'warn');
+    toast('初期ペルソナJSONが見つかりません。アカウント管理からJSONを読み込んでください。','warn');
+  }
+}
+function saveAccounts(){
+  const ok=Store.write(STORE.acc,state.accounts);
+  if(!ok) toast('保存できませんでした。JSONで書き出して控えを取ってください','warn');
+  return ok;
+}
+
+const DEFAULT_API={key:'',model:'claude-sonnet-5',temp:1,vision:true,
+  openaiKey:'',imageModel:'gpt-image-1',imageQuality:'medium',
+  backend:'direct',proxyUrl:'/api/claude',imageProxyUrl:'/api/image',appToken:'',
+  webhooks:[],webhookMode:'direct',webhookProxyUrl:'/api/webhook',webhookIncludeMedia:false};
+function loadApi(){
+  const a={...DEFAULT_API,...(Store.read(STORE.api,null)||{})};
+  a.webhooks=Array.isArray(a.webhooks)?a.webhooks.filter(w=>w&&w.url).map(w=>({
+    id:w.id||('w'+Math.random().toString(36).slice(2,8)),
+    name:String(w.name||'送信先'), url:String(w.url),
+    contentType:w.contentType==='text/plain'?'text/plain':'application/json'
+  })):[];
+  return a;
+}
+function saveApi(){ Store.write(STORE.api,state.api); }
+
+/* ============================================================
+   投稿履歴
+   ------------------------------------------------------------
+   1件 = 1つの公開済みポスト。引用の候補として使う。
+   記録の入口は recordPost() だけにしてある。いまは手貼りだが、
+   X API を繋いだら POST /2/tweets のレスポンス（data.id）を
+   そのまま渡せば同じ形で貯まる。
+     const r = await xPost(...);
+     recordPost({ accountId: acc.id, handle: acc.handle, tweetId: r.data.id, text });
+   ============================================================ */
+function loadHistory(){
+  const arr=Store.read(STORE.history,null);
+  return Array.isArray(arr)?arr.filter(x=>x&&(x.url||x.kind==='delivery')):[];
+}
+function saveHistory(){ Store.write(STORE.history,state.history); }
+function recordDeliveryHistory(payload,label){
+  const posts=(payload?.items||[]).filter(x=>x.type==='post');
+  posts.forEach(item=>{
+    const accId=item.account?.id||item.account?.account_id; const acc=getAcc(accId);
+    state.history.unshift({id:'hd'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),kind:'delivery',accountId:accId,handle:acc?.handle||item.account?.handle||'',
+      url:item.intent_url||null,tweetId:null,text:item.post?.text||'',at:new Date().toISOString(),market:state.market,source:'webhook',label,payload:item});
+  });
+  state.history=state.history.slice(0,500); saveHistory();
+}
+
+function recordPost({accountId,handle,url,tweetId,text,market,source='manual'}){
+  let u=url, id=tweetId;
+  if(!u&&id&&handle) u=`https://x.com/${String(handle).replace('@','')}/status/${id}`;
+  const parsed=parseTweetUrl(u);
+  if(!parsed.ok) return{ ok:false, reason:parsed.reason||'URLを読み取れませんでした' };
+  if(state.history.some(x=>x.tweetId===parsed.id&&x.accountId===accountId)){
+    return{ ok:false, reason:'この投稿はすでに履歴にあります' };
+  }
+  const item={ id:'h'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    accountId, handle:handle||('@'+parsed.handle), url:parsed.url, tweetId:parsed.id,
+    text:String(text||'').slice(0,400), at:new Date().toISOString(),
+    market:market||state.market, source };
+  state.history.unshift(item);
+  state.history=state.history.slice(0,500);
+  saveHistory();
+  return{ ok:true, item };
+}
+function deleteHistory(id){
+  state.history=state.history.filter(x=>x.id!==id);
+  saveHistory();
+}
+function historyFor(accountId){ return state.history.filter(x=>x.accountId===accountId); }
+
+const DEFAULT_SETTINGS={market:'usdjpy',tab:'image',offset:3,gapMin:7,gapMax:16,tags:true,ratio:'9:16',slides:4,sec:30};
+function loadSettings(){ return {...DEFAULT_SETTINGS,...(Store.read(STORE.settings,null)||{})}; }
+function saveSettings(){
+  Store.write(STORE.settings,{
+    market:state.market, tab:state.tab,
+    offset:+$('#offsetRange').value, gapMin:+$('#gapMinRange').value, gapMax:+$('#gapMaxRange').value,
+    tags:$('#tagToggle').checked, ratio:$('#vRatio').value, slides:+$('#vSlides').value, sec:+$('#vSec').value
+  });
+}
+
+/* ============================================================
+   3. 状態
+   ============================================================ */
+const state={
+  view:'main', tab:'image', market:'usdjpy',
+  accounts:loadAccounts(), api:loadApi(), history:[],
+  selected:new Set(), vSelected:new Set(),
+  media:[], vision:null, drafts:[],
+  backgrounds:[], bgIndex:0, accountBg:{}, vSets:[],
+  logs:[], editingId:null, search:'', actionGenerating:false
+};
+normalizeHierarchy();
+state.accounts.filter(a=>a.active&&isMainAccount(a)).slice(0,3).forEach(a=>{state.selected.add(a.id);state.vSelected.add(a.id)});
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fmtTime=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+const riskFlags=t=>RISK_TERMS.filter(w=>t.includes(w));
+const getAcc=id=>state.accounts.find(a=>a.id===id);
+const apiReady=()=>state.api.backend==='proxy'||!!state.api.key;
+
+/* ============================================================
+   4. ログ / トースト / コピー / ダウンロード
+   ============================================================ */
+function log(msg,tone='info'){ state.logs.unshift({msg,tone,at:fmtTime(new Date())}); state.logs=state.logs.slice(0,60); renderLog(); }
+function renderLog(){
+  const c={info:'#64748B',ok:'#0F766E',warn:'#B45309',err:'#B91C1C',act:'#4338CA'};
+  $('#logList').innerHTML=state.logs.map(l=>`<div class="flex gap-2.5"><span class="tag shrink-0 text-ink-dim">${l.at}</span>
+    <span style="color:${c[l.tone]}" class="min-w-0 break-words">${esc(l.msg)}</span></div>`).join('')
+    ||`<div class="text-ink-dim text-[11.5px]">まだ操作はありません。</div>`;
+}
+function toast(msg,tone='ok'){
+  const el=document.createElement('div');
+  el.className='rise glass px-4 py-3 text-[13px] pointer-events-auto max-w-[340px]';
+  if(tone==='warn')el.style.borderColor='#F59E0B'; if(tone==='err')el.style.borderColor='#EF4444';
+  el.textContent=msg; $('#toastWrap').appendChild(el);
+  setTimeout(()=>{el.style.transition='opacity .4s,transform .4s';el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(()=>el.remove(),420)},3200);
+}
+function copyText(t){
+  const done=()=>toast('コピーしました');
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(t).then(done).catch(fb); else fb();
+  function fb(){ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{document.execCommand('copy');done()}catch(e){toast('コピーできませんでした','warn')} ta.remove(); }
+}
+function download(dataUrl,filename){
+  const a=document.createElement('a'); a.href=dataUrl; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ============================================================
+   5. Anthropic API
+   ------------------------------------------------------------
+   サーバー中継に移すときは、ここの endpoint と headers だけ
+   自前のプロキシに差し替える。
+   ============================================================ */
+/* ============================================================
+   5. Anthropic API
+   ------------------------------------------------------------
+   3層に分けてある。差し替えるのは一番下の transport だけでよい。
+
+     anthropicTransport(payload)   … 通信そのもの。direct / proxy を切替
+     callAnthropicAPI(prompt, persona, opts)
+                                   … ペルソナを渡して本文を得る入口
+     generateOne / generateTelop / analyzeImage
+                                   … 用途ごとのラッパー
+
+   Vercel や Netlify Functions に移すときは、設定画面で
+   「バックエンド中継」を選び、エンドポイント（例 /api/claude）を
+   入れるだけでよい。サーバー側は受け取った payload をそのまま
+   Anthropic に転送し、キーは環境変数から付ける。
+
+   ── サーバー側の最小実装（Vercel: /api/claude.js）──────────
+   export default async function handler(req, res){
+     if(req.method!=='POST') return res.status(405).end();
+     const r = await fetch('https://api.anthropic.com/v1/messages',{
+       method:'POST',
+       headers:{
+         'content-type':'application/json',
+         'x-api-key': process.env.ANTHROPIC_API_KEY,
+         'anthropic-version':'2023-06-01'
+       },
+       body: JSON.stringify(req.body)
+     });
+     res.status(r.status).json(await r.json());
+   }
+   ─────────────────────────────────────────────────────────
+   ============================================================ */
+const ANTHROPIC_DIRECT_ENDPOINT='https://api.anthropic.com/v1/messages';
+
+async function anthropicTransport(payload){
+  const useProxy=state.api.backend==='proxy';
+  if(!useProxy&&!state.api.key) throw new Error('NO_KEY');
+
+  const url=useProxy?(state.api.proxyUrl||'/api/claude'):ANTHROPIC_DIRECT_ENDPOINT;
+  const headers={'content-type':'application/json'};
+  if(useProxy&&state.api.appToken) headers['x-app-token']=state.api.appToken;
+  if(!useProxy){
+    // ブラウザから直接叩く場合のみキーを載せる。中継時はサーバーが付ける
+    headers['x-api-key']=state.api.key;
+    headers['anthropic-version']='2023-06-01';
+    headers['anthropic-dangerous-direct-browser-access']='true';
+  }
+
+  const res=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
+  if(!res.ok){
+    let detail=''; try{ const j=await res.json(); detail=j?.error?.message||''; }catch(e){}
+    if(res.status===401) throw new Error(useProxy?'中継サーバーが認証を拒否しました（401）':'APIキーが受け付けられませんでした（401）');
+    if(res.status===404&&useProxy) throw new Error(`中継先が見つかりません（404）：${url}`);
+    if(res.status===429) throw new Error('レート制限に達しました（429）。少し待って再実行してください');
+    if(res.status>=500) throw new Error(`サーバー側のエラー（${res.status}）`);
+    throw new Error(`HTTP ${res.status}${detail?'：'+detail:''}`);
+  }
+  const data=await res.json();
+  return{ text:(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n'), stopReason:data.stop_reason||'', raw:data };
+}
+
+/* 低レベル。system と messages をそのまま渡す */
+async function callClaude({system,messages,max_tokens=2400,temperature}){
+  return anthropicTransport({
+    model:state.api.model, max_tokens,
+    temperature:temperature??state.api.temp,
+    system, messages
+  });
+}
+
+/* ペルソナ付きの入口。将来ここだけ呼べば済むようにしてある */
+async function callAnthropicAPI(prompt, persona=null, opts={}){
+  const system=opts.system||(persona?[
+    'あなたは指定されたペルソナの書き手として日本語の文章を書きます。',
+    '一人称・口調・語尾の指定は必ず守り、「使わない表現」は使わないでください。',
+    '',
+    '【ペルソナ】',
+    ...personaLines(persona).map(s=>'- '+s)
+  ].join('\n'):undefined);
+  const{text,stopReason}=await callClaude({
+    system, messages:[{role:'user',content:prompt}],
+    max_tokens:opts.max_tokens||2400, temperature:opts.temperature
+  });
+  return{ text:cleanDraft(text), truncated:stopReason==='max_tokens' };
+}
+function parseLooseJSON(text){
+  let t=String(text).trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
+  const s=t.search(/[\[{]/); const isArr=t[s]==='[';
+  const e=isArr?t.lastIndexOf(']'):t.lastIndexOf('}');
+  if(s>=0&&e>s) t=t.slice(s,e+1);
+  return JSON.parse(t);
+}
+function cleanDraft(t){
+  let s=String(t||'').trim();
+  s=s.replace(/^```[a-z]*\s*/i,'').replace(/\s*```$/,'');
+  s=s.replace(/^(以下(が|の)[^\n]*[:：]|投稿本文[:：]|本文[:：])\s*\n+/,'');
+  return s.trim();
+}
+
+/* ============================================================
+   5d. 引用ポスト・記事リンク
+   ------------------------------------------------------------
+   引用ポストは intent の url パラメータに元ポストのURLを載せると
+   引用として開く。記事リンクは本文末尾に追記する。
+   両方を url に入れることはできないので役割を分けている。
+   ============================================================ */
+const TWEET_URL_RE=/^https?:\/\/(?:www\.)?(?:x|twitter|mobile\.twitter|mobile\.x)\.com\/([A-Za-z0-9_]{1,15})\/status(?:es)?\/(\d{5,25})(?:\?[^\s]*)?$/i;
+
+/** Xのポストか判定し、x.com 形式に正規化して返す */
+function parseTweetUrl(raw){
+  const s=String(raw||'').trim();
+  if(!s) return{ ok:false, empty:true };
+  const m=s.match(TWEET_URL_RE);
+  if(!m) return{ ok:false, empty:false, reason:'Xのポストのリンク（.../status/数字）を入れてください' };
+  return{ ok:true, handle:m[1], id:m[2], url:`https://x.com/${m[1]}/status/${m[2]}` };
+}
+/** 記事リンクの体裁チェック。http(s) のみ通す */
+function parseArticleUrl(raw){
+  const s=String(raw||'').trim();
+  if(!s) return{ ok:false, empty:true };
+  try{
+    const u=new URL(s);
+    if(u.protocol!=='http:'&&u.protocol!=='https:') throw new Error();
+    return{ ok:true, url:u.toString() };
+  }catch(e){ return{ ok:false, empty:false, reason:'http:// または https:// から始まるURLを入れてください' }; }
+}
+
+/** 投稿に実際に載せる本文。記事リンクは末尾へ、引用URLは本文に入れない */
+function outgoingText(d){
+  const art=parseArticleUrl(d.articleUrl);
+  if(!art.ok) return d.text;
+  if(d.text.includes(art.url)) return d.text;   // すでに本文に書かれていれば重複させない
+  return d.text.replace(/\s+$/,'')+'\n\n'+art.url;
+}
+
+/** Xの作成画面のURL。引用があれば url パラメータで引用ポストとして開く */
+function buildIntentUrl(d){
+  const p=new URLSearchParams();
+  p.set('text',outgoingText(d));
+  const q=parseTweetUrl(d.quoteUrl);
+  if(q.ok) p.set('url',q.url);
+  return 'https://x.com/intent/post?'+p.toString();
+}
+
+/** リンクの状態をひとまとめに返す（表示とJSONで共用） */
+function linkState(d){
+  const q=parseTweetUrl(d.quoteUrl), a=parseArticleUrl(d.articleUrl);
+  return{
+    quote:q, article:a,
+    count:(q.ok?1:0)+(a.ok?1:0),
+    invalid:(!q.ok&&!q.empty)||(!a.ok&&!a.empty)
+  };
+}
+
+/* 引用元ポストのプレビュー。
+   本文は履歴に記録があるときだけ出せる（外部の取得はしない）。 */
+function quotePreviewHTML(d){
+  const q=parseTweetUrl(d.quoteUrl);
+  if(!q.ok) return '';
+  const hit=state.history.find(x=>x.tweetId===q.id);
+  const acc=hit?getAcc(hit.accountId):null;
+  const hue=acc?acc.hue:'#64748B';
+  const body=hit?.text
+    ? `<div class="text-[12.5px] leading-relaxed mt-1.5 text-ink-700">${esc(hit.text)}</div>`
+    : `<div class="text-[12px] text-ink-dim mt-1.5 leading-relaxed">
+         本文は履歴に記録がある投稿だけ表示されます。外部から取得はしていません。</div>`;
+  return `
+  <div class="mt-4 pt-4 border-t border-hair">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="eyebrow">引用ポストのプレビュー</span>
+      ${hit?`<span class="tag px-2 py-0.5 rounded-full" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">履歴から</span>`
+           :`<span class="tag px-2 py-0.5 rounded-full glass-sub text-ink-dim">履歴になし</span>`}
+    </div>
+    <div class="rounded-2xl p-3.5" style="background:rgba(255,255,255,.7);border:1px solid var(--hair)">
+      <div class="text-[12.5px] leading-relaxed text-ink-700 whitespace-pre-wrap">${esc(truncateForPreview(outgoingText(d)))}</div>
+      <div class="mt-3 rounded-xl p-3" style="border:1px solid var(--hair);background:rgba(248,250,252,.9)">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full grid place-items-center text-[10px] font-bold shrink-0"
+                style="background:${hue}22;color:${hue}">${esc((hit?.handle||q.handle).replace('@','').slice(0,1).toUpperCase())}</span>
+          <span class="text-[12px] font-bold">${esc(acc?acc.name:('@'+q.handle))}</span>
+          <span class="tag text-ink-dim">@${esc(q.handle)}</span>
+          ${hit?`<span class="tag text-ink-dim">${esc(fmtDate(hit.at))}</span>`:''}
+          <a href="${esc(q.url)}" target="_blank" rel="noopener" class="tag ml-auto shrink-0" style="color:var(--ac)">開く</a>
+        </div>
+        ${body}
+      </div>
+    </div>
+    <p class="text-[11.5px] text-ink-dim mt-2 leading-relaxed">
+      Xの作成画面では、この元ポストが引用として下に付いた状態で開きます。
+    </p>
+  </div>`;
+}
+function truncateForPreview(t){
+  const s=String(t||'');
+  return [...s].length>220?[...s].slice(0,220).join('')+'…':s;
+}
+
+/* ============================================================
+   5c. 書き出しスキーマ
+   ------------------------------------------------------------
+   X API / GAS / Make / n8n にそのまま流し込める形。
+   items[] の1件が1投稿に対応する。将来 X 連携を足すときは、
+   この配列をループして statuses/update 相当を叩けばよい。
+   media.data_url は base64 なので重い。不要なら含めない設定にできる。
+   ============================================================ */
+const DELIVERY_SCHEMA='post-cockpit.delivery/1';
+const WORKSPACE_SCHEMA='post-cockpit.workspace/1';
+
+function splitHashtags(text){
+  const tags=(text.match(/[#＃][^\s#＃]+/g)||[]);
+  return{ body:text.replace(/\n*\s*(?:[#＃][^\s#＃]+\s*)+$/,'').trim(), hashtags:tags };
+}
+function accountRef(a){
+  return{ id:a.id, name:a.name, handle:a.handle, team:a.team, parentId:a.parentId||null,
+    accountType:a.parentId?'action':'main', actionRole:a.actionRole||null,
+    persona:{ voice:a.voice, stance:a.stance, length:a.length, layout:a.layout, ...a.persona } };
+}
+/* 公開して問題ない状態か。自動化ツール側で弾けるように理由も返す */
+function readiness(d){
+  const blockers=[];
+  const flags=riskFlags(d.text);
+  if(flags.length) blockers.push('表現要確認: '+flags.join('、'));
+  if(d.reviews.length){
+    const rest=d.reviews.length-d.reviews.filter(r=>r.ok).length;
+    if(rest) blockers.push(`社内レビュー未承認 ${rest} 件`);
+  }
+  const out=outgoingText(d);
+  if([...out].length>X_HARD_LIMIT) blockers.push('Xの上限25,000字を超過');
+  if(d.truncated) blockers.push('生成が出力上限で切れている可能性');
+  const L=linkState(d);
+  if(L.invalid) blockers.push('リンクの形式が不正');
+  return{ ready:blockers.length===0, blockers };
+}
+
+function actionPromptSystem(){
+  return[
+    'あなたはX運用チームのアクションコメント編集担当です。',
+    'メインアカウントが公開する投稿本文に対して、紐付いたアクション用アカウントから行うコメントを作成します。',
+    '',
+    '■ 重要',
+    '- 与えられたメイン投稿の情報だけを根拠にする。新しい事実・数値・ニュースを作らない。',
+    '- 役割に応じて、引用ポストなら引用コメント、リプライなら返信文、拡散なら短い補足コメントを作る。',
+    '- メイン投稿と同じ文章を繰り返さず、アクション側ならではの一言を加える。',
+    '- 断定・利益保証・煽り・購入誘導は避ける。',
+    '- 各子アカウントの独自プロンプトを最優先で反映する。',
+    '- 出力はJSON配列だけ。形式は [{"accountId":"...","role":"...","text":"..."}]。'
+  ].join('\\n');
+}
+async function generateActionsForDraft(d){
+  const children=childrenOf(d.acc.id).filter(a=>a.active);
+  if(!children.length){ d.actions=[]; renderLane(); toast('このメインアカウントには有効な子アカウントがありません','warn'); return; }
+  if(!apiReady()){ toast('アクション指示の生成にはAnthropic APIキー（または中継設定）が必要です','warn'); openSettings(); return; }
+  const btn=document.querySelector(`[data-actions-gen="${state.drafts.indexOf(d)}"]`);
+  if(btn){btn.disabled=true;btn.textContent='一括生成中…';}
+  try{
+    const payload=children.map(c=>({accountId:c.id,name:c.name,handle:c.handle,role:c.actionRole,customPrompt:c.actionPrompt,persona:personaLines(c)}));
+    const user=[
+      `【メインアカウント】${d.acc.name} ${d.acc.handle}`,
+      '【メイン投稿】',d.text,'',
+      '【アクション用アカウント】',JSON.stringify(payload,null,2),
+      '',`【マーケット】${MARKETS[state.market].label}（${MARKETS[state.market].sym}）`,
+      '各アカウントにつき1件ずつ作成してください。引用ポスト用は引用コメント、リプライ用は返信文、拡散用は補足コメントとして自然な長さにしてください。'
+    ].join('\\n');
+    const {text}=await callClaude({system:actionPromptSystem(),messages:[{role:'user',content:user}],max_tokens:2200,temperature:0.9});
+    const parsed=parseLooseJSON(text);
+    if(!Array.isArray(parsed))throw new Error('アクション指示のJSONを解析できませんでした');
+    const byId=new Map(parsed.map(x=>[String(x.accountId),x]));
+    d.actions=children.map(c=>{const x=byId.get(String(c.id))||{};return{accountId:c.id,role:c.actionRole,text:String(x.text||'').trim(),status:x.text?'ready':'failed'};});
+    renderLane(); log(`${d.acc.name} のアクション指示を ${children.length} 件生成`,'ok'); toast('アクション指示を一括生成しました');
+  }catch(e){ toast('アクション指示の生成に失敗：'+e.message,'err'); log(`${d.acc.name} のアクション生成に失敗：${e.message}`,'err'); }
+  finally{ const b=document.querySelector(`[data-actions-gen="${state.drafts.indexOf(d)}"]`); if(b){b.disabled=false;b.textContent='アクション指示を一括生成';} }
+}
+function actionSummaryHTML(d,i){
+  const children=childrenOf(d.acc.id).filter(a=>a.active);
+  const acts=Array.isArray(d.actions)?d.actions:[];
+  return `<details class="mt-4 pt-4 border-t border-hair" ${acts.length?'open':''}>
+    <summary class="cursor-pointer text-[12.5px] font-bold text-ink-700 flex items-center gap-2">アクション指示
+      <span class="tag px-2 py-0.5 rounded-full glass-sub text-ink-mute">子 ${children.length}件</span>
+      ${acts.length?`<span class="tag px-2 py-0.5 rounded-full" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">${acts.filter(a=>a.text).length}件生成済み</span>`:''}
+    </summary>
+    <div class="mt-3 space-y-3">
+      ${children.length?`<div class="flex flex-wrap items-center gap-2"><button data-actions-gen="${i}" class="btn-primary text-[11.5px] px-3.5 py-2 rounded-lg font-bold">アクション指示を一括生成</button><span class="text-[11px] text-ink-dim">親投稿の内容を基に、子アカウントごとの引用・リプライ・拡散コメントを作ります。</span></div>`:`<div class="glass-sub p-3 text-[12px] text-ink-dim">このメインアカウントには有効なアクション用アカウントがありません。</div>`}
+      ${acts.length?acts.map(x=>{const c=getAcc(x.accountId);return c?`<div class="glass-sub p-3.5">
+        <div class="flex flex-wrap items-center gap-2 mb-2"><span class="tag" style="color:${c.hue}">${esc(c.name)}</span><span class="tag text-ink-dim">${esc(c.actionRole)}</span><span class="font-mono text-[11px] text-ink-dim">${esc(c.handle)}</span></div>
+        <textarea data-actiontext="${i}-${esc(c.id)}" rows="3" class="w-full bg-transparent resize-y outline-none text-[12.5px] leading-relaxed" placeholder="生成されたアクションコメント">${esc(x.text||'')}</textarea>
+      </div>`:''}).join(''):''}
+    </div>
+  </details>`;
+}
+function selectedProfileForAccount(a){
+  if(!a) return null;
+  return {id:a.id,name:a.name,handle:a.handle,team:a.team,account_type:isMainAccount(a)?'main':'action',parent_id:a.parentId||null,
+    action_role:a.actionRole||null,action_prompt:a.actionPrompt||'',persona:{...(a.persona||{})},voice:a.voice,stance:a.stance,length:a.length,layout:a.layout,note:a.note||''};
+}
+
+function buildDeliveryPayload({includeMedia=true}={}){
+  const m=MARKETS[state.market];
+  const items=[];
+  const rows=[];        // Make / GAS 用のフラットな行。入れ子を辿らずに済む
+  const videoRows=[];
+
+  state.drafts.forEach((d,idx)=>{
+    const out=outgoingText(d);
+    const{body,hashtags}=splitHashtags(out);
+    const L=linkState(d);
+    const R=readiness(d);
+    const approved=d.reviews.filter(r=>r.ok).length;
+    const filename=`post-${d.acc.handle.replace('@','')}.jpg`;
+
+    items.push({
+      type:'post',
+      account:accountRef(d.acc),
+      selected_profile:selectedProfileForAccount(d.acc),
+      post:{ text:out, text_without_links:d.text, body, hashtags, length_chars:[...out].length },
+      links:{
+        quote_post_url:L.quote.ok?L.quote.url:null,
+        quote_post_id:L.quote.ok?L.quote.id:null,
+        quote_post_author:L.quote.ok?('@'+L.quote.handle):null,
+        article_url:L.article.ok?L.article.url:null,
+        article_in_text:L.article.ok
+      },
+      intent_url:buildIntentUrl(d),
+      media:(includeMedia&&d.image)?[{ type:'image', filename, alt:state.vision?.altText||'', data_url:d.image }]:[],
+      schedule:{ scheduled_at:d.at.toISOString(), local_time:fmtTime(d.at),
+        timezone:Intl.DateTimeFormat().resolvedOptions().timeZone },
+      review:{ approved, total:d.reviews.length,
+        complete:d.reviews.length>0&&approved===d.reviews.length,
+        expression_flags:riskFlags(d.text), truncated:!!d.truncated,
+        notes:d.reviews.map(r=>({ role:r.role, note:r.note, approved:!!r.ok })) },
+      publish:{ status:d.status, ready:R.ready, blockers:R.blockers,
+        recorded_url:d.recordedUrl||null },
+      actions:(d.actions||[]).map(x=>{const c=getAcc(x.accountId);return{account:accountRef(c||{id:x.accountId,name:'',handle:'',team:'',voice:'',stance:'',length:'標準',layout:'',persona:{}}),role:x.role,text:x.text||'',status:x.status||'draft'};}),
+      // X API v2 の POST /2/tweets にほぼそのまま渡せる形
+      x_api_payload:{ text:out, ...(L.quote.ok?{ quote_tweet_id:L.quote.id }:{}) }
+    });
+
+    rows.push({
+      index:idx+1,
+      account_name:d.acc.name,
+      account_handle:d.acc.handle,
+      account_team:d.acc.team,
+      selected_profile:selectedProfileForAccount(d.acc),
+      scheduled_at:d.at.toISOString(),
+      scheduled_local:fmtTime(d.at),
+      text:out,
+      length_chars:[...out].length,
+      hashtags:hashtags.join(' '),
+      quote_tweet_id:L.quote.ok?L.quote.id:'',
+      quote_url:L.quote.ok?L.quote.url:'',
+      article_url:L.article.ok?L.article.url:'',
+      image_filename:(includeMedia&&d.image)?filename:'',
+      has_image:!!d.image,
+      review_approved:approved,
+      review_total:d.reviews.length,
+      review_complete:d.reviews.length>0&&approved===d.reviews.length,
+      expression_flags:riskFlags(d.text).join('、'),
+      status:d.status,
+      ready_to_post:R.ready,
+      blockers:R.blockers.join(' / '),
+      intent_url:buildIntentUrl(d)
+    });
+  });
+
+  state.vSets.forEach((s,idx)=>{
+    items.push({
+      type:'video',
+      account:accountRef(s.acc),
+      video:{ ratio:`${s.W}x${s.H}`, slide_count:s.frames.length,
+        seconds_per_slide:+$('#vSec').value/10, background:s.ownBg?'account':'shared' },
+      slides:s.telop.map((t,i)=>({ index:i+1, lead:t.lead, body:t.body,
+        image:includeMedia?{ filename:`${s.acc.handle.replace('@','')}_slide${i+1}.jpg`, data_url:s.frames[i] }:null })),
+      status:'draft'
+    });
+    videoRows.push({
+      index:idx+1,
+      account_name:s.acc.name,
+      account_handle:s.acc.handle,
+      ratio:`${s.W}x${s.H}`,
+      slide_count:s.frames.length,
+      seconds_per_slide:+$('#vSec').value/10,
+      background:s.ownBg?'account':'shared',
+      leads:s.telop.map(t=>t.lead).join(' / ')
+    });
+  });
+
+  return{
+    schema:DELIVERY_SCHEMA,
+    generated_at:new Date().toISOString(),
+    market:{ key:state.market, label:m.label, symbol:m.sym, hashtags:m.tags },
+    generator:{ model:state.api.model, backend:state.api.backend, image_model:state.api.imageModel },
+    counts:{ posts:state.drafts.length, videos:state.vSets.length,
+      ready:rows.filter(r=>r.ready_to_post).length, blocked:rows.filter(r=>!r.ready_to_post).length },
+    // rows / video_rows は入れ子なしの一覧。Make の Iterator や
+    // GAS の forEach にそのまま渡せる
+    rows, video_rows:videoRows,
+    items
+  };
+}
+function buildWorkspacePayload(){
+  return{
+    schema:WORKSPACE_SCHEMA, version:SCHEMA_VERSION, exported_at:new Date().toISOString(),
+    accounts:state.accounts,
+    history:state.history,
+    settings:{ market:state.market, tab:state.tab,
+      offset:+$('#offsetRange').value, gapMin:+$('#gapMinRange').value, gapMax:+$('#gapMaxRange').value,
+      tags:$('#tagToggle').checked, ratio:$('#vRatio').value, slides:+$('#vSlides').value, sec:+$('#vSec').value },
+    api:{ model:state.api.model, temp:state.api.temp, vision:state.api.vision,
+      imageModel:state.api.imageModel, imageQuality:state.api.imageQuality,
+      backend:state.api.backend, proxyUrl:state.api.proxyUrl, imageProxyUrl:state.api.imageProxyUrl,
+      webhookMode:state.api.webhookMode, webhookProxyUrl:state.api.webhookProxyUrl }
+      /* WebhookのURLは実質シークレットなので書き出さない */
+      /* APIキーは書き出さない。共有事故を防ぐため意図的に除外している */
+  };
+}
+function downloadJSON(obj,filename){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  download(url,filename);
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+
+/* ============================================================
+   5b. OpenAI 画像生成（背景ビジュアル専用）
+   ------------------------------------------------------------
+   生成させるのは「文字のない背景」だけ。日本語テロップと数値は
+   Canvas 側で重ねる。画像内に文字や価格を描かせると崩れるうえ、
+   実在しないチャートが出来上がって事故になるため禁止している。
+   ============================================================ */
+const OPENAI_IMAGE_ENDPOINT='https://api.openai.com/v1/images/generations';
+const IMAGE_SIZES={
+  'gpt-image-1':{'9:16':'1024x1536','1:1':'1024x1024','16:9':'1536x1024'},
+  'dall-e-3':{'9:16':'1024x1792','1:1':'1024x1024','16:9':'1792x1024'}
+};
+
+async function generateImage(prompt,ratio){
+  const useProxy=state.api.backend==='proxy';
+  if(!useProxy&&!state.api.openaiKey) throw new Error('OpenAIのAPIキーが設定されていません');
+  const model=state.api.imageModel||'gpt-image-1';
+  const size=(IMAGE_SIZES[model]||IMAGE_SIZES['dall-e-3'])[ratio]||'1024x1024';
+  const body={model,prompt,n:1,size};
+  if(model==='dall-e-3'){
+    body.response_format='b64_json';
+    body.quality=state.api.imageQuality==='high'?'hd':'standard';
+  }else{
+    body.quality=state.api.imageQuality||'medium';
+  }
+  const url=useProxy?(state.api.imageProxyUrl||'/api/image'):OPENAI_IMAGE_ENDPOINT;
+  const headers={'content-type':'application/json'};
+  if(useProxy){ if(state.api.appToken) headers['x-app-token']=state.api.appToken; }
+  else headers['authorization']='Bearer '+state.api.openaiKey;
+  const res=await fetch(url,{method:'POST',headers,body:JSON.stringify(body)});
+  if(!res.ok){
+    let detail=''; try{ const j=await res.json(); detail=j?.error?.message||''; }catch(e){}
+    if(res.status===401) throw new Error('OpenAIのAPIキーが受け付けられませんでした（401）');
+    if(res.status===429) throw new Error('OpenAIのレート制限または残高不足です（429）');
+    if(res.status===403) throw new Error('このモデルを使う権限がありません（403）。組織の認証状況を確認するか dall-e-3 を選んでください');
+    throw new Error(`OpenAI HTTP ${res.status}${detail?'：'+detail:''}`);
+  }
+  const j=await res.json();
+  const d=j?.data?.[0];
+  if(d?.b64_json) return 'data:image/png;base64,'+d.b64_json;
+  throw new Error('画像がbase64で返りませんでした。合成に使えないためモデル設定を確認してください');
+}
+
+/* 参考文章とペルソナから、英語の画像生成プロンプトをClaudeに書かせる */
+function imagePromptSystem(){
+  return[
+    'You write prompts for an AI image generator. The output is a BACKGROUND VISUAL for a Japanese financial-education social post.',
+    'Japanese caption text is composited later in the browser, so the image itself must contain NO text.',
+    '',
+    'Hard constraints to encode in every prompt you write:',
+    '- No letters, words, numbers, tickers, logos, watermarks or UI chrome of any kind.',
+    '- No candlestick charts, price axes, order books, or anything that could be mistaken for real market data.',
+    '- No real people, no recognizable faces, no brand marks.',
+    '- Leave the middle band of the frame visually calm and uncluttered so caption text stays readable.',
+    '- Aim for a premium editorial look: abstract gradients, light, texture, depth of field, geometric forms, material surfaces.',
+    '',
+    'Write one single English prompt, 60-90 words, concrete about composition, palette, lighting and mood.',
+    'Output the prompt only. No preamble, no quotes, no explanation.'
+  ].join('\n');
+}
+async function buildImagePrompt(base,acc,ratio){
+  const m=MARKETS[state.market];
+  const p=acc?.persona||blankPersona();
+  const user=[
+    `Market theme: ${m.label} (${m.sym}).`,
+    `Brand accent color: ${acc?acc.hue:'#2563EB'}.`,
+    `Aspect ratio: ${ratio}.`,
+    acc?`Tone of the account: ${acc.voice} / ${acc.stance}.`:'',
+    p.reader?`Audience: ${p.reader}`:'',
+    '',
+    'Japanese source text the post is based on (for mood only, do not render any of it as text):',
+    '--- start ---',
+    base.slice(0,1200),
+    '--- end ---'
+  ].filter(Boolean).join('\n');
+  const{text}=await callClaude({system:imagePromptSystem(),messages:[{role:'user',content:user}],max_tokens:400,temperature:1});
+  return cleanDraft(text).replace(/^["'「]|["'」]$/g,'').trim();
+}
+
+/* ---------- タブ1：投稿本文のプロンプト ---------- */
+function draftSystemPrompt(){
+  return[
+    'あなたは日本の投資教育ブランドの編集担当です。渡された参考文章を、指定されたアカウントの書き手が書いたX（旧Twitter）の投稿に書き直します。',
+    '',
+    '■ 情報の扱い（最優先）',
+    '- 参考文章にある要素をひとつも落とさない。結論、チャート根拠、ファンダメンタルズ、サブシナリオ、条件分岐、数値、価格帯、注意点はすべて残す。',
+    '- 要約ではない。言い換えと組み替えはしてよいが、情報量は元と同じかそれ以上にする。',
+    '- 冒頭だけを取り上げて後半を捨てることは絶対にしない。最後の要素まで必ず書く。',
+    '- 参考文章にない数値や事実を新しく作らない。元の主張の向きを変えない。',
+    '',
+    '■ 別人として書き分ける',
+    '- 同じ人物が語尾だけ変えたような文章にしない。文章の設計から変える。',
+    '- 一文の長さ、改行の間隔、段落の切り方、語彙の硬さ、体言止めの頻度、問いかけの有無をアカウントごとに変える。',
+    '- 導入の入り方を変える。数字から入る、情景から入る、読者の不安から入る、など切り口自体をずらす。',
+    '- 一人称・口調・語尾の指定は必ず守る。',
+    '- 「話し手の設定」は雰囲気の手がかりに使う。年齢や属性そのものを本文で名乗らせない。',
+    '- 「読者像」に向けて書く。その読者が知らない語は言い換えるか一言添える。',
+    '- 「使わない表現」に挙がった語や言い回しは使わない。',
+    '',
+    '■ 守ること',
+    '- 断定・利益保証にあたる語（必ず / 絶対 / 確実 / 保証 / 稼げる / 儲かる / ノーリスク / 100% / 誰でも）は使わない。',
+    '- 価格の予言や「上がる」「下がる」の言い切りをしない。条件つきの見立てとして書く。',
+    '- 勧誘や購入誘導の文言は入れない。',
+    '',
+    '■ 出力',
+    '- 投稿本文だけを出力する。前置き、後書き、解説、コードフェンスは一切付けない。'
+  ].join('\n');
+}
+function personaLines(acc){
+  const p=acc.persona||blankPersona();
+  const rows=[`表示名: ${acc.name}`,`声のトーン: ${acc.voice}`,`ニュアンス: ${acc.stance}`];
+  if(p.firstPerson)rows.push(`一人称: ${p.firstPerson}`);
+  if(p.speaker)rows.push(`話し手の設定: ${p.speaker}`);
+  if(p.tone)rows.push(`口調・語尾: ${p.tone}`);
+  if(p.reader)rows.push(`読者像: ${p.reader}`);
+  if(p.ng)rows.push(`使わない表現: ${p.ng}`);
+  if(p.bio)rows.push(`背景: ${p.bio}`);
+  if(acc.note)rows.push(`メモ: ${acc.note}`);
+  return rows;
+}
+function draftUserPrompt(base,acc){
+  const m=MARKETS[state.market], p=acc.persona||blankPersona();
+  const L=LENGTHS[acc.length]||LENGTHS['標準'];
+  const layoutRules=LAYOUTS[acc.layout]||LAYOUTS['見出し＋区切り線'];
+  const emojiRule=p.emoji==='使わない'?'絵文字は使わない。見出しの目印には ■ や ▼ を使う。'
+    :p.emoji==='多め'?'見出しと強調したい行の頭に絵文字を置く。1投稿で8個程度まで。'
+    :'見出しの頭に絵文字を1つずつ置く。本文中では多用しない。';
+  const lengthRule=L.keepAll?'字数の上限は設けない。参考文章のすべての要素を書ききることを優先する。途中で終わらせない。'
+    :`目標の長さは ${L.target}。ただし参考文章の要素を落としてまで縮めない。収まらない場合は超えてよい。`;
+  let vision='';
+  if(state.vision) vision=`\n【添付画像の解析結果】\n- 主題: ${state.vision.subject}\n- 画像内の文字: ${(state.vision.texts||[]).join(' / ')||'なし'}\n- 注意点: ${state.vision.caution||'なし'}\n※本文と画像がずれないように書いてください。`;
+  return[
+    `【対象マーケット】${m.label}（${m.sym}）`,
+    `この市場でよく使う論点: ${m.angles.join(' / ')}`,
+    `添えられると良い注意: ${m.caution}`,'',
+    '【参考文章】この内容を、下のアカウントの書き手が書いた投稿に書き直してください。要素は落とさないでください。',
+    '--- ここから ---',base,'--- ここまで ---',vision,'',
+    '【このアカウントの設定】',personaLines(acc).map(s=>'- '+s).join('\n'),'',
+    '【長さ】','- '+lengthRule,'',
+    '【組み方】スマホのXで読むことを前提に整える。',
+    layoutRules.map(s=>'- '+s).join('\n'),'- '+emojiRule,'',
+    $('#tagToggle').checked?`末尾に空行を1つ空けて ${m.tags.join(' ')} を付ける。`:'ハッシュタグは付けない。',
+    linkNote(),'',
+    '投稿本文だけを出力してください。'
+  ].join('\n');
+}
+/* 引用・記事リンクがある場合の注意書き。本文に重ねて書かせないため */
+function linkNote(){
+  const q=parseTweetUrl($('#quoteUrl').value), a=parseArticleUrl($('#articleUrl').value);
+  const rows=[];
+  if(q.ok) rows.push(`この投稿は @${q.handle} のポストを引用する形で出します。引用元に触れる書き出しにしてかまいませんが、URLは本文に書かないでください。`);
+  if(a.ok) rows.push('本文の末尾に記事リンクを別途追記します。URLは本文に書かず、「詳しくは下のリンクから」のような案内も入れないでください。');
+  return rows.length?'\n【リンクについて】\n'+rows.map(s=>'- '+s).join('\n'):'';
+}
+
+function tokenBudget(acc,base){
+  const L=LENGTHS[acc.length]||LENGTHS['標準'];
+  const need=L.keepAll?[...base].length*2.6+2000:L.max*2.4+800;
+  return Math.max(1500,Math.min(16000,Math.round(need)));
+}
+async function generateOne(base,acc){
+  const{text,stopReason}=await callClaude({
+    system:draftSystemPrompt(), messages:[{role:'user',content:draftUserPrompt(base,acc)}], max_tokens:tokenBudget(acc,base)});
+  return{text:cleanDraft(text),truncated:stopReason==='max_tokens'};
+}
+
+/* ---------- タブ2：テロップのプロンプト ---------- */
+function telopSystemPrompt(){
+  return[
+    'あなたは日本の投資教育ブランドの動画編集担当です。渡された文章を、短い動画のテロップ台本に組み直します。',
+    '',
+    '■ テロップの条件',
+    '- 1枚のスライドは「見出し」と「本文」の2つで構成する。',
+    '- 見出しは全角14字以内。ひと目で内容が分かる言葉にする。',
+    '- 本文は全角70字以内。2〜3行で読み切れる長さにする。長い場合はスライドを分ける。',
+    '- 話し言葉に寄せる。読み上げても不自然にならない語順にする。',
+    '- 1枚目は視線を止める入り、最後の1枚は次の行動や締めにする。',
+    '- 元の文章の重要な要素（結論・根拠・注意点）を落とさず、スライド全体で伝えきる。',
+    '- 元の文章にない数値や事実を作らない。',
+    '',
+    '■ キャラクター',
+    '- 指定されたペルソナの一人称・口調・語尾を守る。',
+    '- 語彙とリズムをそのキャラクターに合わせる。別のアカウントと同じ言い回しにしない。',
+    '',
+    '■ 守ること',
+    '- 断定・利益保証にあたる語（必ず / 絶対 / 確実 / 保証 / 稼げる / 儲かる / ノーリスク / 100% / 誰でも）は使わない。',
+    '- 価格の予言や言い切りをしない。',
+    '',
+    '■ 出力',
+    '- JSON配列だけを出力する。説明文やコードフェンスは付けない。',
+    '- 形式: [{"lead":"見出し","body":"本文"}]'
+  ].join('\n');
+}
+function telopUserPrompt(base,acc,slides){
+  const m=MARKETS[state.market];
+  return[
+    `【対象マーケット】${m.label}（${m.sym}）`,'',
+    '【元の文章】','--- ここから ---',base,'--- ここまで ---','',
+    '【このアカウントの設定】',personaLines(acc).map(s=>'- '+s).join('\n'),'',
+    `【枚数】ちょうど ${slides} 枚のスライドにする。`,'',
+    'JSON配列だけを出力してください。'
+  ].join('\n');
+}
+async function generateTelop(base,acc,slides){
+  const attempt=async extra=>{
+    const{text}=await callClaude({ system:telopSystemPrompt(),
+      messages:[{role:'user',content:telopUserPrompt(base,acc,slides)+(extra?'\n\n'+extra:'')}],
+      max_tokens:1800 });
+    return parseLooseJSON(text);
+  };
+  let arr;
+  try{ arr=await attempt(''); }
+  catch(e){ if(e.message==='NO_KEY')throw e; arr=await attempt('前回の出力は解析できませんでした。JSON配列だけを出力してください。'); }
+  if(!Array.isArray(arr)) throw new Error('想定した形式で返ってきませんでした');
+  return arr.filter(o=>o&&(o.lead||o.body)).slice(0,slides)
+    .map(o=>({lead:String(o.lead||'').trim(),body:String(o.body||'').trim()}));
+}
+
+/* ---------- Vision ---------- */
+async function analyzeImage(media){
+  const m=media.src.match(/^data:(.*?);base64,(.*)$/);
+  if(!m) throw new Error('画像の形式を読み取れませんでした');
+  const[,mediaType,b64]=m;
+  const raw=await callClaude({ temperature:0, max_tokens:800,
+    system:'画像を客観的に説明します。出力はJSONオブジェクトのみ。説明文やコードフェンスを付けない。',
+    messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:mediaType,data:b64}},
+      {type:'text',text:['この画像をX投稿に添付します。次のJSONで答えてください。','{',
+        '  "subject": "何が写っているか一文で",','  "texts": ["画像内に読み取れる文字。なければ空配列"],',
+        '  "palette": ["目立つ色を#RRGGBBで最大4つ"],','  "headline": "画像に重ねる見出しとして使える12字以内の言葉",',
+        '  "altText": "代替テキスト。80文字以内",','  "caution": "投稿前に確認すべき点。なければ空文字"','}',
+        'チャート画像なら、銘柄・時間足・期間が読み取れる場合はsubjectに含めてください。'].join('\n')}]}]});
+  return parseLooseJSON(raw.text);
+}
+
+/* ============================================================
+   6. Canvas 合成エンジン（タブ1・タブ2で共用）
+   ------------------------------------------------------------
+   画像生成APIは使わない。アップロードされた画像を土台に、
+   ブランド色・帯・テロップをブラウザ内で描き込む。
+   ============================================================ */
+function loadImage(src){
+  return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('画像を読み込めませんでした')); i.src=src; });
+}
+function drawCover(ctx,img,W,H){
+  const r=Math.max(W/img.width,H/img.height), w=img.width*r, h=img.height*r;
+  ctx.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+}
+function wrapText(ctx,text,maxWidth){
+  const lines=[]; let line='';
+  for(const ch of text){
+    if(ch==='\n'){ lines.push(line); line=''; continue; }
+    if(ctx.measureText(line+ch).width>maxWidth&&line){ lines.push(line); line=ch; }
+    else line+=ch;
+  }
+  if(line) lines.push(line);
+  return lines;
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+/* 背景 + テロップ を1枚描く。タブ2のスライドとタブ1のバナーで共用 */
+async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34,dim=.5}){
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+
+  if(bgSrc){ const img=await loadImage(bgSrc); drawCover(ctx,img,W,H); }
+  else{ const g=ctx.createLinearGradient(0,0,W,H); g.addColorStop(0,hue); g.addColorStop(1,'#0F172A'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
+
+  // ブランド色を薄く重ねる
+  ctx.globalCompositeOperation='soft-light'; ctx.globalAlpha=tint; ctx.fillStyle=hue; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+
+  // 文字を読ませるための暗幕
+  const g2=ctx.createLinearGradient(0,0,0,H);
+  g2.addColorStop(0,`rgba(6,10,22,${dim*.75})`); g2.addColorStop(.45,`rgba(6,10,22,${dim*.35})`); g2.addColorStop(1,`rgba(6,10,22,${dim*1.05})`);
+  ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+
+  const pad=Math.round(W*.078);
+  const maxW=W-pad*2;
+  const leadSize=Math.round(W*(H>W?.082:.062));
+  const bodySize=Math.round(W*(H>W?.049:.038));
+
+  // 本文を先に測って全体の高さを出し、縦位置を決める
+  ctx.font=`700 ${bodySize}px "Zen Kaku Gothic New",sans-serif`;
+  const bodyLines=body?wrapText(ctx,body,maxW):[];
+  ctx.font=`900 ${leadSize}px "Zen Kaku Gothic New",sans-serif`;
+  const leadLines=lead?wrapText(ctx,lead,maxW):[];
+
+  const leadLH=leadSize*1.28, bodyLH=bodySize*1.62;
+  const blockH=leadLines.length*leadLH+(leadLines.length&&bodyLines.length?bodySize*.9:0)+bodyLines.length*bodyLH;
+  let y=H>W?(H*.52-blockH/2):(H-blockH)/2;
+  y=Math.max(pad+leadSize,y);
+
+  // 見出し左のアクセントバー
+  if(leadLines.length){
+    ctx.fillStyle=hue;
+    roundRect(ctx,pad-Math.round(W*.026),y-leadSize*.88,Math.round(W*.011),leadLines.length*leadLH-leadLH*.2,999);
+    ctx.fill();
+  }
+
+  ctx.textBaseline='alphabetic';
+  ctx.shadowColor='rgba(0,0,0,.55)'; ctx.shadowBlur=Math.round(W*.018); ctx.shadowOffsetY=Math.round(W*.004);
+
+  ctx.font=`900 ${leadSize}px "Zen Kaku Gothic New",sans-serif`; ctx.fillStyle='#fff';
+  for(const l of leadLines){ ctx.fillText(l,pad,y); y+=leadLH; }
+  if(leadLines.length&&bodyLines.length) y+=bodySize*.9;
+
+  ctx.font=`500 ${bodySize}px "Zen Kaku Gothic New",sans-serif`; ctx.fillStyle='rgba(255,255,255,.94)';
+  for(const l of bodyLines){ ctx.fillText(l,pad,y); y+=bodyLH; }
+  ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+
+  // フッター（アカウント名）
+  if(footer){
+    const fs=Math.round(W*.026);
+    ctx.font=`700 ${fs}px "JetBrains Mono",monospace`; ctx.fillStyle='rgba(255,255,255,.8)';
+    ctx.fillText(footer,pad,H-pad*.72);
+  }
+  // ページャー
+  if(total>1){
+    const r=Math.round(W*.008), gap=r*3.2;
+    const totalW=(total-1)*gap;
+    const sx=W-pad-totalW;
+    for(let i=0;i<total;i++){
+      ctx.beginPath(); ctx.arc(sx+i*gap,H-pad*.72-r,r,0,Math.PI*2);
+      ctx.fillStyle=i===index?hue:'rgba(255,255,255,.4)'; ctx.fill();
+    }
+  }
+  // ブランド枠
+  ctx.strokeStyle=hue; ctx.lineWidth=Math.max(6,Math.round(W*.008));
+  ctx.strokeRect(ctx.lineWidth/2,ctx.lineWidth/2,W-ctx.lineWidth,H-ctx.lineWidth);
+
+  return c.toDataURL('image/jpeg',.92);
+}
+
+/* スライド群を1本の動画（WebM / 対応環境ならMP4）に書き出す */
+async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
+  if(typeof MediaRecorder==='undefined') throw new Error('このブラウザは動画の書き出しに対応していません');
+  const imgs=await Promise.all(frames.map(loadImage));
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  const stream=c.captureStream(30);
+
+  const types=['video/mp4;codecs=avc1.42E01E','video/webm;codecs=vp9','video/webm'];
+  const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+  if(!mime) throw new Error('対応する動画形式が見つかりません');
+  const ext=mime.startsWith('video/mp4')?'mp4':'webm';
+
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6_000_000});
+  const chunks=[];
+  rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+  const doneP=new Promise(res=>{ rec.onstop=res; });
+  rec.start();
+
+  const FPS=30, fadeF=Math.round(FPS*.35);
+  const per=Math.round(FPS*secPerSlide);
+  for(let i=0;i<imgs.length;i++){
+    for(let f=0;f<per;f++){
+      ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+      // ゆっくり寄る動き
+      const t=f/per, scale=1+t*0.04;
+      const w=W*scale,h=H*scale;
+      ctx.drawImage(imgs[i],(W-w)/2,(H-h)/2,w,h);
+      if(i>0&&f<fadeF){ ctx.globalAlpha=1-f/fadeF; ctx.drawImage(imgs[i-1],0,0,W,H); ctx.globalAlpha=1; }
+      await new Promise(r=>setTimeout(r,1000/FPS));
+    }
+    if(onProgress) onProgress(i+1,imgs.length);
+  }
+  rec.stop(); await doneP;
+  const blob=new Blob(chunks,{type:mime});
+  const url=URL.createObjectURL(blob);
+  download(url,`${filename}.${ext}`);
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  return ext;
+}
+
+/* ============================================================
+   7. サイドバー / タブ / ビュー
+   ============================================================ */
+function openNav(){ $('#sidebar').classList.remove('-translate-x-full'); $('#navScrim').classList.remove('hidden'); }
+function closeNav(){ if(window.innerWidth>=1024)return; $('#sidebar').classList.add('-translate-x-full'); $('#navScrim').classList.add('hidden'); }
+$('#navOpen').onclick=openNav; $('#navClose').onclick=closeNav; $('#navScrim').onclick=closeNav;
+window.addEventListener('resize',()=>{
+  if(window.innerWidth>=1024){ $('#navScrim').classList.add('hidden'); $('#sidebar').classList.remove('-translate-x-full'); }
+  else if($('#navScrim').classList.contains('hidden')) $('#sidebar').classList.add('-translate-x-full');
+});
+
+function setTab(t){
+  state.tab=t;
+  $('#tabImage').classList.toggle('hidden',t!=='image');
+  $('#tabVideo').classList.toggle('hidden',t!=='video');
+  $$('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  if(t==='video'){ renderBgGrid(); renderVPicker(); }
+  saveSettings();
+}
+$$('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+function setView(v){
+  state.view=v;
+  const main=v==='main';
+  $('#tabWrap').classList.toggle('hidden',!main);
+  $('#viewAccounts').classList.toggle('hidden',v!=='accounts');
+  $('#viewHistory').classList.toggle('hidden',v!=='history');
+  $('#tabImage').classList.toggle('hidden',!main||state.tab!=='image');
+  $('#tabVideo').classList.toggle('hidden',!main||state.tab!=='video');
+  $('#deliverySettings').classList.toggle('hidden',!main);
+  $$('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+  const m=MARKETS[state.market];
+  if(main){ $('#headEyebrow').textContent='対象マーケット';
+    $('#marketTitle').innerHTML=`${esc(m.label)} <span class="font-mono text-[13px] font-medium text-ink-mute">${esc(m.sym)}</span>`; }
+  else if(v==='accounts'){ $('#headEyebrow').textContent='registry'; $('#marketTitle').textContent='アカウント管理'; renderAccounts(); }
+  else{ $('#headEyebrow').textContent='history'; $('#marketTitle').textContent='投稿履歴'; renderHistory(); }
+  window.scrollTo({top:0,behavior:'smooth'}); closeNav();
+}
+$$('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+$('#goManage').onclick=()=>setView('accounts');
+
+function renderMarkets(){
+  $('#marketList').innerHTML=Object.entries(MARKETS).map(([k,m])=>{
+    const on=k===state.market;
+    return `<button data-mkt="${k}" class="mkt ${on?'on':''} w-full text-left px-3.5 py-3">
+      <div class="flex items-center gap-2.5"><span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${m.ac}"></span>
+      <span class="text-[13px] font-bold">${esc(m.label)}</span><span class="tag ml-auto text-ink-dim">${esc(m.sym)}</span></div></button>`;
+  }).join('');
+  $$('#marketList [data-mkt]').forEach(b=>b.onclick=()=>setMarket(b.dataset.mkt));
+}
+function setMarket(k){
+  state.market=k; const m=MARKETS[k];
+  document.documentElement.style.setProperty('--ac',m.ac);
+  document.documentElement.style.setProperty('--ac2',m.ac2);
+  if(state.view==='main') $('#marketTitle').innerHTML=`${esc(m.label)} <span class="font-mono text-[13px] font-medium text-ink-mute">${esc(m.sym)}</span>`;
+  renderMarkets(); renderPicker(); renderVPicker(); saveSettings(); log(`マーケットを ${m.label} に切替`,'act');
+}
+
+/* ============================================================
+   8. API設定
+   ============================================================ */
+function renderApiState(){
+  const proxy=state.api.backend==='proxy';
+  const a=proxy||!!state.api.key, o=!!state.api.openaiKey;
+  $('#navApiState').textContent=proxy?'中継':(a&&o?'2件接続':a?'文章のみ':o?'画像のみ':'未設定');
+  $('#apiPillText').textContent=a?(proxy?`中継 ${state.api.proxyUrl}`:(o?`${state.api.model} + ${state.api.imageModel}`:state.api.model)):'APIキー未設定';
+  $('#apiDot').style.background=a?'#0F766E':'#94A3B8';
+}
+function openSettings(){
+  $('#fKey').value=state.api.key; $('#fModel').value=state.api.model;
+  $('#fTemp').value=Math.round(state.api.temp*10); $('#tempVal').textContent=state.api.temp.toFixed(1);
+  $('#fVisionOn').checked=state.api.vision;
+  $('#fBackend').value=state.api.backend;
+  $('#fProxyUrl').value=state.api.proxyUrl;
+  $('#fImageProxyUrl').value=state.api.imageProxyUrl;
+  $('#fAppToken').value=state.api.appToken;
+  $('#proxyRow').classList.toggle('hidden',state.api.backend!=='proxy');
+  $('#fWebhookMode').value=state.api.webhookMode;
+  $('#fWebhookProxyUrl').value=state.api.webhookProxyUrl;
+  $('#fWebhookMedia').checked=!!state.api.webhookIncludeMedia;
+  $('#whProxyRow').classList.toggle('hidden',state.api.webhookMode!=='proxy');
+  whDraft=state.api.webhooks.map(w=>({...w}));
+  renderWhList();
+  $('#fOpenAIKey').value=state.api.openaiKey;
+  $('#fImageModel').value=state.api.imageModel;
+  $('#fImageQuality').value=state.api.imageQuality;
+  $('#setMsg').classList.add('hidden');
+  $('#setModal').classList.remove('hidden'); closeNav();
+}
+/* ---- 送信先の編集（設定モーダル内） ---- */
+let whDraft=[];
+function renderWhList(){
+  const box=$('#whList');
+  if(!whDraft.length){
+    box.innerHTML=`<p class="text-[12px] text-ink-dim">送信先がありません。「追加」から登録してください。</p>`;
+    return;
+  }
+  box.innerHTML=whDraft.map((w,i)=>`
+    <div class="glass-sub p-3 space-y-2">
+      <div class="flex gap-2">
+        <input data-whname="${i}" value="${esc(w.name)}" class="inp text-[12.5px]" placeholder="送信先の名前（例：Make 投稿キュー）">
+        <select data-whct="${i}" class="inp text-[12px] w-[150px] shrink-0">
+          <option value="application/json" ${w.contentType==='application/json'?'selected':''}>application/json</option>
+          <option value="text/plain" ${w.contentType==='text/plain'?'selected':''}>text/plain（GAS向け）</option>
+        </select>
+        <button data-whdel="${i}" class="btn-danger shrink-0 text-[11.5px] px-2.5 py-1 rounded-lg">削除</button>
+      </div>
+      <input data-whurl="${i}" value="${esc(w.url)}" class="inp font-mono text-[12px]" placeholder="https://hook.eu2.make.com/... または https://script.google.com/macros/s/.../exec">
+    </div>`).join('');
+  $$('#whList [data-whname]').forEach(el=>el.oninput=()=>{ whDraft[+el.dataset.whname].name=el.value; });
+  $$('#whList [data-whurl]').forEach(el=>el.oninput=()=>{ whDraft[+el.dataset.whurl].url=el.value.trim(); });
+  $$('#whList [data-whct]').forEach(el=>el.onchange=()=>{ whDraft[+el.dataset.whct].contentType=el.value; });
+  $$('#whList [data-whdel]').forEach(b=>b.onclick=()=>{ whDraft.splice(+b.dataset.whdel,1); renderWhList(); });
+}
+$('#whAdd').onclick=()=>{
+  whDraft.push({id:'w'+Math.random().toString(36).slice(2,8),name:'',url:'',contentType:'application/json'});
+  renderWhList();
+};
+
+/* ---- 単一カード分のpayload ---- */
+function singlePostPayload(i,includeMedia){
+  const p=buildDeliveryPayload({includeMedia});
+  const row=p.rows[i];
+  return{...p,
+    counts:{posts:1,videos:0,ready:row.ready_to_post?1:0,blocked:row.ready_to_post?0:1},
+    rows:[row], video_rows:[], items:[p.items[i]]};
+}
+function singleVideoPayload(si,includeMedia){
+  const p=buildDeliveryPayload({includeMedia});
+  const vids=p.items.filter(x=>x.type==='video');
+  return{...p, counts:{posts:0,videos:1},
+    rows:[], video_rows:[p.video_rows[si]], items:[vids[si]]};
+}
+
+/* ---- 送信状態のバッジ ---- */
+function whBadgeHTML(w){
+  if(!w) return '';
+  if(w.status==='sending')
+    return `<span class="tag px-2 py-1 rounded-md inline-flex items-center gap-1.5" style="background:#EFF6FF;color:#1D4ED8">
+      <span class="w-2.5 h-2.5 rounded-full border-2 border-current border-t-transparent spin inline-block"></span>送信中…</span>`;
+  if(w.status==='ok')
+    return `<span class="tag px-2 py-1 rounded-md" style="background:#ECFDF5;color:#047857" title="${esc(w.msg||'')}">
+      ✓ 送信完了 ${esc(w.at||'')}${w.dest?' / '+esc(w.dest):''}</span>`;
+  if(w.status==='error')
+    return `<span class="tag px-2 py-1 rounded-md" style="background:#FEE2E2;color:#B91C1C" title="${esc(w.msg||'')}">
+      ✕ 送信失敗 ${esc(w.at||'')}</span>`;
+  return '';
+}
+
+/* ---- Webhook送信 ---- */
+async function sendWebhook(destId,payload,label){
+  const dest=state.api.webhooks.find(w=>w.id===destId);
+  if(!dest) throw new Error('送信先が見つかりません');
+  if(!dest.url) throw new Error('送信先URLが空です');
+
+  if(state.api.webhookMode==='proxy'){
+    const headers={'content-type':'application/json'};
+    if(state.api.appToken) headers['x-app-token']=state.api.appToken;
+    const res=await fetch(state.api.webhookProxyUrl||'/api/webhook',{
+      method:'POST',headers,
+      body:JSON.stringify({url:dest.url,payload,contentType:dest.contentType})
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j?.error?.message||`中継エラー（${res.status}）`);
+    if(!j.ok) throw new Error(`送信先が ${j.status} を返しました：${String(j.response||'').slice(0,120)}`);
+    return{ status:j.status, note:`${label} を ${j.target} へ送信` };
+  }
+
+  // 直接POST。text/plain はプリフライトを避けるための指定
+  const res=await fetch(dest.url,{
+    method:'POST',
+    headers:{'content-type':dest.contentType==='text/plain'?'text/plain;charset=utf-8':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  if(!res.ok) throw new Error(`送信先が ${res.status} を返しました`);
+  return{ status:res.status, note:`${label} を送信` };
+}
+
+function webhookPickerHTML(idPrefix){
+  if(!state.api.webhooks.length) return '';
+  return `<select id="${idPrefix}Dest" class="bg-white border border-hair rounded-lg px-2 py-1.5 text-[11.5px] max-w-[170px]">
+    ${state.api.webhooks.map(w=>`<option value="${w.id}">${esc(w.name||w.url.slice(0,28))}</option>`).join('')}
+  </select>
+  <button id="${idPrefix}Send" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">Webhookへ送信</button>`;
+}
+/* 送信状態を対象オブジェクト（draft / vSet）に書き込みながら送る */
+async function runTargetedSend({target,destId,payloadFn,label,rerender}){
+  const dest=state.api.webhooks.find(w=>w.id===destId);
+  if(!dest){ toast('送信先が登録されていません','warn'); openSettings(); return; }
+
+  target.wh={status:'sending'};
+  rerender();
+  try{
+    const payload=payloadFn(); const r=await sendWebhook(destId,payload,label);
+    recordDeliveryHistory(payload,label);
+    target.wh={status:'ok',at:fmtTime(new Date()),dest:dest.name,msg:`HTTP ${r.status}`};
+    toast(`${label} を送信しました（${r.status}）`);
+    log(r.note,'ok');
+  }catch(e){
+    const msg=/Failed to fetch|NetworkError/i.test(e.message)
+      ? 'ブラウザから直接送れませんでした。形式を text/plain にするか、バックエンド経由に切り替えてください。'
+      : e.message;
+    target.wh={status:'error',at:fmtTime(new Date()),dest:dest.name,msg};
+    toast('送信に失敗：'+msg,'err');
+    log(`${label} のWebhook送信に失敗：${msg}`,'err');
+  }
+  rerender();
+}
+
+async function runWebhookSend(destSel,btnSel,payloadFn,label){
+  const btn=$(btnSel); if(!btn) return;
+  const destId=$(destSel).value;
+  btn.disabled=true; const prev=btn.textContent; btn.textContent='送信中…';
+  try{
+    const payload=payloadFn(); const r=await sendWebhook(destId,payload,label);
+    recordDeliveryHistory(payload,label);
+    toast(`送信しました（${r.status}）`); log(r.note,'ok');
+    btn.disabled=false; btn.textContent='✓ 送信完了';
+    btn.style.color='#047857'; btn.style.borderColor='#6EE7B7';
+    setTimeout(()=>{ btn.textContent=prev; btn.style.color=''; btn.style.borderColor=''; },4000);
+    return;
+  }catch(e){
+    const msg=/Failed to fetch|NetworkError/i.test(e.message)
+      ? 'ブラウザから直接送れませんでした。形式を text/plain にするか、バックエンド経由に切り替えてください。'
+      : e.message;
+    toast('送信に失敗：'+msg,'err'); log('Webhook送信に失敗：'+msg,'err');
+    btn.disabled=false; btn.textContent='✕ 失敗';
+    btn.style.color='#B91C1C'; btn.style.borderColor='#FCA5A5';
+    setTimeout(()=>{ btn.textContent=prev; btn.style.color=''; btn.style.borderColor=''; },4000);
+    return;
+  }
+}
+
+$('#openSettings').onclick=openSettings; $('#apiPill').onclick=openSettings;
+const closeSet=()=>$('#setModal').classList.add('hidden');
+$('#setClose').onclick=closeSet; $('#setCancel').onclick=closeSet;
+$('#setModal').addEventListener('click',e=>{if(e.target.id==='setModal')closeSet()});
+$('#fTemp').oninput=()=>{$('#tempVal').textContent=(+$('#fTemp').value/10).toFixed(1)};
+$('#fBackend').onchange=()=>{ $('#proxyRow').classList.toggle('hidden',$('#fBackend').value!=='proxy'); };
+$('#fWebhookMode').onchange=()=>{ $('#whProxyRow').classList.toggle('hidden',$('#fWebhookMode').value!=='proxy'); };
+$('#setSave').onclick=()=>{
+  state.api.key=$('#fKey').value.trim();
+  state.api.model=$('#fModel').value.trim()||'claude-sonnet-5';
+  state.api.temp=+$('#fTemp').value/10; state.api.vision=$('#fVisionOn').checked;
+  state.api.backend=$('#fBackend').value;
+  state.api.proxyUrl=$('#fProxyUrl').value.trim()||'/api/claude';
+  state.api.imageProxyUrl=$('#fImageProxyUrl').value.trim()||'/api/image';
+  state.api.appToken=$('#fAppToken').value.trim();
+  state.api.webhookMode=$('#fWebhookMode').value;
+  state.api.webhookProxyUrl=$('#fWebhookProxyUrl').value.trim()||'/api/webhook';
+  state.api.webhookIncludeMedia=$('#fWebhookMedia').checked;
+  state.api.webhooks=whDraft.filter(w=>w.url).map(w=>({...w,name:w.name||w.url.slice(0,24)}));
+  state.api.openaiKey=$('#fOpenAIKey').value.trim();
+  state.api.imageModel=$('#fImageModel').value;
+  state.api.imageQuality=$('#fImageQuality').value;
+  saveApi(); renderApiState(); closeSet();
+  toast(state.api.key?'API設定を保存しました':'Anthropicのキーが空です。文章生成にはキーが必要です','warn');
+  log('API設定を更新','act');
+};
+$('#keyClear').onclick=()=>{
+  if(!confirm('保存されたAPIキー（Anthropic・OpenAIの両方）を消します。よろしいですか？'))return;
+  Store.remove(STORE.api); state.api=loadApi();
+  $('#fKey').value=''; $('#fOpenAIKey').value=''; $('#fAppToken').value=''; renderApiState();
+  toast('キーを消しました'); log('APIキーを削除','warn');
+};
+$('#keyTest').onclick=async()=>{
+  const msg=$('#setMsg'),btn=$('#keyTest');
+  const prev=state.api.key,prevM=state.api.model;
+  state.api.key=$('#fKey').value.trim(); state.api.model=$('#fModel').value.trim()||'claude-sonnet-5';
+  btn.disabled=true; btn.textContent='テスト中…';
+  msg.classList.remove('hidden'); msg.style.color='#64748B'; msg.textContent='Hello を送信しています…';
+  const started=performance.now();
+  console.groupCollapsed(`[Post Cockpit] API接続テスト / ${state.api.model}`);
+  console.log('request:',{model:state.api.model,message:'Hello',started_at:new Date().toISOString()});
+  try{
+    const r=await callClaude({messages:[{role:'user',content:'Hello'}],max_tokens:32,temperature:0});
+    const elapsed=Math.round(performance.now()-started);
+    console.log('response:',r.text); console.log('elapsed_ms:',elapsed); console.log('ok:',true);
+    console.groupEnd();
+    msg.style.color='#0F766E'; msg.textContent=`接続できました：${r.text.trim().slice(0,40)}（${elapsed}ms）`;
+    log(`API接続テスト成功：${state.api.model} / ${elapsed}ms`,'ok');
+  }catch(e){
+    const elapsed=Math.round(performance.now()-started);
+    console.error('error:',e); console.log('elapsed_ms:',elapsed); console.log('ok:',false); console.groupEnd();
+    state.api.key=prev; state.api.model=prevM; msg.style.color='#B91C1C';
+    msg.textContent=e.message==='NO_KEY'?'キーを入れてください。'
+      :(/Failed to fetch|NetworkError/i.test(e.message)
+        ?`ブラウザからの通信がブロックされました（${elapsed}ms）。file:// ではなくローカルサーバー経由で開いてください。`:e.message);
+    log(`API接続テスト失敗：${e.message} / ${elapsed}ms`,'err');
+  }
+  btn.disabled=false; btn.textContent='接続テスト';
+};
+
+/* ============================================================
+   9. アカウント管理
+   ============================================================ */
+function renderAccounts(){
+  normalizeHierarchy();
+  const q=state.search.trim().toLowerCase();
+  const matches=a=>!q||[a.name,a.handle,a.team,a.voice,a.stance,a.note,a.actionRole,a.actionPrompt,a.persona?.speaker].join(' ').toLowerCase().includes(q);
+  const mains=state.accounts.filter(a=>isMainAccount(a));
+  const mainRows=mains.filter(matches);
+  const childMatches=a=>matches(a)||!!parentAccount(a)&&matches(parentAccount(a));
+  $('#accStat').textContent=`全 ${state.accounts.length} 件 / メイン ${mains.length} 件 / アクション ${state.accounts.length-mains.length} 件`;
+  $('#navAccCount').textContent=state.accounts.length;
+  if(!state.accounts.length){ $('#accountList').innerHTML=`<div class="glass p-12 text-center"><p class="text-[13.5px] text-ink-mute">まだアカウントがありません。</p></div>`; return; }
+  const mainBlocks=mainRows.map(a=>{
+    const children=childrenOf(a.id).filter(childMatches);
+    const allChildren=childrenOf(a.id);
+    return `<section class="glass p-5 sm:p-6">
+      <div class="flex flex-wrap items-center gap-3 mb-3">
+        <span class="tag" style="background:${a.hue}18;color:${a.hue}">MAIN</span>
+        <span class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc((a.name||'?').slice(0,1))}</span>
+        <div class="min-w-0"><div class="text-[14px] font-bold leading-tight truncate">${esc(a.name)} <span class="font-mono text-[11px] font-normal text-ink-dim">${esc(a.handle)}</span></div>
+          <div class="tag text-ink-dim mt-0.5">${esc(a.team)} ・ ${esc(a.voice)} ・ ${esc(a.stance)}</div></div>
+        <span class="tag ml-auto text-ink-dim">子 ${allChildren.length} / 10</span>
+        <label class="flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer"><input type="checkbox" data-toggle="${a.id}" ${a.active?'checked':''} class="w-3.5 h-3.5">有効</label>
+        <button data-addchild="${a.id}" ${allChildren.length>=10?'disabled':''} class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg font-bold">子を追加</button>
+        <button data-dup="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">複製</button>
+        <button data-edit="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">編集</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 mb-4 text-[11px] text-ink-mute">
+        <span class="tag">メイン投稿の生成対象</span>
+        ${a.persona?.speaker?`<span class="tag">${esc(a.persona.speaker)}</span>`:''}
+      </div>
+      <div class="pl-3 sm:pl-6 border-l-2" style="border-color:${a.hue}35">
+        ${children.length?`<div class="space-y-2.5">${children.map(c=>`<div class="glass-sub p-3.5 flex flex-wrap items-center gap-3 ${c.active?'':'opacity-55'}">
+          <span class="tag" style="background:${a.hue}12;color:${a.hue}">ACTION</span>
+          <span class="w-8 h-8 rounded-lg grid place-items-center font-bold text-[12px] shrink-0" style="background:${c.hue}1f;color:${c.hue}">${esc((c.name||'?').slice(0,1))}</span>
+          <div class="min-w-0"><div class="text-[13px] font-bold truncate">${esc(c.name)} <span class="font-mono text-[11px] font-normal text-ink-dim">${esc(c.handle)}</span></div>
+            <div class="flex flex-wrap gap-1.5 mt-1"><span class="tag" style="color:${c.hue}">${esc(c.actionRole)}</span>${c.actionPrompt?'<span class="tag text-ink-dim">独自プロンプトあり</span>':''}</div></div>
+          <div class="ml-auto flex items-center gap-2 shrink-0">
+            <label class="flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer"><input type="checkbox" data-toggle="${c.id}" ${c.active?'checked':''} class="w-3.5 h-3.5">有効</label>
+            <button data-dup="${c.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">複製</button>
+            <button data-edit="${c.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">編集</button></div>
+        </div>`).join('')}</div>`:`<div class="glass-sub p-4 text-[12px] text-ink-dim">アクション用アカウントはまだありません。右上の「子を追加」から登録できます。</div>`}
+      </div>
+    </section>`;
+  }).join('');
+  const orphan=state.accounts.filter(a=>a.parentId&&!getAcc(a.parentId)).filter(matches);
+  const orphanBlock=orphan.length?`<section class="glass p-5 sm:p-6"><div class="text-[13px] font-bold mb-3">親未設定のアクション候補</div><div class="space-y-2">${orphan.map(a=>`<div class="glass-sub p-3 flex items-center gap-3"><span class="tag">ACTION</span><div class="min-w-0"><b>${esc(a.name)}</b><span class="font-mono text-[11px] text-ink-dim ml-2">${esc(a.handle)}</span></div><button data-edit="${a.id}" class="btn-ghost ml-auto text-[11px] px-2.5 py-1.5 rounded-lg">編集</button></div>`).join('')}</div></section>`:'';
+  $('#accountList').innerHTML=mainBlocks+orphanBlock || `<div class="glass p-12 text-center"><p class="text-[13.5px] text-ink-mute">検索条件に合うアカウントがありません。</p></div>`;
+  $$('#accountList [data-edit]').forEach(b=>b.onclick=()=>openModal(b.dataset.edit));
+  $$('#accountList [data-addchild]').forEach(b=>b.onclick=()=>openModal(null,b.dataset.addchild));
+  $$('#accountList [data-toggle]').forEach(cb=>cb.onchange=()=>{
+    const a=getAcc(cb.dataset.toggle); if(!a)return; a.active=cb.checked;
+    if(!a.active){state.selected.delete(a.id);state.vSelected.delete(a.id)}
+    saveAccounts(); renderAccounts(); renderPicker(); renderVPicker();
+  });
+  $$('#accountList [data-dup]').forEach(b=>b.onclick=()=>{
+    const src=getAcc(b.dataset.dup); if(!src)return;
+    const parent=src.parentId?getAcc(src.parentId):null;
+    if(parent&&childrenOf(parent.id).length>=10){toast('このメインアカウントにはすでに10個の子があります','warn');return;}
+    let h=src.handle+'_2',n=2; while(state.accounts.some(a=>a.handle===h)){n++;h=src.handle+'_'+n}
+    const copy=normalizeAccount({...structuredCloneSafe(src),id:uid(),name:src.name+' のコピー',handle:h});
+    state.accounts.push(copy); saveAccounts(); renderAccounts(); renderPicker(); renderVPicker(); toast('複製しました');
+  });
+}
+function fillArchetype(key){
+  const a=ARCHETYPES[key]; if(!a)return;
+  $('#fVoice').value=a.voice; $('#fStance').value=a.stance;
+  $('#fLength').value=a.length; $('#fLayout').value=a.layout; $('#fHue').value=a.hue;
+  $('#pFirst').value=a.persona.firstPerson; $('#pSpeaker').value=a.persona.speaker;
+  $('#pTone').value=a.persona.tone; $('#pReader').value=a.persona.reader;
+  $('#pNG').value=a.persona.ng; $('#pEmoji').value=a.persona.emoji; $('#pBio').value=a.persona.bio;
+  toast(`「${key}」の設定を入れました`);
+}
+function openModal(id,parentId=null){
+  state.editingId=id||null;
+  const a=id?getAcc(id):null;
+  $('#modalTitle').textContent=a?'アカウントを編集':'アカウントを追加';
+  $('#fName').value=a?a.name:''; $('#fHandle').value=a?a.handle:'';
+  $('#fTeam').value=a?a.team:''; $('#fHue').value=a?a.hue:'#2563EB';
+  const currentParent=a?.parentId||parentId||'';
+  const parentOptions=state.accounts.filter(x=>isMainAccount(x)&&x.id!==id);
+  $('#fParentId').innerHTML=`<option value="">メインアカウント（親）</option>`+parentOptions.map(x=>{const n=childrenOf(x.id).length;return `<option value="${esc(x.id)}" ${currentParent===x.id?'selected':''} ${n>=10&&currentParent!==x.id?'disabled':''}>${esc(x.name)}（${esc(x.handle)}）${n>=10?' — 上限10件':''}</option>`}).join('');
+  $('#fActionRole').innerHTML=ACTION_ROLES.map(v=>`<option ${a&&a.actionRole===v?'selected':''}>${esc(v)}</option>`).join('');
+  $('#fActionPrompt').value=a?(a.actionPrompt||''):'';
+  $('#childSettings').classList.toggle('hidden',!currentParent);
+  $('#fParentId').onchange=()=>$('#childSettings').classList.toggle('hidden',!$('#fParentId').value);
+  $('#fNote').value=a?(a.note||''):''; $('#fActive').checked=a?a.active:true;
+  $('#fVoice').innerHTML=VOICES.map(v=>`<option ${a&&a.voice===v?'selected':''}>${esc(v)}</option>`).join('');
+  $('#fStance').innerHTML=STANCES.map(v=>`<option ${a&&a.stance===v?'selected':''}>${esc(v)}</option>`).join('');
+  $('#fLength').innerHTML=Object.entries(LENGTHS).map(([k,l])=>`<option value="${esc(k)}" ${a&&a.length===k?'selected':''}>${esc(l.label)}</option>`).join('');
+  $('#fLayout').innerHTML=Object.keys(LAYOUTS).map(k=>`<option ${a&&a.layout===k?'selected':''}>${esc(k)}</option>`).join('');
+  $('#pEmoji').innerHTML=EMOJI_MODES.map(v=>`<option ${a&&a.persona?.emoji===v?'selected':''}>${esc(v)}</option>`).join('');
+  $('#archetypeBtns').innerHTML=Object.keys(ARCHETYPES).map(k=>
+    `<button data-arch="${esc(k)}" class="chip px-3 py-1.5 text-[12px] font-medium">${esc(k)}</button>`).join('');
+  $$('#archetypeBtns [data-arch]').forEach(b=>b.onclick=()=>fillArchetype(b.dataset.arch));
+  const p=(a&&a.persona)||blankPersona();
+  $('#pFirst').value=p.firstPerson||''; $('#pSpeaker').value=p.speaker||'';
+  $('#pTone').value=p.tone||''; $('#pReader').value=p.reader||'';
+  $('#pNG').value=p.ng||''; $('#pBio').value=p.bio||'';
+  $('#teamOptions').innerHTML=[...new Set(state.accounts.map(x=>x.team).filter(Boolean))].map(t=>`<option value="${esc(t)}">`).join('');
+  $('#modalDelete').classList.toggle('hidden',!a);
+  $('#modalErr').classList.add('hidden');
+  $('#modal').classList.remove('hidden');
+  setTimeout(()=>$('#fName').focus(),60);
+}
+function closeModal(){ $('#modal').classList.add('hidden'); state.editingId=null; }
+$('#addBtn').onclick=()=>openModal(null);
+$('#modalClose').onclick=closeModal; $('#modalCancel').onclick=closeModal;
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  if(!$('#modal').classList.contains('hidden'))closeModal();
+  if(!$('#setModal').classList.contains('hidden'))closeSet();
+});
+$('#modalSave').onclick=()=>{
+  const name=$('#fName').value.trim(); let handle=$('#fHandle').value.trim();
+  const err=$('#modalErr'),fail=m=>{err.textContent=m;err.classList.remove('hidden')};
+  if(!name)return fail('表示名を入れてください。');
+  if(!handle)return fail('ハンドルを入れてください。');
+  if(!handle.startsWith('@'))handle='@'+handle;
+  if(!/^@[A-Za-z0-9_]{1,15}$/.test(handle))return fail('ハンドルは半角英数字とアンダースコア、15文字までです。');
+  if(state.accounts.some(a=>a.handle===handle&&a.id!==state.editingId))return fail('そのハンドルはすでに登録されています。');
+  const selectedParent=$('#fParentId').value||null;
+  if(selectedParent){
+    if(!getAcc(selectedParent))return fail('親アカウントが見つかりません。');
+    if(selectedParent===state.editingId)return fail('自分自身を親にはできません。');
+    const n=childrenOf(selectedParent).filter(x=>x.id!==state.editingId).length;
+    if(n>=10)return fail('1つのメインアカウントに登録できる子は最大10個です。');
+  }
+  const data={ name,handle,team:$('#fTeam').value.trim()||'未分類',voice:$('#fVoice').value,stance:$('#fStance').value,
+    length:$('#fLength').value,layout:$('#fLayout').value,hue:$('#fHue').value,note:$('#fNote').value.trim(),active:$('#fActive').checked,
+    parentId:selectedParent, actionRole:$('#fActionRole').value, actionPrompt:$('#fActionPrompt').value.trim(),
+    persona:{firstPerson:$('#pFirst').value.trim(),speaker:$('#pSpeaker').value.trim(),tone:$('#pTone').value.trim(),
+      reader:$('#pReader').value.trim(),ng:$('#pNG').value.trim(),emoji:$('#pEmoji').value,bio:$('#pBio').value.trim()} };
+  if(state.editingId) Object.assign(getAcc(state.editingId),data);
+  else{ const a=normalizeAccount({id:uid(),...data}); state.accounts.push(a); if(a.active&&!a.parentId){state.selected.add(a.id);state.vSelected.add(a.id)} }
+  saveAccounts(); closeModal(); renderAccounts(); renderPicker(); renderVPicker(); toast('保存しました');
+};
+$('#modalDelete').onclick=()=>{
+  const a=getAcc(state.editingId);
+  if(!a||!confirm(`${a.name}（${a.handle}）を削除します。よろしいですか？`))return;
+  const kids=childrenOf(a.id);
+  if(kids.length&&!confirm(`このメインアカウントには${kids.length}個の子があります。削除すると子アカウントの親紐付けも解除されます。続けますか？`))return;
+  kids.forEach(k=>k.parentId=null);
+  state.accounts=state.accounts.filter(x=>x.id!==a.id);
+  state.selected.delete(a.id); state.vSelected.delete(a.id);
+  saveAccounts(); closeModal(); renderAccounts(); renderPicker(); renderVPicker(); log(`${a.name} を削除`,'warn');
+};
+$('#accSearch').addEventListener('input',e=>{state.search=e.target.value;renderAccounts()});
+$('#exportBtn').onclick=()=>{
+  downloadJSON({schema:'post-cockpit.accounts/3',version:SCHEMA_VERSION,
+    exported_at:new Date().toISOString(),accounts:state.accounts},
+    `post-cockpit-accounts-${new Date().toISOString().slice(0,10)}.json`);
+  log('台帳を書き出し','act');
+};
+$('#exportWsBtn').onclick=()=>{
+  downloadJSON(buildWorkspacePayload(),`post-cockpit-workspace-${new Date().toISOString().slice(0,10)}.json`);
+  toast('APIキーは含めずに書き出しました'); log('ワークスペースを書き出し','act');
+};
+$('#importBtn').onclick=()=>$('#importFile').click();
+$('#importFile').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const j=JSON.parse(r.result);
+      // 素の配列 / accounts入り / ワークスペース の3形式を受け付ける
+      const arr=Array.isArray(j)?j:(Array.isArray(j.accounts)?j.accounts:null);
+      if(!arr||!arr.length) throw new Error('accounts が見つかりません');
+      state.accounts=arr.map(normalizeAccount);
+      normalizeHierarchy();
+      state.selected=new Set(state.accounts.filter(a=>a.active).slice(0,3).map(a=>a.id));
+      state.vSelected=new Set(state.selected);
+
+      if(Array.isArray(j.history)){
+        let n=0; j.history.forEach(x=>{ if(recordPost({...x,source:x.source||'manual'}).ok) n++; });
+        if(n) log(`履歴を ${n} 件読み込み`,'ok');
+      }
+      if(j.settings) applySettings({...loadSettings(),...j.settings});
+      if(j.api){
+        // キーは読み込まない。モデルや接続方式だけ引き継ぐ
+        const{key,openaiKey,...rest}=j.api;
+        state.api={...state.api,...rest}; saveApi(); renderApiState();
+      }
+      saveAccounts(); saveSettings(); renderAccounts(); renderPicker(); renderVPicker();
+      toast(`${state.accounts.length} 件を読み込みました${j.settings?'（設定も反映）':''}`);
+      log(`台帳を読み込み（${state.accounts.length}件）`,'ok');
+    }catch(err){ toast('JSONの形式が読み取れませんでした：'+err.message,'warn'); }
+    e.target.value='';
+  };
+  r.readAsText(f);
+};
+
+/* ============================================================
+   9b. 投稿履歴の画面
+   ============================================================ */
+function fmtDate(iso){
+  const d=new Date(iso);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${fmtTime(d)}`;
+}
+function restoreDeliveryHistory(id){
+  const h=state.history.find(x=>x.id===id); if(!h?.payload)return;
+  const p=h.payload, acc=getAcc(h.accountId); if(!acc){toast('この履歴のアカウントが見つかりません','warn');return;}
+  const post=p.post||{};
+  const d={acc,text:post.text_without_links||post.text||h.text||'',at:new Date(),status:'ready',reviews:[],image:p.media?.[0]?.data_url||null,truncated:false,failed:false,
+    quoteUrl:p.links?.quote_post_url||'',articleUrl:p.links?.article_url||'',actions:(p.actions||[]).map(x=>({accountId:x.account?.id||x.account?.account_id,role:x.role,text:x.text||'',status:x.status||'draft'}))};
+  state.drafts=[d]; setView('main'); renderLane(); toast('送信履歴を再編集用に読み込みました'); log('送信履歴を再編集','act');
+}
+
+function renderHistory(){
+  $('#navHistCount').textContent=state.history.length;
+  $('#histAcc').innerHTML=state.accounts.map(a=>`<option value="${a.id}">${esc(a.name)}（${esc(a.handle)}）</option>`).join('');
+
+  if(!state.history.length){
+    $('#historyList').innerHTML=`<div class="glass p-12 text-center">
+      <p class="text-[13.5px] text-ink-mute">まだ履歴がありません。公開した投稿のURLを上のフォームから追加するか、配信レーンのカードから記録してください。</p></div>`;
+    return;
+  }
+  const byAcc={};
+  state.history.forEach(x=>{ (byAcc[x.accountId]=byAcc[x.accountId]||[]).push(x); });
+
+  $('#historyList').innerHTML=Object.entries(byAcc).map(([accId,list])=>{
+    const a=getAcc(accId)||{name:'（削除されたアカウント）',handle:list[0].handle,hue:'#94A3B8'};
+    return `<section class="glass p-5 sm:p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-8 h-8 rounded-xl grid place-items-center font-bold text-[12px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc((a.name||'?').slice(0,1))}</span>
+        <h3 class="text-[14px] font-bold">${esc(a.name)}</h3>
+        <span class="tag text-ink-dim">${esc(a.handle)}</span>
+        <span class="tag ml-auto text-ink-dim">${list.length} 件</span></div>
+      <div class="space-y-2.5">${list.map(x=>`
+        <div class="glass-sub p-3 flex flex-wrap items-start gap-3">
+          <div class="min-w-0 flex-1">
+            <div class="text-[12.5px] leading-relaxed">${esc(x.text||'（メモなし）')}</div>
+            <div class="tag text-ink-dim mt-1">${fmtDate(x.at)} ・ ${x.kind==='delivery'?'Webhook送信':'公開記録'}${x.tweetId?' ・ '+esc(x.tweetId):''}</div></div>
+          <div class="flex gap-1.5 shrink-0">
+            ${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener" class="btn-ghost text-[11px] px-2 py-1 rounded-lg">開く</a>`:''}
+            ${x.url?`<button data-hcopy="${esc(x.url)}" class="btn-ghost text-[11px] px-2 py-1 rounded-lg">URL</button>`:''}
+            ${x.kind==='delivery'&&x.payload?`<button data-hreload="${x.id}" class="btn-ghost text-[11px] px-2 py-1 rounded-lg">再編集</button>`:''}
+            <button data-hdel="${x.id}" class="btn-danger text-[11px] px-2 py-1 rounded-lg">削除</button></div>
+        </div>`).join('')}</div></section>`;
+  }).join('');
+
+  $$('#historyList [data-hcopy]').forEach(b=>b.onclick=()=>copyText(b.dataset.hcopy));
+  $$('#historyList [data-hreload]').forEach(b=>b.onclick=()=>restoreDeliveryHistory(b.dataset.hreload));
+  $$('#historyList [data-hdel]').forEach(b=>b.onclick=()=>{
+    if(!confirm('この履歴を削除します。よろしいですか？'))return;
+    deleteHistory(b.dataset.hdel); renderHistory();
+  });
+}
+
+$('#histAdd').onclick=()=>{
+  const accId=$('#histAcc').value, a=getAcc(accId);
+  if(!a){ toast('アカウントを選んでください','warn'); return; }
+  const r=recordPost({accountId:a.id,handle:a.handle,url:$('#histUrl').value,text:$('#histMemo').value,source:'manual'});
+  const msg=$('#histMsg');
+  if(r.ok){ msg.textContent='追加しました'; msg.style.color='#0F766E';
+    $('#histUrl').value=''; $('#histMemo').value=''; renderHistory(); toast('履歴に追加しました'); }
+  else{ msg.textContent=r.reason; msg.style.color='#B91C1C'; }
+};
+$('#histExport').onclick=()=>{
+  downloadJSON({schema:'post-cockpit.history/1',exported_at:new Date().toISOString(),history:state.history},
+    `post-cockpit-history-${new Date().toISOString().slice(0,10)}.json`);
+  log('履歴を書き出し','act');
+};
+$('#histImport').onclick=()=>$('#histFile').click();
+$('#histFile').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const j=JSON.parse(r.result);
+      const arr=Array.isArray(j)?j:(Array.isArray(j.history)?j.history:null);
+      if(!arr) throw new Error('history が見つかりません');
+      let added=0;
+      arr.forEach(x=>{ if(recordPost({...x,source:x.source||'manual'}).ok) added++; });
+      renderHistory(); toast(`${added} 件を追加しました（重複は除外）`);
+    }catch(err){ toast('読み込めませんでした：'+err.message,'warn'); }
+    e.target.value='';
+  };
+  r.readAsText(f);
+};
+
+/* ============================================================
+   9c. 引用する投稿を選ぶモーダル
+   ============================================================ */
+let qmTarget=null;   // 対象のカード index
+function openQuotePicker(i){
+  qmTarget=i;
+  const d=state.drafts[i];
+  $('#qmSub').innerHTML=`<span class="font-bold">${esc(d.acc.name)}（${esc(d.acc.handle)}）</span> の過去投稿から選びます。`;
+  $('#qmSearch').value=''; $('#qmManual').value=''; $('#qmManualMsg').textContent='';
+  renderQuoteList();
+  $('#quoteModal').classList.remove('hidden');
+}
+function closeQuotePicker(){ $('#quoteModal').classList.add('hidden'); qmTarget=null; }
+function renderQuoteList(){
+  if(qmTarget===null) return;
+  const d=state.drafts[qmTarget];
+  const q=$('#qmSearch').value.trim().toLowerCase();
+  const list=historyFor(d.acc.id).filter(x=>!q||(x.text||'').toLowerCase().includes(q));
+  const box=$('#qmList');
+  if(!list.length){
+    box.innerHTML=`<div class="glass-sub p-8 text-center">
+      <p class="text-[13px] text-ink-mute">${historyFor(d.acc.id).length?'条件に合う投稿がありません。':'このアカウントの履歴がまだありません。'}</p>
+      <p class="text-[11.5px] text-ink-dim mt-2">公開した投稿のURLを記録すると、ここに並びます。</p></div>`;
+    return;
+  }
+  box.innerHTML=list.map(x=>`
+    <button data-qpick="${esc(x.url)}" class="w-full text-left glass-sub p-3 hover:border-[color:var(--ac)] transition">
+      <div class="text-[12.5px] leading-relaxed">${esc(x.text||'（メモなし）')}</div>
+      <div class="tag text-ink-dim mt-1.5">${fmtDate(x.at)} ・ ${esc(x.url)}</div>
+    </button>`).join('');
+  $$('#qmList [data-qpick]').forEach(b=>b.onclick=()=>applyQuote(b.dataset.qpick));
+}
+function applyQuote(url){
+  if(qmTarget===null) return;
+  state.drafts[qmTarget].quoteUrl=url;
+  closeQuotePicker(); renderLane(); toast('引用先を設定しました');
+}
+$('#qmClose').onclick=closeQuotePicker;
+$('#quoteModal').addEventListener('click',e=>{ if(e.target.id==='quoteModal') closeQuotePicker(); });
+$('#qmSearch').addEventListener('input',renderQuoteList);
+$('#qmManualUse').onclick=()=>{
+  const r=parseTweetUrl($('#qmManual').value);
+  const msg=$('#qmManualMsg');
+  if(!r.ok){ msg.textContent=r.reason||'URLを入れてください'; msg.style.color='#B91C1C'; return; }
+  applyQuote(r.url);
+};
+
+/* ============================================================
+   10. アカウント選択（タブ1 / タブ2）
+   ============================================================ */
+function pickerHTML(selSet){
+  const active=state.accounts.filter(a=>a.active&&isMainAccount(a));
+  const mkLabel=MARKETS[state.market].label;
+  const teams=[...new Set(active.map(a=>a.team||'未分類'))].sort((x,y)=>(y===mkLabel)-(x===mkLabel));
+  return teams.map(t=>{
+    const list=active.filter(a=>(a.team||'未分類')===t);
+    const allOn=list.every(a=>selSet.has(a.id));
+    const isMk=t===mkLabel;
+    return `<div><div class="flex items-center gap-3 mb-2.5">
+      <span class="text-[12.5px] font-bold ${isMk?'':'text-ink-700'}" ${isMk?'style="color:var(--ac)"':''}>${esc(t)}</span>
+      ${isMk?`<span class="tag px-2 py-0.5 rounded-full" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">選択中のマーケット</span>`:''}
+      <span class="tag text-ink-dim">${list.length}</span>
+      <button data-team="${esc(t)}" class="ml-auto text-[11.5px] text-ink-mute hover:text-[color:var(--ac)] transition">${allOn?'すべて外す':'すべて選ぶ'}</button></div>
+      <div class="flex flex-wrap gap-2">${list.map(a=>{
+        const on=selSet.has(a.id);
+        return `<button data-acc="${a.id}" class="chip ${on?'on':''} px-3.5 py-2 flex items-center gap-2.5">
+          <span class="w-5 h-5 rounded-md grid place-items-center text-[10px] font-bold shrink-0"
+            style="background:${on?'rgba(255,255,255,.25)':a.hue+'1f'};color:${on?'#fff':a.hue}">${esc((a.name||'?').slice(0,1))}</span>
+          <span class="text-[12.5px] font-medium">${esc(a.name)}</span>
+          <span class="tag ${on?'text-white/70':'text-ink-dim'}">${esc(a.stance||'')}</span></button>`;
+      }).join('')}</div></div>`;
+  }).join('');
+}
+function bindPicker(root,selSet,after){
+  $$(`${root} [data-acc]`).forEach(b=>b.onclick=()=>{
+    const id=b.dataset.acc; selSet.has(id)?selSet.delete(id):selSet.add(id); after();
+  });
+  $$(`${root} [data-team]`).forEach(b=>b.onclick=()=>{
+    const list=state.accounts.filter(a=>a.active&&(a.team||'未分類')===b.dataset.team);
+    const allOn=list.every(a=>selSet.has(a.id));
+    list.forEach(a=>allOn?selSet.delete(a.id):selSet.add(a.id)); after();
+  });
+}
+function renderPicker(){
+  const active=state.accounts.filter(a=>a.active&&isMainAccount(a));
+  if(!active.length){
+    $('#teamPicker').innerHTML=`<div class="glass-sub p-6 text-center"><p class="text-[13px] text-ink-mute mb-3">有効なアカウントがありません。</p>
+      <button id="goAcc" class="btn-ghost text-[12.5px] px-4 py-2 rounded-lg">アカウント管理を開く</button></div>`;
+    $('#goAcc').onclick=()=>setView('accounts'); $('#pickCount').textContent='0 件'; return;
+  }
+  $('#teamPicker').innerHTML=pickerHTML(state.selected);
+  bindPicker('#teamPicker',state.selected,renderPicker);
+  $('#pickCount').textContent=`${state.selected.size} 件`;
+}
+function renderVPicker(){
+  const active=state.accounts.filter(a=>a.active);
+  if(!active.length){ $('#vPicker').innerHTML=`<p class="text-[13px] text-ink-mute">有効なアカウントがありません。</p>`; return; }
+  $('#vPicker').innerHTML=`<div class="w-full space-y-5">${pickerHTML(state.vSelected)}</div>`;
+  bindPicker('#vPicker',state.vSelected,renderVPicker);
+  $('#vPickCount').textContent=`${state.vSelected.size} 件`;
+  renderAccBg();
+}
+
+/* ============================================================
+   11. タブ1：入力・生成・カード
+   ============================================================ */
+$('#baseText').addEventListener('input',e=>{
+  const v=e.target.value, cnt=$('#baseCount');
+  cnt.textContent=v.length>=800?`${v.length} 文字（要点を残して書き分けます）`:`${v.length} 文字`;
+  cnt.style.color=v.length>=2000?'#B45309':'';
+  const f=riskFlags(v),el=$('#baseFlags');
+  if(f.length){ el.textContent=`要確認：${f.join('、')}`; el.className='tag font-bold'; el.style.color='#B45309'; }
+  else{ el.textContent='表現チェック：問題なし'; el.className='tag text-ink-dim'; el.style.color=''; }
+});
+$('#sampleBtn').onclick=()=>{
+  const m=MARKETS[state.market];
+  $('#baseText').value=
+`今週の${m.label}（${m.sym}）は、直近高値で三度止められた。上ヒゲが揃っているので、そこに戻り売りが置かれている。
+
+結論
+跳ね返された後の初動は追わない。押しが入って、そこで買いが入るかを見てから判断する。
+
+チャート根拠
+直近高値は3回とも上ヒゲで否定されている。日足の実体は前回安値の上で止まっており、レンジ内の往復が続いている。
+
+ファンダメンタルズ
+見るべきは${m.angles[0]}。ここが動かないうちは、上に抜けても続きにくい。
+
+サブシナリオ
+指標が上振れした場合は、いったん抜けてから戻される展開を想定する。その場合は戻り待ちに切り替える。
+
+${m.caution}
+今週はロットを普段の半分にして、値動きの癖を確認する週にしてもいい。`;
+  $('#baseText').dispatchEvent(new Event('input')); $('#baseText').focus();
+};
+
+function refreshLinkPanel(){
+  const q=parseTweetUrl($('#quoteUrl').value), a=parseArticleUrl($('#articleUrl').value);
+  const badge=$('#linkBadge'), hint=$('#quoteHint');
+  const parts=[]; if(q.ok)parts.push('引用'); if(a.ok)parts.push('記事');
+  const bad=(!q.ok&&!q.empty)||(!a.ok&&!a.empty);
+  badge.textContent=bad?'形式を確認':(parts.length?parts.join(' + '):'未設定');
+  badge.style.color=bad?'#B91C1C':(parts.length?'var(--ac)':'');
+  badge.style.background=bad?'#FEE2E2':(parts.length?'color-mix(in srgb,var(--ac) 12%,transparent)':'');
+  hint.textContent = q.ok
+    ? `@${q.handle} のポストを引用する形でXの作成画面が開きます。`
+    : (q.empty?'Xの作成画面を開くとき、このURLを url パラメータに載せて引用ポストとして開きます。':q.reason);
+  hint.style.color=(!q.ok&&!q.empty)?'#B91C1C':'';
+  state.drafts.forEach(d=>{ d.quoteUrl=$('#quoteUrl').value.trim(); d.articleUrl=$('#articleUrl').value.trim(); });
+  if(state.drafts.length) renderLane();
+}
+$('#quoteUrl').addEventListener('input',refreshLinkPanel);
+$('#articleUrl').addEventListener('input',refreshLinkPanel);
+
+const dz=$('#dropzone'),fi=$('#fileInput');
+dz.onclick=()=>fi.click();
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--ac)';dz.style.background='rgba(255,255,255,.85)'});
+dz.addEventListener('dragleave',()=>{dz.style.borderColor='';dz.style.background=''});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='';dz.style.background='';addMedia(e.dataTransfer.files)});
+fi.onchange=e=>addMedia(e.target.files);
+
+function addMedia(files){
+  const list=[...files].filter(f=>f.type.startsWith('image/')).slice(0,4);
+  let pending=list.length;
+  list.forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const item={name:f.name,src:r.result};
+      state.media.push(item);
+      state.backgrounds.push({name:f.name,src:r.result,from:'アップロード'});
+      renderThumbs(); renderBgGrid();
+      if(--pending===0) runVision();
+    };
+    r.readAsDataURL(f);
+  });
+  if(list.length) log(`画像を ${list.length} 件追加`,'act');
+}
+function renderThumbs(){
+  $('#thumbs').innerHTML=state.media.map((m,i)=>`
+    <div class="rise relative">
+      <img src="${m.src}" alt="${esc(m.name)}" class="w-28 h-28 object-cover rounded-xl border border-hair">
+      <button data-rm="${i}" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border border-hair text-[12px] shadow hover:text-amber-600 transition">×</button>
+    </div>`).join('');
+  $$('#thumbs [data-rm]').forEach(b=>b.onclick=()=>{
+    state.media.splice(+b.dataset.rm,1);
+    if(!state.media.length){ state.vision=null; $('#visionBox').classList.add('hidden'); }
+    renderThumbs();
+  });
+}
+async function runVision(){
+  const img=state.media[0];
+  if(!img||!apiReady()||!state.api.vision)return;
+  const box=$('#visionBox'); box.classList.remove('hidden');
+  box.innerHTML=`<div class="glass-sub p-4"><div class="shimmer h-3 w-48 mb-2.5"></div><div class="shimmer h-3 w-full"></div></div>`;
+  try{
+    state.vision=await analyzeImage(img);
+    const v=state.vision;
+    box.innerHTML=`<div class="rise glass-sub p-4">
+      <div class="eyebrow mb-2">画像の解析結果</div>
+      <p class="text-[13px] leading-relaxed">${esc(v.subject||'')}</p>
+      ${v.texts?.length?`<p class="text-[12px] text-ink-mute mt-1.5">画像内の文字：${esc(v.texts.join(' / '))}</p>`:''}
+      ${v.caution?`<p class="text-[12px] mt-1.5" style="color:#B45309">確認：${esc(v.caution)}</p>`:''}
+      ${v.altText?`<div class="flex items-center gap-2 mt-3 pt-3 border-t border-hair">
+        <span class="tag text-ink-dim shrink-0">代替テキスト</span>
+        <span class="text-[12px] text-ink-mute truncate">${esc(v.altText)}</span>
+        <button id="altCopy" class="btn-ghost ml-auto shrink-0 text-[11.5px] px-2.5 py-1 rounded-lg">コピー</button></div>`:''}</div>`;
+    if($('#altCopy'))$('#altCopy').onclick=()=>copyText(v.altText);
+    log('画像を解析しました','ok');
+  }catch(e){
+    state.vision=null;
+    box.innerHTML=`<div class="glass-sub p-4 text-[12.5px]" style="color:#B45309">画像の解析に失敗しました：${esc(e.message)}</div>`;
+    log('画像解析に失敗：'+e.message,'err');
+  }
+}
+
+function buildSchedule(n){
+  const offset=+$('#offsetRange').value;
+  let lo=+$('#gapMinRange').value,hi=+$('#gapMaxRange').value;
+  if(hi<lo)[lo,hi]=[hi,lo];
+  const out=[]; let t=new Date(Date.now()+offset*60000);
+  for(let i=0;i<n;i++){ if(i>0)t=new Date(t.getTime()+(lo+Math.floor(Math.random()*(hi-lo+1)))*60000); out.push(new Date(t)); }
+  return out;
+}
+function lengthChipHTML(text,acc,i){
+  const n=[...text].length, L=LENGTHS[acc.length]||LENGTHS['標準'];
+  let color='color:#64748B',note='';
+  if(n>X_HARD_LIMIT){color='color:#B91C1C;font-weight:700';note='（Xの上限25,000字超）'}
+  else if(n>L.max*1.25){color='color:#B45309';note='（目標より長め）'}
+  else if(n<L.max*.35){color='color:#94A3B8';note='（目標より短め）'}
+  return `<span class="tag" data-count="${i}" style="${color}">${n} 字 / 目標 ${esc(L.target)}${note}</span>`;
+}
+
+async function tune(){
+  const base=$('#baseText').value.trim();
+  if(!base){ toast('先に参考文章を入れてください','warn'); $('#baseText').focus(); return; }
+  if(!apiReady()){ toast('文章生成にはAnthropic APIキー（または中継設定）が必要です','warn'); openSettings(); return; }
+  const accounts=state.accounts.filter(a=>a.active&&state.selected.has(a.id));
+  if(!accounts.length){ toast('配信するアカウントを選んでください','warn'); return; }
+
+  const btn=$('#tuneBtn'),icon=$('#tuneIcon'),label=$('#tuneLabel');
+  btn.disabled=true; icon.classList.add('spin'); label.textContent='キャラクター別に生成中…';
+  $('#emptyState').classList.add('hidden'); $('#lane').classList.add('hidden');
+  const ls=$('#loadingState'); ls.classList.remove('hidden');
+  ls.innerHTML=`<div class="flex items-center gap-3 pb-4 mb-1 border-b border-hair">
+      <span class="text-[13px] font-bold">下書きを作成中</span><span id="genProgress" class="tag text-ink-dim">0 / ${accounts.length} 件</span></div>`
+    +accounts.map((a,i)=>`<div class="flex gap-4 items-start">
+      <div class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc(a.name.slice(0,1))}</div>
+      <div class="flex-1 space-y-2.5 min-w-0">
+        <div class="text-[12px] font-bold">${esc(a.name)}
+          <span class="tag text-ink-dim">${esc(a.stance)} / ${esc((LENGTHS[a.length]||LENGTHS['標準']).label)}</span>
+          <span class="tag ml-1" data-genstate="${i}" style="color:var(--ac)">待機中</span></div>
+        <div class="shimmer h-3 w-full"></div><div class="shimmer h-3 w-[82%]"></div></div></div>`).join('');
+
+  const results=new Array(accounts.length);
+  let cursor=0,done=0;
+  async function worker(){
+    while(cursor<accounts.length){
+      const i=cursor++,acc=accounts[i];
+      try{
+        results[i]=await generateOne(base,acc);
+        if(results[i].truncated) log(`${acc.name}: 出力が上限に達しました。末尾を確認してください`,'warn');
+      }catch(e){ results[i]={text:'',failed:e.message}; log(`${acc.name} の生成に失敗：${e.message}`,'err'); }
+      done++;
+      const gp=$('#genProgress'); if(gp)gp.textContent=`${done} / ${accounts.length} 件`;
+      const st=document.querySelector(`[data-genstate="${i}"]`);
+      if(st){ st.textContent=results[i].failed?'失敗':'完了'; st.style.color=results[i].failed?'#B91C1C':'#0F766E'; }
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(3,accounts.length)},worker));
+
+  const times=buildSchedule(accounts.length);
+  const q0=$('#quoteUrl').value.trim(), a0=$('#articleUrl').value.trim();
+  state.drafts=accounts.map((acc,i)=>({acc,text:results[i].text||'（生成に失敗しました。もう一度お試しください）',
+    at:times[i],status:'ready',reviews:[],image:null,truncated:!!results[i].truncated,failed:results[i].failed,
+    quoteUrl:q0,articleUrl:a0,actions:[]}));
+  ls.classList.add('hidden'); $('#lane').classList.remove('hidden');
+  renderLane();
+  btn.disabled=false; icon.classList.remove('spin'); label.textContent='もう一度書き分ける';
+  $('#reshuffleBtn').disabled=false;
+  log(`${accounts.length}件を書き分け（${MARKETS[state.market].label}）`,'ok');
+  toast('下書きができました。内容を確認してください');
+}
+$('#tuneBtn').onclick=tune;
+$('#reshuffleBtn').onclick=()=>{
+  if(!state.drafts.length)return;
+  const t=buildSchedule(state.drafts.length);
+  state.drafts.forEach((d,i)=>{if(d.status!=='sent')d.at=t[i]});
+  renderLane(); log('公開時刻を組み直した','act');
+};
+
+function renderLane(){
+  $('#laneMeta').textContent=state.drafts.length?`${state.drafts.length} アカウント / 最終 ${fmtTime(state.drafts[state.drafts.length-1].at)}`:'';
+  $('#lane').innerHTML=state.drafts.map((d,i)=>{
+    const a=d.acc,flags=riskFlags(d.text),sent=d.status==='sent';
+    const L=LENGTHS[a.length]||LENGTHS['標準'];
+    const rows=L.max>900?20:(L.max>300?14:6);
+    return `<article class="rise glass p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <input type="checkbox" data-pick="${i}" ${d.checked?'checked':''} class="w-4 h-4 shrink-0" title="一括操作で選ぶ">
+        <div class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc(a.name.slice(0,1))}</div>
+        <div class="min-w-0"><div class="text-[14px] font-bold leading-tight truncate">${esc(a.name)}
+          <span class="font-mono text-[11px] font-normal text-ink-dim">${esc(a.handle)}</span></div>
+          <div class="tag text-ink-dim mt-0.5">${esc(a.voice)} ・ ${esc(a.stance)}</div></div>
+        <div class="ml-auto flex items-center gap-2 shrink-0">
+          <div class="flex flex-col gap-0.5">
+            <button data-up="${i}" ${i===0?'disabled':''} class="btn-ghost w-6 h-4 rounded grid place-items-center text-[9px] leading-none" title="1つ前の時刻と入れ替え">▲</button>
+            <button data-down="${i}" ${i===state.drafts.length-1?'disabled':''} class="btn-ghost w-6 h-4 rounded grid place-items-center text-[9px] leading-none" title="1つ後の時刻と入れ替え">▼</button></div>
+          <span class="tag px-2.5 py-1 rounded-full glass-sub text-ink-mute">${fmtTime(d.at)} 予定</span>
+          ${sent?`<span class="tag px-2.5 py-1 rounded-full text-white" style="background:var(--ac)">公開済み</span>`:''}</div>
+      </div>
+      <div class="field p-4">
+        <textarea data-text="${i}" rows="${rows}" ${sent?'readonly':''} class="w-full bg-transparent resize-y outline-none text-[13.5px] leading-[1.85]">${esc(d.text)}</textarea>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 mt-3">
+        ${lengthChipHTML(outgoingText(d),a,i)}
+        ${d.truncated?`<span class="tag px-2 py-1 rounded-md" style="background:#FEE2E2;color:#B91C1C">出力上限で末尾が切れている可能性</span>`:''}
+        <span data-flag="${i}">${flags.length?`<span class="tag px-2 py-1 rounded-md" style="background:#FEF3C7;color:#B45309">要確認：${flags.map(esc).join('、')}</span>`:''}</span>
+        ${whBadgeHTML(d.wh)}
+        <input type="time" data-time="${i}" value="${fmtTime(d.at)}" ${sent?'disabled':''} class="ml-auto bg-white border border-hair rounded-lg px-2 py-1 font-mono text-[12px]">
+      </div>
+
+      ${(state.media.length||state.backgrounds.length)?`
+      <div class="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-hair">
+        ${d.image?`<img src="${d.image}" class="w-28 h-16 object-cover rounded-lg border border-hair">
+          <div class="min-w-0"><div class="text-[12px] font-bold">ブランド版の画像</div>
+            <div class="tag text-ink-dim">元画像に識別色と見出しを合成</div></div>
+          <div class="ml-auto flex gap-2 shrink-0">
+            <button data-imgdl="${i}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">保存</button>
+            <button data-img="${i}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">作り直す</button></div>`
+        :`<span class="tag text-ink-dim">${state.media.length?'元画像あり':'背景あり（タブ②の選択中の背景を使用）'}</span>
+          <button data-img="${i}" class="btn-ghost ml-auto text-[11.5px] px-3 py-1.5 rounded-lg">この垢用の画像を合成</button>`}
+      </div>`:''}
+
+      <details class="mt-4 pt-4 border-t border-hair" ${linkState(d).count?'open':''}>
+        <summary class="cursor-pointer select-none text-[12.5px] font-bold text-ink-700 flex items-center gap-2">
+          リンク
+          ${(()=>{const L=linkState(d);
+            return L.count
+              ? `<span class="tag px-2 py-0.5 rounded-full" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">${L.quote.ok?'引用':''}${L.quote.ok&&L.article.ok?' + ':''}${L.article.ok?'記事':''}</span>`
+              : `<span class="tag px-2 py-0.5 rounded-full glass-sub text-ink-dim">なし</span>`;})()}
+        </summary>
+        <div class="mt-3 space-y-2.5">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-[11.5px] font-bold text-ink-700">引用する元ポスト</span>
+              <span class="tag text-ink-dim">このアカウントの履歴 ${historyFor(a.id).length} 件</span>
+              <button data-qopen="${i}" class="btn-ghost ml-auto text-[11px] px-2.5 py-1 rounded-lg">履歴から選ぶ</button>
+              ${d.quoteUrl?`<button data-qclear="${i}" class="btn-ghost text-[11px] px-2.5 py-1 rounded-lg">外す</button>`:''}
+            </div>
+            <input data-quote="${i}" value="${esc(d.quoteUrl||'')}" class="inp font-mono text-[12px]" placeholder="https://x.com/username/status/...">
+            <div data-quotemsg="${i}" class="tag mt-1"></div>
+          </div>
+          <div>
+            <div class="text-[11.5px] font-bold text-ink-700 mb-1">記事・note等のURL</div>
+            <input data-article="${i}" value="${esc(d.articleUrl||'')}" class="inp font-mono text-[12px]" placeholder="https://...">
+            <div data-articlemsg="${i}" class="tag mt-1"></div>
+          </div>
+        </div>
+      </details>
+
+      ${quotePreviewHTML(d)}
+
+      <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-hair">
+        <button data-copy="${i}" class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">本文をコピー</button>
+        <button data-open="${i}" class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">Xの作成画面で開く</button>
+        <button data-regen="${i}" ${sent?'disabled':''} class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">この垢だけ書き直す</button>
+        <button data-json="${i}" class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">JSONをコピー</button>
+        ${state.api.webhooks.length
+          ? `<button data-whsend="${i}" ${d.wh?.status==='sending'?'disabled':''} class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">
+               ${d.wh?.status==='sending'?'送信中…':(d.wh?.status==='ok'?'再送する':'Webhookへ送信')}</button>`
+          : ''}
+        <button data-send="${i}" ${sent?'disabled':''} class="btn-primary ml-auto px-5 py-2 rounded-lg text-[12.5px] font-bold">
+          <span data-sendlabel="${i}">${sent?'公開済み':'公開済みにする'}</span></button>
+      </div>
+
+      ${actionSummaryHTML(d,i)}
+
+      ${sent?`
+      <div class="mt-3 p-3 rounded-xl" style="background:color-mix(in srgb,var(--ac) 7%,transparent);border:1px solid color-mix(in srgb,var(--ac) 22%,transparent)">
+        ${d.recordedUrl
+          ? `<div class="flex flex-wrap items-center gap-2">
+               <span class="tag" style="color:var(--ac)">履歴に記録済み</span>
+               <span class="tag text-ink-dim truncate min-w-0">${esc(d.recordedUrl)}</span>
+               <a href="${esc(d.recordedUrl)}" target="_blank" rel="noopener" class="btn-ghost ml-auto shrink-0 text-[11px] px-2.5 py-1 rounded-lg">開く</a></div>`
+          : `<div class="text-[11.5px] font-bold text-ink-700 mb-1.5">公開したポストのURLを記録すると、次回この投稿を引用できます</div>
+             <div class="flex gap-2">
+               <input data-rec="${i}" class="inp font-mono text-[12px]" placeholder="https://x.com/${esc(a.handle.replace('@',''))}/status/...">
+               <button data-recsave="${i}" class="btn-ghost shrink-0 text-[12px] px-3 py-2 rounded-lg">記録</button></div>
+             <div data-recmsg="${i}" class="tag mt-1.5"></div>`}
+      </div>`:''}
+
+      <details class="mt-4 pt-4 border-t border-hair" ${d.reviews.length?'open':''}>
+        <summary class="cursor-pointer text-[12.5px] font-bold text-ink-700 flex items-center gap-2">
+          社内レビュー（公開前）
+          <span class="tag px-2 py-0.5 rounded-full glass-sub text-ink-mute">${d.reviews.filter(r=>r.ok).length} / ${d.reviews.length||10} 承認</span></summary>
+        <div class="mt-3">
+          <button data-review="${i}" class="btn-ghost text-[12px] px-3 py-1.5 rounded-lg mb-3">${d.reviews.length?'観点を出し直す':'レビュー観点を出す'}</button>
+          <div data-reviewbox="${i}" class="grid sm:grid-cols-2 gap-2.5">
+            ${d.reviews.map((r,j)=>`<div class="glass-sub p-3">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="tag px-2 py-0.5 rounded-md" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">${esc(r.role)}</span>
+                <label class="ml-auto flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer">
+                  <input type="checkbox" data-ok="${i}-${j}" ${r.ok?'checked':''} class="w-3.5 h-3.5">承認</label></div>
+              <textarea data-note="${i}-${j}" rows="2" class="w-full bg-transparent resize-none outline-none text-[12.5px] leading-relaxed text-ink-700">${esc(r.note)}</textarea>
+            </div>`).join('')}
+          </div>
+        </div>
+      </details>
+    </article>`;
+  }).join('');
+  $('#expLaneCopy').classList.toggle('hidden',!state.drafts.length);
+  $('#expLaneDl').classList.toggle('hidden',!state.drafts.length);
+  refreshBulkBar();
+  renderLaneWebhook();
+  bindCard();
+}
+
+/* ============================================================
+   一括操作（選択 → 時刻シフト / ステータス変更）
+   ------------------------------------------------------------
+   選択が1件もないときは全カードを対象にする。
+   ============================================================ */
+function pickedIndexes(){
+  const sel=state.drafts.map((d,i)=>d.checked?i:-1).filter(i=>i>=0);
+  return sel.length?sel:state.drafts.map((_,i)=>i);
+}
+function refreshBulkBar(){
+  const bar=$('#bulkBar');
+  bar.classList.toggle('hidden',!state.drafts.length);
+  if(!state.drafts.length) return;
+  const n=state.drafts.filter(d=>d.checked).length;
+  $('#bulkCount').textContent=`${n} 件選択`;
+  $('#bulkAll').checked=n>0&&n===state.drafts.length;
+  $('#bulkAll').indeterminate=n>0&&n<state.drafts.length;
+  $('#bulkHint').textContent=n
+    ? `選択した ${n} 件が対象です。`
+    : `選択が無いときは全 ${state.drafts.length} 件が対象になります。`;
+}
+function shiftTimes(min){
+  const idx=pickedIndexes().filter(i=>state.drafts[i].status!=='sent');
+  if(!idx.length){ toast('対象がありません（公開済みは動かしません）','warn'); return; }
+  idx.forEach(i=>{ state.drafts[i].at=new Date(state.drafts[i].at.getTime()+min*60000); });
+  renderLane();
+  log(`${idx.length}件の時刻を ${min>0?'+':''}${min}分 ずらした`,'act');
+}
+function swapTimes(i,j){
+  if(i<0||j<0||i>=state.drafts.length||j>=state.drafts.length) return;
+  const a=state.drafts[i], b=state.drafts[j];
+  const t=a.at; a.at=b.at; b.at=t;
+  state.drafts[i]=b; state.drafts[j]=a;   // 表示順も時刻順に保つ
+  renderLane();
+}
+
+$('#bulkAll').onchange=()=>{
+  const on=$('#bulkAll').checked;
+  state.drafts.forEach(d=>{ d.checked=on; });
+  renderLane();
+};
+$$('#bulkBar [data-shift]').forEach(b=>b.onclick=()=>shiftTimes(+b.dataset.shift));
+$('#shiftApply').onclick=()=>{
+  const v=Number($('#shiftCustom').value);
+  if(!Number.isFinite(v)||v===0){ toast('分数を入れてください','warn'); return; }
+  shiftTimes(Math.round(v));
+};
+$('#bulkSend').onclick=()=>{
+  const idx=pickedIndexes().filter(i=>state.drafts[i].status!=='sent');
+  if(!idx.length){ toast('公開待ちのカードがありません','warn'); return; }
+
+  const flagged=idx.filter(i=>riskFlags(state.drafts[i].text).length);
+  const unreviewed=idx.filter(i=>{
+    const d=state.drafts[i];
+    return d.reviews.length&&d.reviews.filter(r=>r.ok).length<d.reviews.length;
+  });
+  const lines=[`${idx.length} 件をまとめて公開済みにします。`];
+  if(flagged.length) lines.push(`・断定/利益保証の疑いがある表現を含むカード: ${flagged.length} 件`);
+  if(unreviewed.length) lines.push(`・社内レビューが未完のカード: ${unreviewed.length} 件`);
+  lines.push('','よろしいですか？');
+  if(!confirm(lines.join('\n'))) return;
+
+  idx.forEach(i=>{ state.drafts[i].status='sent'; });
+  renderLane();
+  toast(`${idx.length} 件を公開済みにしました`);
+  log(`${idx.length}件をまとめて公開済みに変更`,'ok');
+};
+$('#bulkUnsend').onclick=()=>{
+  const idx=pickedIndexes().filter(i=>state.drafts[i].status==='sent');
+  if(!idx.length){ toast('公開済みのカードがありません','warn'); return; }
+  idx.forEach(i=>{ state.drafts[i].status='ready'; });
+  renderLane(); log(`${idx.length}件を下書きに戻した`,'act');
+};
+
+function postsOnlyPayload(opts){
+  const p=buildDeliveryPayload({includeMedia:opts?opts.includeMedia:$('#expMedia').checked});
+  p.items=p.items.filter(i=>i.type==='post');
+  p.video_rows=[]; p.counts.videos=0;
+  return p;
+}
+$('#expLaneCopy').onclick=()=>{ copyText(JSON.stringify(postsOnlyPayload(),null,2)); log('配信JSONをコピー','act'); };
+$('#expLaneDl').onclick=()=>{
+  downloadJSON(postsOnlyPayload(),`delivery-posts-${new Date().toISOString().slice(0,10)}.json`);
+  log('配信JSONを保存','act');
+};
+
+function bindCard(){
+  $$('[data-actions-gen]').forEach(b=>b.onclick=()=>generateActionsForDraft(state.drafts[+b.dataset.actionsGen]));
+  $$('[data-actiontext]').forEach(ta=>{
+    const [i,id]=ta.dataset.actiontext.split('-');
+    const act=(state.drafts[+i].actions||[]).find(x=>x.accountId===id);
+    if(act) ta.oninput=()=>{act.text=ta.value;act.status='edited';};
+  });
+  $$('[data-text]').forEach(ta=>ta.oninput=()=>{
+    const i=+ta.dataset.text; state.drafts[i].text=ta.value;
+    const c=document.querySelector(`[data-count="${i}"]`);
+    if(c)c.outerHTML=lengthChipHTML(outgoingText(state.drafts[i]),state.drafts[i].acc,i);
+    const f=riskFlags(ta.value);
+    document.querySelector(`[data-flag="${i}"]`).innerHTML=
+      f.length?`<span class="tag px-2 py-1 rounded-md" style="background:#FEF3C7;color:#B45309">要確認：${f.map(esc).join('、')}</span>`:'';
+  });
+  $$('[data-time]').forEach(inp=>inp.onchange=()=>{
+    const i=+inp.dataset.time,[h,m]=inp.value.split(':').map(Number);
+    const d=new Date(state.drafts[i].at); d.setHours(h,m,0,0); state.drafts[i].at=d;
+  });
+  $$('[data-copy]').forEach(b=>b.onclick=()=>copyText(outgoingText(state.drafts[+b.dataset.copy])));
+  $$('[data-open]').forEach(b=>b.onclick=()=>{
+    const d=state.drafts[+b.dataset.open], L=linkState(d);
+    if(L.invalid){ toast('リンクの形式を確認してください','warn'); return; }
+    window.open(buildIntentUrl(d),'_blank','noopener');
+  });
+  /* X API を繋いだら、この中で投稿してレスポンスから recordPost() を呼ぶ。
+     手貼りの入力欄は不要になる：
+       const r = await xPost({ text: outgoingText(d), quote_tweet_id: linkState(d).quote.id });
+       recordPost({ accountId:d.acc.id, handle:d.acc.handle, tweetId:r.data.id, text:d.text, source:'api' });
+     ※2026年時点のX APIは従量課金。URLを含む投稿は1件あたりの単価が高い */
+  $$('[data-send]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.send,d=state.drafts[i];
+    const f=riskFlags(d.text);
+    if(f.length&&!confirm(`「${f.join('、')}」は断定・利益保証と受け取られる表現です。\nこのまま公開済みにしますか？`))return;
+    d.status='sent'; renderLane(); log(`${d.acc.name} を公開済みにした`,'ok');
+  });
+  $$('[data-regen]').forEach(b=>b.onclick=async()=>{
+    const i=+b.dataset.regen,d=state.drafts[i],base=$('#baseText').value.trim();
+    if(!base){toast('参考文章が空です','warn');return}
+    b.disabled=true; b.textContent='書き直し中…';
+    try{ const r=await generateOne(base,d.acc); d.text=r.text; d.truncated=r.truncated;
+      log(`${d.acc.name} を書き直した`,'ok'); }
+    catch(e){ toast('書き直しに失敗：'+e.message,'err'); }
+    renderLane();
+  });
+  $$('[data-review]').forEach(b=>b.onclick=async()=>{
+    const i=+b.dataset.review;
+    const box=document.querySelector(`[data-reviewbox="${i}"]`);
+    box.innerHTML=Array.from({length:6}).map(()=>`<div class="shimmer h-16"></div>`).join('');
+    await sleep(700);
+    state.drafts[i].reviews=REVIEW_ROLES.map(r=>({role:r.role,note:pick(r.notes),ok:false}));
+    renderLane();
+  });
+  $$('[data-ok]').forEach(cb=>cb.onchange=()=>{
+    const[i,j]=cb.dataset.ok.split('-').map(Number); state.drafts[i].reviews[j].ok=cb.checked; renderLane();
+  });
+  $$('[data-note]').forEach(ta=>ta.oninput=()=>{
+    const[i,j]=ta.dataset.note.split('-').map(Number); state.drafts[i].reviews[j].note=ta.value;
+  });
+  const linkMsg=(sel,res,okText)=>{
+    const el=document.querySelector(sel); if(!el) return;
+    if(res.empty){ el.textContent=''; el.style.color=''; return; }
+    el.textContent=res.ok?okText:res.reason;
+    el.style.color=res.ok?'#0F766E':'#B91C1C';
+  };
+  $$('[data-pick]').forEach(cb=>cb.onchange=()=>{
+    state.drafts[+cb.dataset.pick].checked=cb.checked; refreshBulkBar();
+  });
+  $$('[data-up]').forEach(b=>b.onclick=()=>swapTimes(+b.dataset.up,+b.dataset.up-1));
+  $$('[data-down]').forEach(b=>b.onclick=()=>swapTimes(+b.dataset.down,+b.dataset.down+1));
+  $$('[data-qopen]').forEach(b=>b.onclick=()=>openQuotePicker(+b.dataset.qopen));
+  $$('[data-qclear]').forEach(b=>b.onclick=()=>{ state.drafts[+b.dataset.qclear].quoteUrl=''; renderLane(); });
+  $$('[data-recsave]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.recsave, d=state.drafts[i];
+    const url=document.querySelector(`[data-rec="${i}"]`).value;
+    const r=recordPost({accountId:d.acc.id,handle:d.acc.handle,url,
+      text:d.text.split('\n').map(s=>s.trim()).filter(Boolean).slice(0,2).join(' ').slice(0,120),source:'manual'});
+    const msg=document.querySelector(`[data-recmsg="${i}"]`);
+    if(r.ok){ d.recordedUrl=r.item.url; renderLane(); toast('履歴に記録しました'); log(`${d.acc.name} の投稿を履歴に記録`,'ok'); }
+    else{ msg.textContent=r.reason; msg.style.color='#B91C1C'; }
+  });
+  $$('[data-quote]').forEach(inp=>inp.oninput=()=>{
+    const i=+inp.dataset.quote; state.drafts[i].quoteUrl=inp.value;
+    const r=parseTweetUrl(inp.value);
+    linkMsg(`[data-quotemsg="${i}"]`,r,r.ok?`@${r.handle} のポストを引用します`:'');
+    const c=document.querySelector(`[data-count="${i}"]`);
+    if(c) c.outerHTML=lengthChipHTML(outgoingText(state.drafts[i]),state.drafts[i].acc,i);
+  });
+  $$('[data-article]').forEach(inp=>inp.oninput=()=>{
+    const i=+inp.dataset.article; state.drafts[i].articleUrl=inp.value;
+    const r=parseArticleUrl(inp.value);
+    linkMsg(`[data-articlemsg="${i}"]`,r,'本文の末尾に追記されます');
+    const c=document.querySelector(`[data-count="${i}"]`);
+    if(c) c.outerHTML=lengthChipHTML(outgoingText(state.drafts[i]),state.drafts[i].acc,i);
+  });
+  $$('[data-quote]').forEach(inp=>inp.dispatchEvent(new Event('input')));
+  $$('[data-article]').forEach(inp=>inp.dispatchEvent(new Event('input')));
+
+  $$('[data-whsend]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.whsend;
+    const destId=$('#lwDest')?.value||state.api.webhooks[0]?.id;
+    runTargetedSend({ target:state.drafts[i], destId,
+      payloadFn:()=>singlePostPayload(i,state.api.webhookIncludeMedia),
+      label:`${state.drafts[i].acc.name} の投稿`, rerender:renderLane });
+  });
+  $$('[data-json]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.json;
+    copyText(JSON.stringify(singlePostPayload(i,$('#expMedia').checked),null,2));
+  });
+  $$('[data-img]').forEach(b=>b.onclick=()=>buildCardImage(+b.dataset.img));
+  $$('[data-imgdl]').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.imgdl,d=state.drafts[i];
+    download(d.image,`post-${d.acc.handle.replace('@','')}.jpg`);
+  });
+}
+
+async function buildCardImage(i){
+  const d=state.drafts[i];
+  const src=state.media[0]?.src||state.backgrounds[state.bgIndex]?.src;
+  if(!src){ toast('元画像をアップロードするか、タブ②で背景を作ってください','warn'); return; }
+  const btn=document.querySelector(`[data-img="${i}"]`);
+  btn.disabled=true; btn.textContent='合成中…';
+  try{
+    const first=d.text.split('\n').map(s=>s.trim()).filter(Boolean)[0]||d.acc.name;
+    const lead=(state.vision?.headline||first).replace(/[#＃]\S+/g,'').replace(/^[📌📊🌍⚠️🔀🧮■▼]\s*/,'').slice(0,20);
+    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:'',
+      footer:d.acc.handle,index:0,total:1,tint:.28,dim:.42});
+    state.backgrounds.push({name:`${d.acc.name} 合成`,src:d.image,from:`${d.acc.name}用`});
+    state.accountBg[d.acc.id]=d.image;   // タブ②の背景として引き継ぐ
+    renderBgGrid(); renderAccBg(); renderLane();
+    log(`${d.acc.name} 用の画像を合成`,'ok');
+  }catch(e){ toast('画像の合成に失敗しました','err'); btn.disabled=false; btn.textContent='この垢用の画像を合成'; }
+}
+
+/* ============================================================
+   12. タブ2：背景・テロップ・書き出し
+   ============================================================ */
+$('#vBaseText').addEventListener('input',e=>{ $('#vBaseCount').textContent=`${e.target.value.length} 文字`; });
+$('#pullFromT1').onclick=()=>{
+  const t=$('#baseText').value.trim();
+  if(!t){ toast('タブ①の文章が空です','warn'); return; }
+  $('#vBaseText').value=t; $('#vBaseText').dispatchEvent(new Event('input')); toast('読み込みました');
+};
+$('#vSec').oninput=()=>{ $('#vSecVal').textContent=(+$('#vSec').value/10).toFixed(1)+'秒'; };
+$('#bgUploadBtn').onclick=()=>$('#bgFile').click();
+
+/* ---- AIで背景を作る ---- */
+$('#bgAiBtn').onclick=()=>{
+  const p=$('#bgAiPanel');
+  p.classList.toggle('hidden');
+  if(!p.classList.contains('hidden')&&!$('#bgPrompt').value.trim()&&$('#vBaseText').value.trim()) $('#bgPromptBtn').click();
+};
+$('#bgPromptBtn').onclick=async()=>{
+  const base=$('#vBaseText').value.trim()||$('#baseText').value.trim();
+  if(!base){ toast('先に文章を入れてください','warn'); return; }
+  if(!apiReady()){ toast('プロンプト生成にはAnthropic APIキー（または中継設定）が必要です','warn'); openSettings(); return; }
+  const btn=$('#bgPromptBtn'); btn.disabled=true; btn.textContent='作成中…';
+  try{
+    const acc=state.accounts.find(a=>state.vSelected.has(a.id))||state.accounts[0];
+    $('#bgPrompt').value=await buildImagePrompt(base,acc,$('#vRatio').value);
+    log('背景プロンプトを作成','ok');
+  }catch(e){ toast('プロンプトの作成に失敗：'+e.message,'err'); }
+  btn.disabled=false; btn.textContent='文章から自動で書く';
+};
+$('#bgGenBtn').onclick=async()=>{
+  const prompt=$('#bgPrompt').value.trim();
+  if(!prompt){ toast('プロンプトを入れてください','warn'); return; }
+  if(state.api.backend!=='proxy'&&!state.api.openaiKey){ toast('画像生成にはOpenAIのAPIキーが必要です','warn'); openSettings(); return; }
+  const perAcc=$('#bgPerAccount').checked;
+  const accounts=state.accounts.filter(a=>a.active&&state.vSelected.has(a.id));
+  if(perAcc&&!accounts.length){ toast('アカウントを選んでください','warn'); return; }
+  if(perAcc&&!confirm(`${accounts.length}件のアカウント分、画像を${accounts.length}枚生成します。\nその回数だけOpenAIの料金がかかります。続けますか？`)) return;
+
+  const btn=$('#bgGenBtn'),st=$('#bgGenState'),ratio=$('#vRatio').value;
+  btn.disabled=true; st.classList.remove('hidden');
+
+  if(!perAcc){
+    btn.textContent='生成中…';
+    st.innerHTML=`<div class="flex items-center gap-3"><div class="shimmer w-20 h-14 rounded-lg"></div>
+      <span class="text-[12.5px] text-ink-mute">${esc(state.api.imageModel)} で背景を生成しています（20〜60秒ほど）</span></div>`;
+    try{
+      const src=await generateImage(prompt,ratio);
+      state.backgrounds.push({name:'AI背景',src,from:'GPT生成'});
+      state.bgIndex=state.backgrounds.length-1; renderBgGrid();
+      st.innerHTML=`<div class="flex items-center gap-3"><img src="${src}" class="w-20 h-14 object-cover rounded-lg border border-hair">
+        <span class="text-[12.5px]" style="color:#0F766E">生成しました。共通背景として選択済みです。</span></div>`;
+      log('背景画像を生成（OpenAI）','ok'); toast('背景を生成しました');
+    }catch(e){
+      st.innerHTML=`<div class="text-[12.5px]" style="color:#B91C1C">${esc(e.message)}</div>`;
+      log('背景生成に失敗：'+e.message,'err');
+    }
+  }else{
+    let done=0;
+    const draw=()=>{ st.innerHTML=`<div class="text-[12.5px] text-ink-mute mb-2">アカウント別に生成中 ${done} / ${accounts.length} 件</div>
+      <div class="flex flex-wrap gap-2">${accounts.map(a=>state.accountBg[a.id]
+        ?`<img src="${state.accountBg[a.id]}" class="w-16 h-11 object-cover rounded-lg border border-hair">`
+        :`<div class="shimmer w-16 h-11 rounded-lg"></div>`).join('')}</div>`; };
+    draw();
+    for(const acc of accounts){
+      btn.textContent=`${acc.name} を生成中…`;
+      try{
+        // アカウントごとにプロンプトを作り直す（識別色とペルソナが変わるため）
+        let p=prompt;
+        try{ p=await buildImagePrompt($('#vBaseText').value.trim()||$('#baseText').value.trim(),acc,ratio); }catch(e){}
+        const src=await generateImage(p,ratio);
+        state.accountBg[acc.id]=src;
+        state.backgrounds.push({name:`${acc.name} 背景`,src,from:`${acc.name}用`});
+        log(`${acc.name} の背景を生成`,'ok');
+      }catch(e){ log(`${acc.name} の背景生成に失敗：${e.message}`,'err'); toast(`${acc.name}：${e.message}`,'err'); }
+      done++; draw(); renderBgGrid(); renderAccBg();
+    }
+    st.innerHTML=`<div class="text-[12.5px]" style="color:#0F766E">アカウント別の背景を ${Object.keys(state.accountBg).length} 件用意しました。</div>`;
+    toast('アカウント別の背景を作りました');
+  }
+  btn.disabled=false; btn.textContent='この内容で生成';
+};
+
+/* ---- アカウント別の背景の割り当て ---- */
+function renderAccBg(){
+  const accounts=state.accounts.filter(a=>a.active&&state.vSelected.has(a.id));
+  const panel=$('#accBgPanel');
+  if(!accounts.length){ panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  $('#accBgList').innerHTML=accounts.map(a=>{
+    const src=state.accountBg[a.id];
+    return `<div class="flex items-center gap-2.5 p-2.5 rounded-xl border border-hair bg-white/70">
+      ${src?`<img src="${src}" class="w-14 h-10 object-cover rounded-lg border border-hair shrink-0">`
+           :`<div class="w-14 h-10 rounded-lg grid place-items-center shrink-0" style="background:${a.hue}14">
+              <span class="tag" style="color:${a.hue}">共通</span></div>`}
+      <div class="min-w-0"><div class="text-[12.5px] font-bold truncate">${esc(a.name)}</div>
+        <div class="tag text-ink-dim">${src?'専用の背景':'共通背景を使用'}</div></div>
+      <div class="ml-auto flex gap-1.5 shrink-0">
+        <button data-assign="${a.id}" class="btn-ghost text-[11px] px-2 py-1 rounded-lg">選択中を割当</button>
+        ${src?`<button data-unassign="${a.id}" class="btn-ghost text-[11px] px-2 py-1 rounded-lg">解除</button>`:''}
+      </div></div>`;
+  }).join('');
+  $$('#accBgList [data-assign]').forEach(b=>b.onclick=()=>{
+    const bg=state.backgrounds[state.bgIndex];
+    if(!bg){ toast('割り当てる背景がありません','warn'); return; }
+    state.accountBg[b.dataset.assign]=bg.src; renderAccBg(); toast('割り当てました');
+  });
+  $$('#accBgList [data-unassign]').forEach(b=>b.onclick=()=>{
+    delete state.accountBg[b.dataset.unassign]; renderAccBg();
+  });
+}
+$('#accBgClearAll').onclick=()=>{ state.accountBg={}; renderAccBg(); toast('すべて共通背景に戻しました'); };
+
+/* そのアカウントが使う背景を返す。専用が無ければ共通背景 */
+function bgFor(acc){
+  return state.accountBg[acc.id]||state.backgrounds[state.bgIndex]?.src||null;
+}
+$('#bgFile').onchange=e=>{
+  const list=[...e.target.files].filter(f=>f.type.startsWith('image/'));
+  list.forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{ state.backgrounds.push({name:f.name,src:r.result,from:'アップロード'}); renderBgGrid(); };
+    r.readAsDataURL(f);
+  });
+  if(list.length) log(`背景を ${list.length} 件追加`,'act');
+  e.target.value='';
+};
+function renderBgGrid(){
+  const g=$('#bgGrid');
+  if(!state.backgrounds.length){
+    g.innerHTML=`<div class="col-span-full glass-sub p-8 text-center">
+      <p class="text-[13px] text-ink-mute">背景がありません。「背景を追加」か、タブ①で画像をアップロードしてください。</p></div>`;
+    return;
+  }
+  if(state.bgIndex>=state.backgrounds.length) state.bgIndex=0;
+  g.innerHTML=state.backgrounds.map((b,i)=>`
+    <button data-bg="${i}" class="bgpick ${i===state.bgIndex?'on':''} aspect-[4/3]">
+      <img src="${b.src}" class="w-full h-full object-cover">
+      <span class="tag absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white">${esc(b.from)}</span>
+    </button>`).join('');
+  $$('#bgGrid [data-bg]').forEach(b=>b.onclick=()=>{ state.bgIndex=+b.dataset.bg; renderBgGrid(); });
+}
+
+async function vGenerate(){
+  const base=$('#vBaseText').value.trim();
+  if(!base){ toast('テロップの元になる文章を入れてください','warn'); $('#vBaseText').focus(); return; }
+  if(!apiReady()){ toast('テロップ生成にはAnthropic APIキー（または中継設定）が必要です','warn'); openSettings(); return; }
+  if(!state.backgrounds.length){ toast('背景画像を追加してください','warn'); return; }
+  const accounts=state.accounts.filter(a=>a.active&&state.vSelected.has(a.id));
+  if(!accounts.length){ toast('アカウントを選んでください','warn'); return; }
+
+  const slides=+$('#vSlides').value;
+  const btn=$('#vGenBtn'),icon=$('#vIcon'),label=$('#vLabel');
+  btn.disabled=true; icon.classList.add('spin'); label.textContent='テロップを生成中…';
+  $('#vEmpty').classList.add('hidden'); $('#vCards').classList.add('hidden');
+  const vl=$('#vLoading'); vl.classList.remove('hidden');
+  vl.innerHTML=`<div class="text-[13px] font-bold mb-3">テロップを作って合成しています</div>`
+    +accounts.map(a=>`<div class="flex gap-4 items-center">
+      <div class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc(a.name.slice(0,1))}</div>
+      <div class="flex-1 space-y-2"><div class="text-[12px] font-bold">${esc(a.name)}</div><div class="shimmer h-3 w-full"></div></div></div>`).join('');
+
+  const[W,H]=RATIOS[$('#vRatio').value];
+  const sets=[];
+  for(const acc of accounts){
+    try{
+      const bgSrc=bgFor(acc);
+      const telop=await generateTelop(base,acc,slides);
+      const frames=[];
+      for(let i=0;i<telop.length;i++){
+        frames.push(await composeFrame({bgSrc,W,H,hue:acc.hue,lead:telop[i].lead,body:telop[i].body,
+          footer:acc.handle,index:i,total:telop.length}));
+      }
+      sets.push({acc,telop,frames,W,H,ownBg:!!state.accountBg[acc.id]});
+      log(`${acc.name} のテロップ ${telop.length} 枚を合成`,'ok');
+    }catch(e){ log(`${acc.name} のテロップ生成に失敗：${e.message}`,'err'); toast(`${acc.name}：${e.message}`,'err'); }
+  }
+  state.vSets=sets;
+  vl.classList.add('hidden');
+  if(sets.length){ $('#vCards').classList.remove('hidden'); $('#vExportAll').classList.remove('hidden');
+    $('#vExportJson').classList.remove('hidden'); renderVCards(); }
+  else $('#vEmpty').classList.remove('hidden');
+  btn.disabled=false; icon.classList.remove('spin'); label.textContent='テロップを作り直す';
+  $('#vRecomposeBtn').disabled=!sets.length;
+}
+$('#vGenBtn').onclick=vGenerate;
+
+/* テロップはそのままに、背景だけ差し替えて合成し直す */
+$('#vRecomposeBtn').onclick=async()=>{
+  if(!state.vSets.length)return;
+  const[W,H]=RATIOS[$('#vRatio').value];
+  const btn=$('#vRecomposeBtn'); btn.disabled=true; btn.textContent='合成中…';
+  for(const s of state.vSets){
+    const bgSrc=bgFor(s.acc);
+    s.frames=[]; s.W=W; s.H=H; s.ownBg=!!state.accountBg[s.acc.id];
+    for(let i=0;i<s.telop.length;i++){
+      s.frames.push(await composeFrame({bgSrc,W,H,hue:s.acc.hue,lead:s.telop[i].lead,body:s.telop[i].body,
+        footer:s.acc.handle,index:i,total:s.telop.length}));
+    }
+  }
+  renderVCards(); btn.disabled=false; btn.textContent='背景だけ差し替える';
+  log('背景を差し替えて合成し直した','act');
+};
+
+function webhookSetupLinkHTML(id){
+  return `<button id="${id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">Webhook送信先を登録</button>`;
+}
+function renderLaneWebhook(){
+  const box=$('#laneWebhook');
+  if(!state.drafts.length){ box.innerHTML=''; return; }
+  if(!state.api.webhooks.length){
+    box.innerHTML=webhookSetupLinkHTML('lwSetup');
+    $('#lwSetup').onclick=openSettings; return;
+  }
+  box.innerHTML=webhookPickerHTML('lw').replace('Webhookへ送信','投稿を送信')+
+    `<button id="lwSetup" class="text-[11px] text-ink-dim hover:text-[color:var(--ac)] transition" title="送信先の設定">設定</button>`;
+  $('#lwSetup').onclick=openSettings;
+  $('#lwSend').onclick=()=>runWebhookSend('#lwDest','#lwSend',
+    ()=>postsOnlyPayload({includeMedia:state.api.webhookIncludeMedia}),'投稿データ（全件）');
+}
+function renderVideoWebhook(){
+  const box=$('#vWebhook');
+  if(!state.vSets.length){ box.innerHTML=''; return; }
+  if(!state.api.webhooks.length){
+    box.innerHTML=webhookSetupLinkHTML('vwSetup');
+    $('#vwSetup').onclick=openSettings; return;
+  }
+  box.innerHTML=webhookPickerHTML('vw');
+  $('#vwSend').onclick=()=>runWebhookSend('#vwDest','#vwSend',()=>{
+    const p=buildDeliveryPayload({includeMedia:state.api.webhookIncludeMedia});
+    p.items=p.items.filter(i=>i.type==='video'); p.rows=[]; p.counts.posts=0;
+    return p;
+  },'動画データ（全件）');
+}
+
+function renderVCards(){
+  $('#vCards').innerHTML=state.vSets.map((s,si)=>`
+    <article class="rise glass p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${s.acc.hue}1f;color:${s.acc.hue}">${esc(s.acc.name.slice(0,1))}</div>
+        <div class="min-w-0"><div class="text-[14px] font-bold leading-tight truncate">${esc(s.acc.name)}
+          <span class="font-mono text-[11px] font-normal text-ink-dim">${esc(s.acc.handle)}</span></div>
+          <div class="tag text-ink-dim mt-0.5">${s.frames.length} 枚 / ${s.W}×${s.H} / ${s.ownBg?'専用の背景':'共通背景'}</div>
+          <div class="mt-1">${whBadgeHTML(s.wh)}</div></div>
+        <div class="ml-auto flex flex-wrap gap-2 shrink-0">
+          ${state.api.webhooks.length
+            ? `<button data-vwhsend="${si}" ${s.wh?.status==='sending'?'disabled':''} class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">
+                 ${s.wh?.status==='sending'?'送信中…':(s.wh?.status==='ok'?'再送する':'Webhookへ送信')}</button>`
+            : ''}
+          <button data-vjson="${si}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">JSONをコピー</button>
+          <button data-vpng="${si}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">PNGで保存</button>
+          <button data-vmp4="${si}" class="btn-primary text-[11.5px] px-3.5 py-1.5 rounded-lg font-bold">動画で書き出す</button></div>
+      </div>
+      <div class="flex gap-3 overflow-x-auto pb-2">
+        ${s.frames.map((f,fi)=>`<div class="shrink-0" style="width:${s.H>s.W?'132px':'236px'}">
+          <img src="${f}" class="w-full rounded-xl border border-hair shadow-sm">
+          <div class="tag text-ink-dim mt-1.5 text-center">${fi+1} / ${s.frames.length}</div></div>`).join('')}
+      </div>
+      <details class="mt-4 pt-4 border-t border-hair">
+        <summary class="cursor-pointer text-[12.5px] font-bold text-ink-700">テロップの文言を確認・修正</summary>
+        <div class="mt-3 space-y-2.5">
+          ${s.telop.map((t,ti)=>`<div class="glass-sub p-3 grid sm:grid-cols-[160px_1fr] gap-2.5">
+            <input data-tlead="${si}-${ti}" value="${esc(t.lead)}" class="inp text-[12.5px] font-bold" placeholder="見出し">
+            <input data-tbody="${si}-${ti}" value="${esc(t.body)}" class="inp text-[12.5px]" placeholder="本文">
+          </div>`).join('')}
+          <button data-tapply="${si}" class="btn-ghost text-[12px] px-3 py-1.5 rounded-lg">修正を反映して合成し直す</button>
+        </div>
+      </details>
+    </article>`).join('');
+
+  renderVideoWebhook();
+  $$('#vCards [data-vwhsend]').forEach(b=>b.onclick=()=>{
+    const si=+b.dataset.vwhsend;
+    const destId=$('#vwDest')?.value||state.api.webhooks[0]?.id;
+    runTargetedSend({ target:state.vSets[si], destId,
+      payloadFn:()=>singleVideoPayload(si,state.api.webhookIncludeMedia),
+      label:`${state.vSets[si].acc.name} の動画`, rerender:renderVCards });
+  });
+  $$('#vCards [data-vjson]').forEach(b=>b.onclick=()=>{
+    const si=+b.dataset.vjson;
+    copyText(JSON.stringify(singleVideoPayload(si,$('#expMedia').checked),null,2));
+  });
+  $$('#vCards [data-vpng]').forEach(b=>b.onclick=()=>{
+    const s=state.vSets[+b.dataset.vpng];
+    s.frames.forEach((f,i)=>setTimeout(()=>download(f,`${s.acc.handle.replace('@','')}_slide${i+1}.jpg`),i*260));
+    toast(`${s.frames.length} 枚を保存します`);
+  });
+  $$('#vCards [data-vmp4]').forEach(b=>b.onclick=async()=>{
+    const s=state.vSets[+b.dataset.vmp4];
+    b.disabled=true; b.textContent='書き出し中…';
+    try{
+      const ext=await exportVideo(s.frames,+$('#vSec').value/10,s.W,s.H,
+        `${s.acc.handle.replace('@','')}_${Date.now()}`,(d,t)=>{b.textContent=`書き出し中 ${d}/${t}`});
+      toast(`${ext.toUpperCase()} で書き出しました`);
+      log(`${s.acc.name} の動画を書き出し（${ext}）`,'ok');
+    }catch(e){ toast('動画の書き出しに失敗：'+e.message,'err'); }
+    b.disabled=false; b.textContent='動画で書き出す';
+  });
+  $$('#vCards [data-tapply]').forEach(b=>b.onclick=async()=>{
+    const si=+b.dataset.tapply,s=state.vSets[si];
+    s.telop=s.telop.map((t,ti)=>({
+      lead:document.querySelector(`[data-tlead="${si}-${ti}"]`).value,
+      body:document.querySelector(`[data-tbody="${si}-${ti}"]`).value }));
+    b.disabled=true; b.textContent='合成中…';
+    const bgSrc=bgFor(s.acc);
+    s.frames=[];
+    for(let i=0;i<s.telop.length;i++){
+      s.frames.push(await composeFrame({bgSrc,W:s.W,H:s.H,hue:s.acc.hue,
+        lead:s.telop[i].lead,body:s.telop[i].body,footer:s.acc.handle,index:i,total:s.telop.length}));
+    }
+    renderVCards(); toast('合成し直しました');
+  });
+}
+$$('#vCards [data-vjson]');
+$('#vExportJson').onclick=()=>{
+  const p=buildDeliveryPayload({includeMedia:$('#expMedia').checked});
+  p.items=p.items.filter(i=>i.type==='video');
+  p.rows=[]; p.counts.posts=0;
+  downloadJSON(p,`delivery-videos-${new Date().toISOString().slice(0,10)}.json`); log('動画JSONを保存','act');
+};
+$('#vExportAll').onclick=()=>{
+  let n=0;
+  state.vSets.forEach(s=>s.frames.forEach((f,i)=>{
+    setTimeout(()=>download(f,`${s.acc.handle.replace('@','')}_slide${i+1}.jpg`),n*260); n++;
+  }));
+  toast(`${n} 枚を順に保存します`);
+};
+
+/* ============================================================
+   13. 設定の復元と起動
+   ============================================================ */
+function applySettings(s){
+  $('#offsetRange').value=s.offset; $('#offsetVal').textContent=s.offset+'分';
+  $('#gapMinRange').value=s.gapMin; $('#gapMinVal').textContent=s.gapMin+'分';
+  $('#gapMaxRange').value=s.gapMax; $('#gapMaxVal').textContent=s.gapMax+'分';
+  $('#tagToggle').checked=s.tags!==false;
+  $('#vRatio').value=s.ratio; $('#vSlides').value=String(s.slides);
+  $('#vSec').value=s.sec; $('#vSecVal').textContent=(s.sec/10).toFixed(1)+'秒';
+}
+[['#offsetRange','#offsetVal'],['#gapMinRange','#gapMinVal'],['#gapMaxRange','#gapMaxVal']].forEach(([r,v])=>{
+  $(r).oninput=()=>{ $(v).textContent=$(r).value+'分'; saveSettings(); };
+});
+['#tagToggle','#vRatio','#vSlides','#vSec'].forEach(sel=>{
+  $(sel).addEventListener('change',saveSettings);
+});
+$('#clearLog').onclick=()=>{ state.logs=[]; renderLog(); };
+setInterval(()=>{ $('#clock').textContent=fmtTime(new Date()); },1000);
+$('#clock').textContent=fmtTime(new Date());
+
+if(window.innerWidth>=1024) $('#sidebar').classList.remove('-translate-x-full');
+
+/* ============================================================
+   React orchestration layer
+   ------------------------------------------------------------
+   新規運用機能はReactコンポーネント単位で分離。既存のCanvas/生成
+   エンジンはDOM APIを維持し、段階的にコンポーネントへ移行できる構造。
+   ============================================================ */
+(function mountReactOperations(){
+  if(!window.React||!window.ReactDOM) return;
+  const {useEffect,useState}=React;
+  function ApiTestStatus(){const [msg,setMsg]=useState('API接続テストは設定画面から実行できます。');useEffect(()=>{const el=document.querySelector('#setMsg');if(!el)return;const mo=new MutationObserver(()=>setMsg(el.textContent||'API接続テストは設定画面から実行できます。'));mo.observe(el,{childList:true,characterData:true,subtree:true});return()=>mo.disconnect()},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'ApiTestStatus','data-status':msg},msg)}
+  function WebhookStatus(){const [count,setCount]=useState(0);useEffect(()=>{const tick=()=>setCount(state.api.webhooks.length);const id=setInterval(tick,1000);tick();return()=>clearInterval(id)},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'WebhookStatus','data-destinations':count},String(count))}
+  function AccountHierarchy(){const [count,setCount]=useState(0);useEffect(()=>{const id=setInterval(()=>setCount(state.accounts.filter(a=>a.parentId).length),1000);return()=>clearInterval(id)},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'AccountHierarchy','data-action-accounts':count},String(count))}
+  function HistoryBridge(){const [count,setCount]=useState(state.history.length);useEffect(()=>{const id=setInterval(()=>setCount(state.history.length),1000);return()=>clearInterval(id)},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'HistoryBridge','data-history-count':count},String(count))}
+  function OperationsRoot(){return React.createElement(React.Fragment,null,React.createElement(ApiTestStatus),React.createElement(WebhookStatus),React.createElement(AccountHierarchy),React.createElement(HistoryBridge))}
+  ReactDOM.createRoot(document.getElementById('reactOpsRoot')).render(React.createElement(OperationsRoot));
+})();
+
+state.history=loadHistory();
+loadExternalPersonaAccounts();
+const boot=loadSettings();
+applySettings(boot);
+if(!Store.available()) toast('このブラウザでは保存が使えません。JSONで書き出して控えを取ってください','warn');
+setMarket(MARKETS[boot.market]?boot.market:'usdjpy');
+setTab(boot.tab==='video'?'video':'image');
+setView('main');
+renderApiState();
+renderPicker();
+renderVPicker();
+renderBgGrid();
+renderAccounts();
+$('#navHistCount').textContent=state.history.length;
+renderLog();
+log('デスクを起動しました');
+</script>
+</body>
+</html>
