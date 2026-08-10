@@ -175,33 +175,6 @@ tailwind.config={theme:{extend:{
             <span id="baseFlags" class="tag text-ink-dim">表現チェック：問題なし</span>
             <span id="baseCount" class="tag text-ink-dim">0 文字</span></div>
         </div>
-        <details id="linkPanel" class="mt-4 rounded-2xl border border-hair bg-white/60">
-          <summary class="cursor-pointer select-none px-4 py-3 flex items-center gap-2.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" class="text-ink-mute">
-              <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/></svg>
-            <span class="text-[13px] font-bold">引用ポスト・記事リンク</span>
-            <span id="linkBadge" class="tag px-2 py-0.5 rounded-full glass-sub text-ink-dim">未設定</span>
-            <span class="ml-auto text-[11.5px] text-ink-dim">任意</span>
-          </summary>
-          <div class="px-4 pb-4 pt-1 space-y-3">
-            <label class="block">
-              <div class="text-[12px] font-bold text-ink-700 mb-1.5">引用したい元ポストのURL</div>
-              <input id="quoteUrl" class="inp font-mono text-[12.5px]" placeholder="https://x.com/username/status/1234567890">
-              <p id="quoteHint" class="text-[11.5px] text-ink-dim mt-1.5 leading-relaxed">
-                Xの作成画面を開くとき、このURLを url パラメータに載せて引用ポストとして開きます。</p>
-            </label>
-            <label class="block">
-              <div class="text-[12px] font-bold text-ink-700 mb-1.5">一緒に紹介する記事・note等のURL</div>
-              <input id="articleUrl" class="inp font-mono text-[12.5px]" placeholder="https://note.com/... または自社ブログのURL">
-              <p class="text-[11.5px] text-ink-dim mt-1.5 leading-relaxed">
-                本文の末尾に自動で追記されます。Xではリンクは23文字として数えられます。</p>
-            </label>
-            <p class="text-[11.5px] text-ink-dim leading-relaxed pt-1 border-t border-hair">
-              ここで入れたリンクは、次に生成する全カードの初期値になります。カードごとの差し替えは各カードの「リンク」から。
-            </p>
-          </div>
-        </details>
-
         <div id="dropzone" class="mt-4 rounded-2xl border-2 border-dashed border-hair transition cursor-pointer p-6 text-center">
           <input id="fileInput" type="file" accept="image/*" multiple class="hidden">
           <div class="text-[13px] text-ink-mute">元画像（チャート・図解）をドラッグ、またはクリックして選択</div>
@@ -430,7 +403,7 @@ tailwind.config={theme:{extend:{
             <div class="eyebrow mb-1.5">realtime watch desk</div>
             <h2 class="text-[17px] font-bold">🔔 新着監視デスク</h2>
             <p class="text-[12.5px] text-ink-mute mt-1 max-w-[760px] leading-relaxed">
-              登録した公開アカウントの新着ポストをバックエンド経由で監視し、検知した投稿を一覧化します。返信文はAIで下書きできますが、投稿は必ず人間が確認してXの画面から行う設計です。
+              登録した公開アカウントの新着ポストをバックエンド経由で監視し、検知した投稿を一覧化します。返信文はAIで下書きできます。X APIを接続したアカウントでは、対象を限定して自動返信まで実行できます。
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -694,8 +667,14 @@ tailwind.config={theme:{extend:{
           <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">X APIバックエンドURL</div>
             <input id="fXBackendUrl" class="inp font-mono" placeholder="https://your-backend.example.com">
             <p class="text-[11px] text-ink-dim mt-1.5">GitHub Pagesとは別に配置するPost CockpitバックエンドのURLです。</p></label>
-          <label class="flex items-center gap-2.5 cursor-pointer"><input id="fXConfirm" type="checkbox" checked class="w-4 h-4">
-            <span class="text-[13px] text-ink-700">Xへの実行前に必ず確認ダイアログを表示する</span></label>
+          <label class="flex items-center gap-2.5 cursor-pointer"><input id="fXConfirm" type="checkbox" class="w-4 h-4">
+            <span class="text-[13px] text-ink-700">X APIの自動実行前に確認ダイアログを表示する</span></label>
+          <div class="rounded-xl p-3" style="background:#F8FAFC;border:1px solid #E2E8F0">
+            <label class="flex items-center gap-2.5 cursor-pointer"><input id="fXAutoReply" type="checkbox" checked class="w-4 h-4">
+              <span class="text-[12.5px] font-bold text-ink-700">公開後のメンション返信を自動監視</span></label>
+            <div class="flex items-center gap-2 mt-2 text-[11.5px] text-ink-dim">取得間隔 <select id="fXAutoReplyInterval" class="inp !w-20 py-1"><option value="5">5秒</option><option value="8" selected>8秒</option><option value="15">15秒</option><option value="30">30秒</option></select></div>
+            <p class="text-[10.5px] text-ink-dim mt-2 leading-relaxed">Post Cockpitが開いている間、今回この画面から公開したメイン投稿への「登録済み子アカウントからの手動リプライ」だけを監視し、検知したらAIで返信文を生成してメインアカウントのX APIから自動返信します。子アカウントのリプライ自体はAPIでは実行しません。</p>
+          </div>
           <div class="rounded-xl p-3" style="background:#EFF6FF;border:1px solid #BFDBFE">
             <p class="text-[11.5px] leading-relaxed" style="color:#1E3A8A">
               必要スコープ：tweet.read / tweet.write / users.read / like.write / bookmark.write / offline.access。X側の権限と料金体系はDeveloper Consoleで確認してください。</p></div>
@@ -836,7 +815,7 @@ function structuredCloneSafe(o){ return JSON.parse(JSON.stringify(o)); }
    fetch に差し替えるだけでよい。
    ============================================================ */
 const SCHEMA_VERSION=8;
-const STORE={acc:'postcockpit.accounts',api:'postcockpit.api',settings:'postcockpit.settings',history:'postcockpit.history',monitor:'postcockpit.monitor.v1'};
+const STORE={acc:'postcockpit.accounts',api:'postcockpit.api',settings:'postcockpit.settings',history:'postcockpit.history',monitor:'postcockpit.monitor.v1',autoReplySeen:'postcockpit.autoReplySeen.v1',autoReplyWatch:'postcockpit.autoReplyWatch.v1'};
 const LEGACY_KEYS={acc:['postcockpit.accounts.v2','postcockpit.accounts.v1'],api:['postcockpit.api.v2','postcockpit.api.v1']};
 
 const Store={
@@ -981,7 +960,7 @@ const DEFAULT_API={key:'',model:'claude-sonnet-5',temp:1,vision:true,
   openaiKey:'',imageModel:'gpt-image-1',imageQuality:'medium',
   backend:'direct',proxyUrl:'/api/claude',imageProxyUrl:'/api/image',appToken:'',
   webhooks:[],webhookMode:'direct',webhookProxyUrl:'/api/webhook',webhookIncludeMedia:false,
-  xBackendUrl:'',xRequireConfirm:true};
+  xBackendUrl:'',xRequireConfirm:false,autoReplyEnabled:true,autoReplyInterval:8};
 function loadApi(){
   const a={...DEFAULT_API,...(Store.read(STORE.api,null)||{})};
   a.webhooks=Array.isArray(a.webhooks)?a.webhooks.filter(w=>w&&w.url).map(w=>({
@@ -1105,11 +1084,9 @@ function monitorCardHTML(x,i){
     <div class="flex flex-wrap gap-2 mt-3">
       ${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">元ポストを開く</a>`:''}
       <button data-monitor-draft="${i}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">AIで返信案</button>
-      ${x.url?`<button data-monitor-reply="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">Xで返信画面</button>`:''}
-      ${x.url?`<button data-monitor-quote="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">Xで引用画面</button>`:''}
       <button data-monitor-read="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">${x.read?'未読に戻す':'既読にする'}</button>
     </div>
-    ${x.draft?`<div class="mt-3 pt-3 border-t border-hair"><div class="text-[10.5px] text-ink-dim mb-1.5">AI返信案（必ず確認してから投稿）</div><textarea data-monitor-text="${i}" rows="3" class="inp w-full text-[12px] leading-relaxed">${esc(x.draft)}</textarea><div class="flex gap-2 mt-2"><button data-monitor-openreply="${i}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">確認してX返信画面を開く</button><button data-monitor-copy="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">コピー</button></div></div>`:''}
+    ${x.draft?`<div class="mt-3 pt-3 border-t border-hair"><div class="text-[10.5px] text-ink-dim mb-1.5">AI返信案</div><textarea data-monitor-text="${i}" rows="3" class="inp w-full text-[12px] leading-relaxed">${esc(x.draft)}</textarea><div class="flex gap-2 mt-2"><span class="text-[11px] text-ink-dim">この監視デスクは参考表示です。自動返信はX API設定の監視機能から行います。</span></div></div>`:''}
   </article>`;
 }
 function monitorPrompt(x){
@@ -1123,8 +1100,8 @@ async function generateMonitorDraft(i){
     x.draft=String(r.text||'').trim().replace(/^```[\s\S]*?\n|```$/g,'').trim(); x.read=true; saveMonitor(); renderMonitor(); toast('返信案を生成しました'); log(`${x.authorHandle||'監視対象'}への返信案を生成`,'act');
   }catch(e){toast('返信案の生成に失敗：'+e.message,'err');log(`監視返信案生成失敗：${e.message}`,'err')}
 }
-function monitorOpenReply(i){const x=state.monitor.inbox[i];if(!x?.url)return;const t=(document.querySelector(`[data-monitor-text="${i}"]`)||{}).value?.trim()||x.draft||'';if(!t){toast('返信文がありません','warn');return}const id=parseTweetUrl(x.url);if(!id.ok){toast('元ポストURLを解析できません','warn');return}window.open(`https://x.com/intent/post?in_reply_to=${encodeURIComponent(id.id)}&text=${encodeURIComponent(t)}`,'_blank','noopener');x.read=true;x.draft=t;saveMonitor();renderMonitor();log('X返信画面を開いた（手動投稿）','act')}
-function monitorOpenQuote(i){const x=state.monitor.inbox[i];if(!x?.url)return;const t=(document.querySelector(`[data-monitor-text="${i}"]`)||{}).value?.trim()||x.draft||'';const u=t?`${t}\n${x.url}`:x.url;window.open(`https://x.com/intent/post?text=${encodeURIComponent(u)}`,'_blank','noopener');x.read=true;saveMonitor();renderMonitor();log('X引用画面を開いた（手動投稿）','act')}
+function monitorOpenReply(i){toast('この画面からXの作成画面は開きません。自動返信監視を使用してください','warn')}
+function monitorOpenQuote(i){toast('この画面からXの作成画面は開きません。自動返信監視を使用してください','warn')}
 async function pollMonitor(){
   if(!state.monitor.running||!xBackendUrl())return;
   try{
@@ -1309,11 +1286,10 @@ async function anthropicTransport(payload){
 
 /* 低レベル。system と messages をそのまま渡す */
 async function callClaude({system,messages,max_tokens=2400,temperature}){
-  return anthropicTransport({
-    model:state.api.model, max_tokens,
-    temperature:temperature??state.api.temp,
-    system, messages
-  });
+  const payload={model:state.api.model,max_tokens,system,messages};
+  // Claude Sonnet 5系では temperature が非対応のため送らない。
+  if(!/^claude-sonnet-5/i.test(String(state.api.model||''))) payload.temperature=temperature??state.api.temp;
+  return anthropicTransport(payload);
 }
 
 /* ペルソナ付きの入口。将来ここだけ呼べば済むようにしてある */
@@ -1374,14 +1350,9 @@ function parseArticleUrl(raw){
 }
 
 /** 投稿に実際に載せる本文。記事リンクは末尾へ、引用URLは本文に入れない */
-function outgoingText(d){
-  const art=parseArticleUrl(d.articleUrl);
-  if(!art.ok) return d.text;
-  if(d.text.includes(art.url)) return d.text;   // すでに本文に書かれていれば重複させない
-  return d.text.replace(/\s+$/,'')+'\n\n'+art.url;
-}
+function outgoingText(d){ return String(d.text||'').trim(); }
 
-/** Xの作成画面のURL。引用があれば url パラメータで引用ポストとして開く */
+/** 旧来のX作成画面URL生成（現在の投稿フローでは使用しない） */
 function buildIntentUrl(d){
   const p=new URLSearchParams();
   p.set('text',outgoingText(d));
@@ -1391,14 +1362,7 @@ function buildIntentUrl(d){
 }
 
 /** リンクの状態をひとまとめに返す（表示とJSONで共用） */
-function linkState(d){
-  const q=parseTweetUrl(d.quoteUrl), a=parseArticleUrl(d.articleUrl);
-  return{
-    quote:q, article:a,
-    count:(q.ok?1:0)+(a.ok?1:0),
-    invalid:(!q.ok&&!q.empty)||(!a.ok&&!a.empty)
-  };
-}
+function linkState(d){ const q=parseTweetUrl(d.quoteUrl); return{quote:q,article:{ok:false,empty:true},count:q.ok?1:0,invalid:!q.ok&&!q.empty}; }
 
 /* 引用元ポストのプレビュー。
    本文は履歴に記録があるときだけ出せる（外部の取得はしない）。 */
@@ -1434,7 +1398,7 @@ function quotePreviewHTML(d){
       </div>
     </div>
     <p class="text-[11.5px] text-ink-dim mt-2 leading-relaxed">
-      Xの作成画面では、この元ポストが引用として下に付いた状態で開きます。
+      公開時はX APIの quote_tweet_id としてこの履歴ポストを引用します。
     </p>
   </div>`;
 }
@@ -1540,11 +1504,11 @@ function actionSummaryHTML(d,i){
       ${acts.length?`<span class="tag px-2 py-0.5 rounded-full" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">${planned}件アクション</span>`:''}
     </summary>
     <div class="mt-3 space-y-3">
-      ${children.length?`<div class="flex flex-wrap items-center gap-2"><button data-actions-plan="${i}" class="btn-primary text-[11.5px] px-3.5 py-2 rounded-lg font-bold">ランダムにアクションプランを作成</button>${textTargets?`<button data-actions-ai="${i}" class="btn-ghost text-[11.5px] px-3.5 py-2 rounded-lg font-bold">リプライ・引用文案をAI生成</button>`:''}<span class="text-[11px] text-ink-dim">親に紐づく有効なサポートアカウント全体へ、設定した重みに応じてアクション数を配分。実行は手動確認です。</span></div>`:`<div class="glass-sub p-3 text-[12px] text-ink-dim">このメインアカウントには有効なサポートアカウントがありません。</div>`}
+      ${children.length?`<div class="flex flex-wrap items-center gap-2"><button data-actions-plan="${i}" class="btn-primary text-[11.5px] px-3.5 py-2 rounded-lg font-bold">ランダムにアクションプランを作成</button>${textTargets?`<button data-actions-ai="${i}" class="btn-ghost text-[11.5px] px-3.5 py-2 rounded-lg font-bold">リプライ・引用文案をAI生成</button>`:''}<span class="text-[11px] text-ink-dim">親に紐づく有効なサポートアカウント全体へ、設定した重みに応じてアクション数を配分。子アカウントの最初のリプライは手動で行い、その返信をメインアカウントが自動検知して返信します。子アカウントからのAPI自動リプライは行いません。</span></div>`:`<div class="glass-sub p-3 text-[12px] text-ink-dim">このメインアカウントには有効なサポートアカウントがありません。</div>`}
       ${acts.length?acts.map(x=>{const c=getAcc(x.accountId);return c?`<div class="glass-sub p-3.5">
-        <div class="flex flex-wrap items-center gap-2 mb-2"><span class="tag" style="color:${c.hue}">${esc(c.name)}</span><span class="tag text-ink-dim">${esc(actionLabel(x.action||x.role))}</span><span class="font-mono text-[11px] text-ink-dim">${esc(c.handle)}</span><span class="tag ml-auto text-ink-dim">手動確認</span></div>
+        <div class="flex flex-wrap items-center gap-2 mb-2"><span class="tag" style="color:${c.hue}">${esc(c.name)}</span><span class="tag text-ink-dim">${esc(actionLabel(x.action||x.role))}</span><span class="font-mono text-[11px] text-ink-dim">${esc(c.handle)}</span>${x.action==='reply'?`<span class="tag ml-auto text-ink-dim">手動リプライ待ち</span>`:`<span class="tag ml-auto text-ink-dim">実行対象</span>`}</div>
         ${(x.action==='reply'||x.action==='quote')?`<textarea data-actiontext="${i}-${esc(c.id)}" rows="3" class="w-full bg-transparent resize-y outline-none text-[12.5px] leading-relaxed" placeholder="${x.action==='quote'?'紹介・PRまたは要点補足の引用文':'投稿内容への感想・補足・質問などのリプライ文案'}">${esc(x.text||'')}</textarea>`:`<div class="text-[12px] text-ink-mute py-1.5">このアクションは文章入力不要です。実行時にX上で確認してください。</div>`}
-        ${x.action!=='skip'?`<div class="mt-3 flex flex-wrap items-center gap-2"><button data-x-execute="${i}-${esc(c.id)}" class="btn-primary text-[11.5px] px-3 py-2 rounded-lg font-bold">Xで実行</button><button data-x-skip="${i}-${esc(c.id)}" class="btn-ghost text-[11.5px] px-3 py-2 rounded-lg">今回はスキップ</button><span data-x-result="${i}-${esc(c.id)}" class="text-[11px] text-ink-dim"></span></div>`:''}
+        ${x.action==='reply'?`<div class="mt-3 flex flex-wrap items-center gap-2"><span class="tag" style="color:#0F766E">手動リプライ後にメインが自動返信</span><button data-x-skip="${i}-${esc(c.id)}" class="btn-ghost text-[11.5px] px-3 py-2 rounded-lg">監視対象から外す</button></div>`:x.action!=='skip'?`<div class="mt-3 flex flex-wrap items-center gap-2"><button data-x-execute="${i}-${esc(c.id)}" class="btn-primary text-[11.5px] px-3 py-2 rounded-lg font-bold">Xで実行</button><button data-x-skip="${i}-${esc(c.id)}" class="btn-ghost text-[11.5px] px-3 py-2 rounded-lg">今回はスキップ</button><span data-x-result="${i}-${esc(c.id)}" class="text-[11px] text-ink-dim"></span></div>`:''}
       </div>`:''}).join(''):''}
     </div>
   </details>`;
@@ -1828,13 +1792,7 @@ function draftUserPrompt(base,acc){
   ].join('\n');
 }
 /* 引用・記事リンクがある場合の注意書き。本文に重ねて書かせないため */
-function linkNote(){
-  const q=parseTweetUrl($('#quoteUrl').value), a=parseArticleUrl($('#articleUrl').value);
-  const rows=[];
-  if(q.ok) rows.push(`この投稿は @${q.handle} のポストを引用する形で出します。引用元に触れる書き出しにしてかまいませんが、URLは本文に書かないでください。`);
-  if(a.ok) rows.push('本文の末尾に記事リンクを別途追記します。URLは本文に書かず、「詳しくは下のリンクから」のような案内も入れないでください。');
-  return rows.length?'\n【リンクについて】\n'+rows.map(s=>'- '+s).join('\n'):'';
-}
+function linkNote(){ return ''; }
 
 function tokenBudget(acc,base){
   const L=LENGTHS[acc.length]||LENGTHS['標準'];
@@ -2133,7 +2091,7 @@ function renderApiState(){
   $('#apiDot').style.background=a?'#0F766E':'#94A3B8';
 }
 function openSettings(){
-  $('#fXBackendUrl').value=state.api.xBackendUrl||''; $('#fXConfirm').checked=state.api.xRequireConfirm!==false; refreshXStatus();
+  $('#fXBackendUrl').value=state.api.xBackendUrl||''; $('#fXConfirm').checked=state.api.xRequireConfirm===true; if($('#fXAutoReply'))$('#fXAutoReply').checked=state.api.autoReplyEnabled!==false; if($('#fXAutoReplyInterval'))$('#fXAutoReplyInterval').value=String(state.api.autoReplyInterval||8); refreshXStatus();
   $('#fKey').value=state.api.key; $('#fModel').value=state.api.model;
   $('#fTemp').value=Math.round(state.api.temp*10); $('#tempVal').textContent=state.api.temp.toFixed(1);
   $('#fVisionOn').checked=state.api.vision;
@@ -2318,6 +2276,8 @@ $('#setSave').onclick=()=>{
   state.api.webhookIncludeMedia=$('#fWebhookMedia').checked;
   state.api.xBackendUrl=$('#fXBackendUrl').value.trim();
   state.api.xRequireConfirm=$('#fXConfirm').checked;
+   state.api.autoReplyEnabled=$('#fXAutoReply')?.checked!==false;
+   state.api.autoReplyInterval=Math.max(5,+($('#fXAutoReplyInterval')?.value||8));
   state.api.webhooks=whDraft.filter(w=>w.url).map(w=>({...w,name:w.name||w.url.slice(0,24)}));
   state.api.openaiKey=$('#fOpenAIKey').value.trim();
   state.api.imageModel=$('#fImageModel').value;
@@ -2421,7 +2381,7 @@ function connectXAccount(accountId){
   const url=base+'/api/x/connect?accountId='+encodeURIComponent(accountId)+'&returnTo='+encodeURIComponent(location.href.split('#')[0]);
   window.location.href=url;
 }
-async function executeXAction(d,act){
+async function executeXAction(d,act,opts={}){
   const c=getAcc(act.accountId); if(!c)return;
   const tweetId=act.targetTweetId||d.xTweetId||d.recordedTweetId||null;
   if(!tweetId && ['reply','quote','like','repost','bookmark'].includes(act.action)){
@@ -2431,14 +2391,14 @@ async function executeXAction(d,act){
   const target=act.targetTweetId||d.xTweetId||d.recordedTweetId||null;
   if(!target && act.action!=='post') { toast('対象Post IDがありません。まずメイン投稿をXへ公開し、Post IDを登録してください','warn'); return; }
   if(['reply','quote'].includes(act.action)&&!act.text.trim()){toast('リプライ／引用文案を入力してください','warn');return;}
-  if(state.api.xRequireConfirm!==false){
+  if(!opts.auto && state.api.xRequireConfirm===true){
     const label=actionLabel(act.action);
     if(!confirm(`Xで「${label}」を ${c.handle} から実行します。\n\n${act.text||'文章なし'}\n\n実行してよろしいですか？`))return;
   }
   const result=document.querySelector(`[data-x-result="${state.drafts.indexOf(d)}-${CSS.escape(c.id)}"]`);
   if(result)result.textContent='送信中…';
   try{
-    const payload={accountId:c.id,action:act.action,tweetId:target,text:act.text||'',quoteTweetId:act.action==='quote'?target:null};
+    const payload={accountId:c.id,accountHandle:c.handle,action:act.action,tweetId:target,text:act.text||'',quoteTweetId:act.action==='quote'?target:null};
     const j=await xFetch('/api/x/action',{method:'POST',body:JSON.stringify(payload)});
     act.status='executed'; act.executedAt=new Date().toISOString(); act.result=j;
     if(j.data?.id){act.resultTweetId=j.data.id;}
@@ -2448,12 +2408,115 @@ async function executeXAction(d,act){
     act.status='failed'; act.error=e.message; if(result)result.textContent='失敗：'+e.message; renderLane(); log(`${c.name} のX実行失敗：${e.message}`,'err');
   }
 }
+
+async function publishDraft(d){
+  if(!d)return;
+  if(!xBackendUrl()){openSettings();toast('先にX APIバックエンドURLを設定してください','warn');return;}
+  if(d.status==='sent'&&d.xTweetId){toast('この投稿はすでに公開済みです','warn');return;}
+  const f=riskFlags(d.text);
+  if(f.length&&!confirm(`「${f.join('、')}」は要確認の表現です。\nこのままXへ投稿しますか？`))return;
+  const i=state.drafts.indexOf(d), b=document.querySelector(`[data-send="${i}"]`), label=b?.querySelector(`[data-sendlabel="${i}"]`);
+  if(b)b.disabled=true; if(label)label.textContent='投稿中…';
+  try{
+    const L=linkState(d);
+    const j=await xFetch('/api/x/post',{method:'POST',body:JSON.stringify({accountId:d.acc.id,accountHandle:d.acc.handle,text:outgoingText(d),quoteTweetId:L.quote.ok?L.quote.id:null,mediaDataUrl:d.image||null})});
+    const tid=j?.result?.data?.id||j?.data?.id;
+    if(!tid)throw new Error('XからPost IDを取得できませんでした');
+    d.status='sent'; d.xTweetId=String(tid); d.recordedTweetId=String(tid); d.recordedUrl=`https://x.com/${String(d.acc.handle).replace('@','')}/status/${tid}`;
+    recordPost({accountId:d.acc.id,handle:d.acc.handle,tweetId:String(tid),text:d.text,source:'api'});
+    renderLane(); toast(`${d.acc.name} をXへ投稿しました`,'ok'); log(`${d.acc.name} をX APIで公開：${tid}`,'ok');
+    if(isMainAccount(d.acc)){
+      if(!Array.isArray(d.actions)||!d.actions.length) createReplyActionPlan(d);
+      registerMentionWatch(d);
+    }
+  }catch(e){
+    toast('Xへの投稿に失敗：'+e.message,'err'); log(`${d.acc.name} のX投稿失敗：${e.message}`,'err');
+    if(label)label.textContent='Xへ投稿';
+  }finally{if(b)b.disabled=false;}
+}
+function createReplyActionPlan(d){
+  // 子アカウントの最初のリプライは手動。Post Cockpitから子アカウントへAPI投稿しない。
+  const children=childrenOf(d.acc.id).filter(a=>a.active);
+  d.actions=children.map(c=>({accountId:c.id,action:'reply',role:'手動リプライ待ち',text:'',status:'manual_waiting',plannedAt:new Date().toISOString()}));
+  renderLane();
+  if(children.length){
+    const watch=Store.read(STORE.autoReplyWatch,{})||{};
+    watch[String(d.xTweetId)]={mainAccountId:d.acc.id,mainHandle:d.acc.handle,childHandles:children.map(c=>String(c.handle||'').replace(/^@/,'').toLowerCase()).filter(Boolean),createdAt:Date.now()};
+    Store.write(STORE.autoReplyWatch,watch);
+    toast(`子アカウント ${children.length}件の手動リプライ待ち。検知後は${d.acc.name}から自動返信します`,'ok');
+    log(`${d.acc.name}：子アカウントの手動リプライ待ちを登録`,'act');
+  }
+}
+
+const mentionWatch={posts:new Map(),sinceId:null,timer:null,running:false};
+function registerMentionWatch(d){
+  if(state.api.autoReplyEnabled===false||!d?.xTweetId)return;
+  const children=childrenOf(d.acc.id).filter(a=>a.active);
+  const childHandles=children.map(c=>String(c.handle||'').replace(/^@/,'').toLowerCase()).filter(Boolean);
+  mentionWatch.posts.set(String(d.xTweetId),{mainAccountId:d.acc.id,mainHandle:String(d.acc.handle||''),childHandles});
+  const stored=Store.read(STORE.autoReplyWatch,{})||{};
+  stored[String(d.xTweetId)]={mainAccountId:d.acc.id,mainHandle:d.acc.handle,childHandles,createdAt:Date.now()};
+  Store.write(STORE.autoReplyWatch,stored);
+  startMentionWatcher();
+}
+function restoreMentionWatches(){
+  if(state.api.autoReplyEnabled===false)return;
+  const stored=Store.read(STORE.autoReplyWatch,{})||{};
+  const recent=Object.entries(stored).filter(([_,v])=>v&&Date.now()-Number(v.createdAt||0)<1000*60*60*24*7);
+  for(const [tweetId,v] of recent) mentionWatch.posts.set(String(tweetId),v);
+  if(mentionWatch.posts.size) startMentionWatcher();
+}
+function startMentionWatcher(){
+  if(state.api.autoReplyEnabled===false||!mentionWatch.posts.size||!xBackendUrl())return;
+  if(mentionWatch.running)return;
+  mentionWatch.running=true;
+  clearInterval(mentionWatch.timer);
+  mentionWatch.timer=setInterval(pollAutoReplies,Math.max(5,Number(state.api.autoReplyInterval||8))*1000);
+  pollAutoReplies();
+  log('メインアカウント宛ての手動子アカウントリプライ監視を開始','act');
+}
+function normalizeHandle(v){return String(v||'').replace(/^@/,'').trim().toLowerCase();}
+async function pollAutoReplies(){
+  if(!mentionWatch.running||!mentionWatch.posts.size||!xBackendUrl())return;
+  try{
+    const j=await xFetch('/api/x/mentions?sinceId='+(mentionWatch.sinceId||''));
+    const items=Array.isArray(j.items)?j.items:[];
+    if(j.meta?.newest_id) mentionWatch.sinceId=j.meta.newest_id;
+    const seen=Store.read(STORE.autoReplySeen,{})||{};
+    for(const x of items){
+      const ref=(x.referenced_tweets||[]).find(r=>r.type==='replied_to');
+      const watch=ref?mentionWatch.posts.get(String(ref.id)):null;
+      if(!watch)continue;
+      if(String(x.author_id)===String(j.me?.id))continue;
+      const author=normalizeHandle(x.author_username);
+      // 登録済みの子アカウントだけを自動返信対象にする。
+      if(!watch.childHandles.length || !watch.childHandles.includes(author))continue;
+      if(watch.createdAt && x.created_at && new Date(x.created_at).getTime() < Number(watch.createdAt))continue;
+      const key='auto:'+x.id;
+      if(seen[key])continue;
+      if(!apiReady()){log('自動返信を実行できません：Anthropic API設定がありません','err');continue;}
+      const prompt=`あなたはメインアカウントの返信担当です。次の「手動で行われた子アカウントからの返信」に対して、元の投稿者として自然で短い返信を1件作ってください。\n\nルール：\n- 相手の返信内容に直接応答する\n- 元投稿にない事実、実績、第三者推薦を作らない\n- 過度な宣伝や購入誘導をしない\n- 1〜2文程度で自然にする\n- 返信本文だけを出力する\n\nメインアカウント：${watch.mainHandle||j.me?.username||''}\n子アカウント：@${author}\n子アカウントの返信：\n${x.text||''}`;
+      const r=await callAnthropicAPI(prompt,null,{max_tokens:300});
+      const text=String(r.text||'').trim().replace(/^```[a-z]*\s*/i,'').replace(/\s*```$/,'').trim();
+      if(!text)continue;
+      const post=await xFetch('/api/x/post',{method:'POST',body:JSON.stringify({text,replyToTweetId:String(x.id),accountHandle:j.me?.username?('@'+j.me.username):watch.mainHandle})});
+      seen[key]=Date.now();
+      seen['result:'+x.id]=String(post?.result?.data?.id||post?.data?.id||'');
+      Store.write(STORE.autoReplySeen,seen);
+      log(`@${author} の手動リプライを検知 → ${watch.mainHandle||'メイン'} が自動返信`,'ok');
+    }
+  }catch(e){log(`手動子リプライの自動返信失敗：${e.message}`,'err');}
+}
+
 function bindXActionButtons(){}
 document.addEventListener('click',e=>{
   const c=e.target.closest('[data-x-connect]'); if(c){connectXAccount(c.dataset.xConnect);return;}
   const ex=e.target.closest('[data-x-execute]'); if(ex){const [i,id]=ex.dataset.xExecute.split('-');const d=state.drafts[+i];const act=(d?.actions||[]).find(x=>x.accountId===id);if(act)executeXAction(d,act);return;}
   const sk=e.target.closest('[data-x-skip]'); if(sk){const [i,id]=sk.dataset.xSkip.split('-');const d=state.drafts[+i];const act=(d?.actions||[]).find(x=>x.accountId===id);if(act){act.status='skipped';renderLane();}}
 });
+
+// ページ再読込後も直近7日間の自動返信監視を復元
+setTimeout(()=>{try{restoreMentionWatches()}catch(e){console.warn('[auto-reply] restore failed',e)}},0);
 
 /* ============================================================
    9. アカウント管理
@@ -2888,24 +2951,6 @@ ${m.caution}
   $('#baseText').dispatchEvent(new Event('input')); $('#baseText').focus();
 };
 
-function refreshLinkPanel(){
-  const q=parseTweetUrl($('#quoteUrl').value), a=parseArticleUrl($('#articleUrl').value);
-  const badge=$('#linkBadge'), hint=$('#quoteHint');
-  const parts=[]; if(q.ok)parts.push('引用'); if(a.ok)parts.push('記事');
-  const bad=(!q.ok&&!q.empty)||(!a.ok&&!a.empty);
-  badge.textContent=bad?'形式を確認':(parts.length?parts.join(' + '):'未設定');
-  badge.style.color=bad?'#B91C1C':(parts.length?'var(--ac)':'');
-  badge.style.background=bad?'#FEE2E2':(parts.length?'color-mix(in srgb,var(--ac) 12%,transparent)':'');
-  hint.textContent = q.ok
-    ? `@${q.handle} のポストを引用する形でXの作成画面が開きます。`
-    : (q.empty?'Xの作成画面を開くとき、このURLを url パラメータに載せて引用ポストとして開きます。':q.reason);
-  hint.style.color=(!q.ok&&!q.empty)?'#B91C1C':'';
-  state.drafts.forEach(d=>{ d.quoteUrl=$('#quoteUrl').value.trim(); d.articleUrl=$('#articleUrl').value.trim(); });
-  if(state.drafts.length) renderLane();
-}
-$('#quoteUrl').addEventListener('input',refreshLinkPanel);
-$('#articleUrl').addEventListener('input',refreshLinkPanel);
-
 const dz=$('#dropzone'),fi=$('#fileInput');
 dz.onclick=()=>fi.click();
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--ac)';dz.style.background='rgba(255,255,255,.85)'});
@@ -3023,10 +3068,9 @@ async function tune(){
   await Promise.all(Array.from({length:Math.min(3,accounts.length)},worker));
 
   const times=buildSchedule(accounts.length);
-  const q0=$('#quoteUrl').value.trim(), a0=$('#articleUrl').value.trim();
   state.drafts=accounts.map((acc,i)=>({acc,text:results[i].text||'（生成に失敗しました。もう一度お試しください）',
     at:times[i],status:'ready',reviews:[],image:null,truncated:!!results[i].truncated,failed:results[i].failed,
-    quoteUrl:q0,articleUrl:a0,actions:[]}));
+    quoteUrl:'',articleUrl:'',actions:[]}));
   ls.classList.add('hidden'); $('#lane').classList.remove('hidden');
   renderLane();
   btn.disabled=false; icon.classList.remove('spin'); label.textContent='もう一度書き分ける';
@@ -3086,37 +3130,22 @@ function renderLane(){
       </div>`:''}
 
       <details class="mt-4 pt-4 border-t border-hair" ${linkState(d).count?'open':''}>
-        <summary class="cursor-pointer select-none text-[12.5px] font-bold text-ink-700 flex items-center gap-2">
-          リンク
-          ${(()=>{const L=linkState(d);
-            return L.count
-              ? `<span class="tag px-2 py-0.5 rounded-full" style="background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)">${L.quote.ok?'引用':''}${L.quote.ok&&L.article.ok?' + ':''}${L.article.ok?'記事':''}</span>`
-              : `<span class="tag px-2 py-0.5 rounded-full glass-sub text-ink-dim">なし</span>`;})()}
+        <summary class="cursor-pointer select-none text-[12.5px] font-bold text-ink-700 flex items-center gap-2">自分の過去投稿を引用
+          <span class="tag px-2 py-0.5 rounded-full glass-sub text-ink-dim">このアカウントの履歴 ${historyFor(a.id).length} 件</span>
         </summary>
-        <div class="mt-3 space-y-2.5">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-[11.5px] font-bold text-ink-700">引用する元ポスト</span>
-              <span class="tag text-ink-dim">このアカウントの履歴 ${historyFor(a.id).length} 件</span>
-              <button data-qopen="${i}" class="btn-ghost ml-auto text-[11px] px-2.5 py-1 rounded-lg">履歴から選ぶ</button>
-              ${d.quoteUrl?`<button data-qclear="${i}" class="btn-ghost text-[11px] px-2.5 py-1 rounded-lg">外す</button>`:''}
-            </div>
-            <input data-quote="${i}" value="${esc(d.quoteUrl||'')}" class="inp font-mono text-[12px]" placeholder="https://x.com/username/status/...">
-            <div data-quotemsg="${i}" class="tag mt-1"></div>
+        <div class="mt-3">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-[11.5px] font-bold text-ink-700">引用する過去投稿</span>
+            <button data-qopen="${i}" class="btn-ghost ml-auto text-[11px] px-2.5 py-1 rounded-lg">履歴から選ぶ</button>
+            ${d.quoteUrl?`<button data-qclear="${i}" class="btn-ghost text-[11px] px-2.5 py-1 rounded-lg">外す</button>`:''}
           </div>
-          <div>
-            <div class="text-[11.5px] font-bold text-ink-700 mb-1">記事・note等のURL</div>
-            <input data-article="${i}" value="${esc(d.articleUrl||'')}" class="inp font-mono text-[12px]" placeholder="https://...">
-            <div data-articlemsg="${i}" class="tag mt-1"></div>
-          </div>
+          <div data-quotemsg="${i}" class="tag mt-1"></div>
         </div>
       </details>
 
       ${quotePreviewHTML(d)}
 
       <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-hair">
-        <button data-copy="${i}" class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">本文をコピー</button>
-        <button data-open="${i}" class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">Xの作成画面で開く</button>
         <button data-regen="${i}" ${sent?'disabled':''} class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">この垢だけ書き直す</button>
         <button data-json="${i}" class="btn-ghost px-3.5 py-2 rounded-lg text-[12.5px]">JSONをコピー</button>
         ${state.api.webhooks.length
@@ -3124,7 +3153,7 @@ function renderLane(){
                ${d.wh?.status==='sending'?'送信中…':(d.wh?.status==='ok'?'再送する':'Webhookへ送信')}</button>`
           : ''}
         <button data-send="${i}" ${sent?'disabled':''} class="btn-primary ml-auto px-5 py-2 rounded-lg text-[12.5px] font-bold">
-          <span data-sendlabel="${i}">${sent?'公開済み':'公開済みにする'}</span></button>
+          <span data-sendlabel="${i}">${sent?'公開済み':'Xへ投稿'}</span></button>
       </div>
 
       ${actionSummaryHTML(d,i)}
@@ -3275,23 +3304,7 @@ function bindCard(){
     const i=+inp.dataset.time,[h,m]=inp.value.split(':').map(Number);
     const d=new Date(state.drafts[i].at); d.setHours(h,m,0,0); state.drafts[i].at=d;
   });
-  $$('[data-copy]').forEach(b=>b.onclick=()=>copyText(outgoingText(state.drafts[+b.dataset.copy])));
-  $$('[data-open]').forEach(b=>b.onclick=()=>{
-    const d=state.drafts[+b.dataset.open], L=linkState(d);
-    if(L.invalid){ toast('リンクの形式を確認してください','warn'); return; }
-    window.open(buildIntentUrl(d),'_blank','noopener');
-  });
-  /* X API を繋いだら、この中で投稿してレスポンスから recordPost() を呼ぶ。
-     手貼りの入力欄は不要になる：
-       const r = await xPost({ text: outgoingText(d), quote_tweet_id: linkState(d).quote.id });
-       recordPost({ accountId:d.acc.id, handle:d.acc.handle, tweetId:r.data.id, text:d.text, source:'api' });
-     ※2026年時点のX APIは従量課金。URLを含む投稿は1件あたりの単価が高い */
-  $$('[data-send]').forEach(b=>b.onclick=()=>{
-    const i=+b.dataset.send,d=state.drafts[i];
-    const f=riskFlags(d.text);
-    if(f.length&&!confirm(`「${f.join('、')}」は断定・利益保証と受け取られる表現です。\nこのまま公開済みにしますか？`))return;
-    d.status='sent'; renderLane(); log(`${d.acc.name} を公開済みにした`,'ok');
-  });
+  $$('[data-send]').forEach(b=>b.onclick=()=>publishDraft(state.drafts[+b.dataset.send]));
   $$('[data-regen]').forEach(b=>b.onclick=async()=>{
     const i=+b.dataset.regen,d=state.drafts[i],base=$('#baseText').value.trim();
     if(!base){toast('参考文章が空です','warn');return}
@@ -3337,22 +3350,7 @@ function bindCard(){
     if(r.ok){ d.recordedUrl=r.item.url; renderLane(); toast('履歴に記録しました'); log(`${d.acc.name} の投稿を履歴に記録`,'ok'); }
     else{ msg.textContent=r.reason; msg.style.color='#B91C1C'; }
   });
-  $$('[data-quote]').forEach(inp=>inp.oninput=()=>{
-    const i=+inp.dataset.quote; state.drafts[i].quoteUrl=inp.value;
-    const r=parseTweetUrl(inp.value);
-    linkMsg(`[data-quotemsg="${i}"]`,r,r.ok?`@${r.handle} のポストを引用します`:'');
-    const c=document.querySelector(`[data-count="${i}"]`);
-    if(c) c.outerHTML=lengthChipHTML(outgoingText(state.drafts[i]),state.drafts[i].acc,i);
-  });
-  $$('[data-article]').forEach(inp=>inp.oninput=()=>{
-    const i=+inp.dataset.article; state.drafts[i].articleUrl=inp.value;
-    const r=parseArticleUrl(inp.value);
-    linkMsg(`[data-articlemsg="${i}"]`,r,'本文の末尾に追記されます');
-    const c=document.querySelector(`[data-count="${i}"]`);
-    if(c) c.outerHTML=lengthChipHTML(outgoingText(state.drafts[i]),state.drafts[i].acc,i);
-  });
-  $$('[data-quote]').forEach(inp=>inp.dispatchEvent(new Event('input')));
-  $$('[data-article]').forEach(inp=>inp.dispatchEvent(new Event('input')));
+  // 引用先は各アカウント自身の公開履歴からのみ選択する。手入力URL・記事リンクは廃止。
 
   $$('[data-whsend]').forEach(b=>b.onclick=()=>{
     const i=+b.dataset.whsend;
