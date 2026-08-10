@@ -518,6 +518,19 @@ tailwind.config={theme:{extend:{
       </div>
 
       <div class="pt-4 mt-1 border-t border-hair">
+        <div class="eyebrow mb-1">チャート・画像スタイル</div>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">アカウントごとに、水平線・トレンドラインなどの描画スタイルを固定できます。市場価格の正確な分析線ではなく、投稿画像のビジュアルテンプレートとして使用します。</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">チャート要素</div><select id="fChartStyle" class="inp"><option value="none">なし</option><option value="horizontal">水平線中心</option><option value="trend">トレンドライン中心</option><option value="both">水平線＋トレンドライン</option></select></label>
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">ライン密度</div><select id="fChartDensity" class="inp"><option value="light">控えめ</option><option value="standard">標準</option><option value="strong">強め</option></select></label>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4 mt-3">
+          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">ライン色</div><input id="fChartColor" type="color" value="#FFFFFF" class="w-16 h-10 rounded-lg border border-hair bg-white cursor-pointer"></label>
+          <label class="flex items-center gap-2 text-[12px] text-ink-700 mt-6"><input id="fChartGlow" type="checkbox" class="w-3.5 h-3.5" checked>ラインに軽い発光を付ける</label>
+        </div>
+      </div>
+
+      <div class="pt-4 mt-1 border-t border-hair">
         <div class="eyebrow mb-1">ペルソナ設定</div>
         <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">
           このアカウントの書き手像です。運用者を明示しているブランドアカウントの、文章の書き分けに使います。</p>
@@ -899,7 +912,7 @@ function normalizeAccount(a){
     actionPrompt:String(a.actionPrompt||''),
     actionPolicy:normalizeActionPolicy(a.actionPolicy),
     actionDistribution:normalizeActionDistribution(a.actionDistribution||a.actionPolicy),
-    persona:{...blankPersona(),...(a.persona||{})} };
+    chart:{style:['none','horizontal','trend','both'].includes(a.chart?.style)?a.chart.style:'both',density:['light','standard','strong'].includes(a.chart?.density)?a.chart.density:'standard',color:a.chart?.color||'#FFFFFF',glow:a.chart?.glow!==false}, persona:{...blankPersona(),...(a.persona||{})} };
 }
 function childrenOf(parentId){ return state.accounts.filter(a=>a.parentId===parentId); }
 function isMainAccount(a){ return !a.parentId; }
@@ -1696,7 +1709,7 @@ function imagePromptSystem(){
     '',
     'Hard constraints to encode in every prompt you write:',
     '- No letters, words, numbers, tickers, logos, watermarks or UI chrome of any kind.',
-    '- No candlestick charts, price axes, order books, or anything that could be mistaken for real market data.',
+    '- Do not render numeric prices, tickers, axes, labels, logos or UI. If the account chart style asks for chart visuals, use only abstract non-numeric chart geometry; exact horizontal/trend lines are composited later by Canvas.',
     '- No real people, no recognizable faces, no brand marks.',
     '- Leave the middle band of the frame visually calm and uncluttered so caption text stays readable.',
     '- Aim for a premium editorial look: abstract gradients, light, texture, depth of field, geometric forms, material surfaces.',
@@ -1713,6 +1726,7 @@ async function buildImagePrompt(base,acc,ratio){
     `Brand accent color: ${acc?acc.hue:'#2563EB'}.`,
     `Aspect ratio: ${ratio}.`,
     acc?`Tone of the account: ${acc.voice} / ${acc.stance}.`:'',
+    acc?`Chart visual style: ${acc.chart?.style||'both'}, density: ${acc.chart?.density||'standard'}.`:'',
     p.reader?`Audience: ${p.reader}`:'',
     '',
     'Japanese source text the post is based on (for mood only, do not render any of it as text):',
@@ -1904,7 +1918,7 @@ function roundRect(ctx,x,y,w,h,r){
 }
 
 /* 背景 + テロップ を1枚描く。タブ2のスライドとタブ1のバナーで共用 */
-async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34,dim=.5}){
+async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34,dim=.5,chart=null}){
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const ctx=c.getContext('2d');
 
@@ -1914,6 +1928,23 @@ async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34
   // ブランド色を薄く重ねる
   ctx.globalCompositeOperation='soft-light'; ctx.globalAlpha=tint; ctx.fillStyle=hue; ctx.fillRect(0,0,W,H);
   ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+
+  // アカウント固有のチャート・ラインを正確にCanvas描画。AI画像生成には任せない。
+  if(chart && chart.style && chart.style!=='none'){
+    const color=chart.color||'#FFFFFF';
+    const density=chart.density==='light'?0.28:(chart.density==='strong'?0.58:0.42);
+    ctx.save(); ctx.globalAlpha=density; ctx.strokeStyle=color; ctx.lineWidth=Math.max(2,Math.round(W*.003));
+    if(chart.glow){ctx.shadowColor=color;ctx.shadowBlur=Math.round(W*.012);}
+    if(['horizontal','both'].includes(chart.style)){
+      const ys=chart.density==='light'?[.37,.62]:chart.density==='strong'?[.27,.42,.58,.73]:[.34,.66];
+      ys.forEach(y=>{ctx.beginPath();ctx.moveTo(W*.08,H*y);ctx.lineTo(W*.92,H*y);ctx.stroke();});
+    }
+    if(['trend','both'].includes(chart.style)){
+      ctx.beginPath(); ctx.moveTo(W*.12,H*.72); ctx.lineTo(W*.46,H*.52); ctx.lineTo(W*.88,H*.32); ctx.stroke();
+      if(chart.density==='strong'){ctx.beginPath();ctx.moveTo(W*.12,H*.28);ctx.lineTo(W*.48,H*.44);ctx.lineTo(W*.88,H*.60);ctx.stroke();}
+    }
+    ctx.restore();
+  }
 
   // 文字を読ませるための暗幕
   const g2=ctx.createLinearGradient(0,0,0,H);
@@ -2367,7 +2398,7 @@ async function xFetch(path,options={}){
   if(state.api.appToken) headers['x-app-token']=state.api.appToken;
   const r=await fetch(base+path,{...options,headers});
   const j=await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(j.error||j.detail||`Xバックエンド HTTP ${r.status}`);
+  if(!r.ok){ const x=j.x||{}; const detail=x.detail||j.error||j.detail||`Xバックエンド HTTP ${r.status}`; const errs=Array.isArray(x.errors)?' / '+x.errors.map(e=>e.message||e.detail||JSON.stringify(e)).join(' / '):''; throw new Error(`${detail}${errs}`); }
   return j;
 }
 async function refreshXStatus(){
@@ -2611,7 +2642,7 @@ function openModal(id,parentId=null){
   $$('#actionPolicyFields [data-action-policy]').forEach(cb=>cb.onchange=()=>{ if(!$$('#actionPolicyFields [data-action-policy]:checked').length){cb.checked=true;toast('少なくとも1つのアクションを選択してください','warn')}});
   $('#fActionRandom').checked=policy.randomize;
   $('#fReplyStyle').value=policy.replyStyle; $('#fQuoteStyle').value=policy.quoteStyle; $('#fDisclosure').checked=policy.disclosureRequired!==false;
-  $('#fActionPrompt').value=a?(a.actionPrompt||''):'';
+  $('#fActionPrompt').value=a?(a.actionPrompt||''):''; $('#fChartStyle').value=a?.chart?.style||'both'; $('#fChartDensity').value=a?.chart?.density||'standard'; $('#fChartColor').value=a?.chart?.color||'#FFFFFF'; $('#fChartGlow').checked=a?.chart?.glow!==false;
   $('#childSettings').classList.toggle('hidden',!distributionOwner);
   $('#fParentId').onchange=()=>{const owner=$('#fParentId').value?getAcc($('#fParentId').value):(state.editingId&&isMainAccount(getAcc(state.editingId))?getAcc(state.editingId):null); const p=parentActionDistribution(owner); $$('#actionPolicyFields [data-action-policy]').forEach(cb=>cb.checked=p.allowedActions.includes(cb.dataset.actionPolicy)); $$('#actionPolicyFields [data-action-weight]').forEach(x=>x.value=p.weights[x.dataset.actionWeight]); $('#fActionRandom').checked=p.randomize; $('#fReplyStyle').value=p.replyStyle; $('#fQuoteStyle').value=p.quoteStyle; $('#fDisclosure').checked=p.disclosureRequired!==false; $('#childSettings').classList.toggle('hidden',!owner)};
   $('#fNote').value=a?(a.note||''):''; $('#fActive').checked=a?a.active:true;
@@ -2662,7 +2693,7 @@ $('#modalSave').onclick=()=>{
   const actionDistribution=normalizeActionDistribution({randomize:$('#fActionRandom').checked,allowedActions,weights,replyStyle:$('#fReplyStyle').value,quoteStyle:$('#fQuoteStyle').value,disclosureRequired:$('#fDisclosure').checked});
   const data={ name,handle,team:$('#fTeam').value.trim()||'未分類',voice:$('#fVoice').value,stance:$('#fStance').value,
     length:$('#fLength').value,layout:$('#fLayout').value,hue:$('#fHue').value,note:$('#fNote').value.trim(),active:$('#fActive').checked,
-    parentId:selectedParent, actionRole:null, actionPolicy:normalizeActionPolicy(actionDistribution), actionDistribution:selectedParent?null:actionDistribution, actionPrompt:$('#fActionPrompt').value.trim(),
+    parentId:selectedParent, actionRole:null, actionPolicy:normalizeActionPolicy(actionDistribution), actionDistribution:selectedParent?null:actionDistribution, actionPrompt:$('#fActionPrompt').value.trim(), chart:{style:$('#fChartStyle').value,density:$('#fChartDensity').value,color:$('#fChartColor').value,glow:$('#fChartGlow').checked},
     persona:{firstPerson:$('#pFirst').value.trim(),speaker:$('#pSpeaker').value.trim(),tone:$('#pTone').value.trim(),
       reader:$('#pReader').value.trim(),ng:$('#pNG').value.trim(),emoji:$('#pEmoji').value,bio:$('#pBio').value.trim()} };
   if(state.editingId) Object.assign(getAcc(state.editingId),data);
@@ -3379,7 +3410,7 @@ async function buildCardImage(i){
   try{
     const first=d.text.split('\n').map(s=>s.trim()).filter(Boolean)[0]||d.acc.name;
     const lead=(state.vision?.headline||first).replace(/[#＃]\S+/g,'').replace(/^[📌📊🌍⚠️🔀🧮■▼]\s*/,'').slice(0,20);
-    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:'',
+    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:'',chart:d.acc.chart,
       footer:d.acc.handle,index:0,total:1,tint:.28,dim:.42});
     state.backgrounds.push({name:`${d.acc.name} 合成`,src:d.image,from:`${d.acc.name}用`});
     state.accountBg[d.acc.id]=d.image;   // タブ②の背景として引き継ぐ
@@ -3557,7 +3588,7 @@ async function vGenerate(){
       const telop=await generateTelop(base,acc,slides);
       const frames=[];
       for(let i=0;i<telop.length;i++){
-        frames.push(await composeFrame({bgSrc,W,H,hue:acc.hue,lead:telop[i].lead,body:telop[i].body,
+        frames.push(await composeFrame({bgSrc,W,H,hue:acc.hue,lead:telop[i].lead,body:telop[i].body,chart:acc.chart,
           footer:acc.handle,index:i,total:telop.length}));
       }
       sets.push({acc,telop,frames,W,H,ownBg:!!state.accountBg[acc.id]});
@@ -3583,7 +3614,7 @@ $('#vRecomposeBtn').onclick=async()=>{
     const bgSrc=bgFor(s.acc);
     s.frames=[]; s.W=W; s.H=H; s.ownBg=!!state.accountBg[s.acc.id];
     for(let i=0;i<s.telop.length;i++){
-      s.frames.push(await composeFrame({bgSrc,W,H,hue:s.acc.hue,lead:s.telop[i].lead,body:s.telop[i].body,
+      s.frames.push(await composeFrame({bgSrc,W,H,hue:s.acc.hue,lead:s.telop[i].lead,body:s.telop[i].body,chart:s.acc.chart,chart:s.acc.chart,
         footer:s.acc.handle,index:i,total:s.telop.length}));
     }
   }
