@@ -1061,6 +1061,8 @@ function saveSettings(){
    /api/x/monitor/poll から取得する。投稿は自動実行せず、人間確認で
    XのWeb画面を開く。
    ============================================================ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
 const DEFAULT_MONITOR={
   targets:[
     {id:'mt_yahoo',handle:'@YahooNewsTopics',name:'Yahoo!ニュース',enabled:true},
@@ -1201,7 +1203,6 @@ const state={
 normalizeHierarchy();
 state.accounts.filter(a=>a.active&&isMainAccount(a)).slice(0,3).forEach(a=>{state.selected.add(a.id);state.vSelected.add(a.id)});
 
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
