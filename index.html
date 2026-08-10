@@ -642,7 +642,7 @@ tailwind.config={theme:{extend:{
       <label class="flex items-center gap-2.5 cursor-pointer"><input id="fVisionOn" type="checkbox" checked class="w-4 h-4">
         <span class="text-[13px] text-ink-700">添付画像をVisionで解析して下書きに反映する</span></label>
       <p class="text-[11.5px] text-ink-dim leading-relaxed">
-        テロップの合成・スライド・動画の書き出しはブラウザ内で処理します。Anthropicは文章生成、OpenAIは画像解析と画像生成に使います。</p>
+        テロップの合成・スライド・動画の書き出しはブラウザ内で処理します。Anthropicは文章生成と画像解析に使います。</p>
 
       <div class="pt-5 mt-1 border-t border-hair">
         <div class="eyebrow mb-1">OpenAI（背景画像の生成）</div>
@@ -1900,97 +1900,22 @@ async function generateTelop(base,acc,slides){
     .map(o=>({lead:String(o.lead||'').trim(),body:String(o.body||'').trim()}));
 }
 
-/* ---------- Vision ----------
-   v28.2: 画像解析はOpenAIのJSON modeを優先。
-   AnthropicへJSON文字列を自由形式で返させる方式は、引用符や改行の
-   エスケープ崩れで「Unterminated string」になりやすいため廃止。
-   画像そのものは再生成せず、解析結果だけをCanvas描画に渡す。
-*/
-function parseVisionJSON(text){
-  let t=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
-  try{return JSON.parse(t)}catch(e){}
-  const start=t.indexOf('{');
-  if(start<0) throw new Error('画像解析のJSONが見つかりませんでした');
-  let depth=0,inStr=false,esc=false;
-  for(let i=start;i<t.length;i++){
-    const ch=t[i];
-    if(inStr){
-      if(esc){esc=false;continue;}
-      if(ch==='\\'){esc=true;continue;}
-      if(ch==='"'){inStr=false;}
-      continue;
-    }
-    if(ch==='"'){inStr=true;continue;}
-    if(ch==='{')depth++;
-    else if(ch==='}'){depth--;if(depth===0){
-      try{return JSON.parse(t.slice(start,i+1))}catch(e){break;}
-    }}
-  }
-  throw new Error('画像解析結果のJSONを解析できませんでした');
-}
-
-async function openaiVisionAnalyze(media){
-  const m=media.src.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
-  if(!m) throw new Error('画像の形式を読み取れませんでした');
-  if(!state.api.openaiKey) throw new Error('OpenAI APIキーが設定されていません');
-  const[,mediaType,b64]=m;
-  const schemaText=[
-    '添付画像を客観的に解析してください。',
-    '画像は後でブラウザのCanvasにそのまま配置するため、画像自体を描き直したり生成したりしません。',
-    'チャートの場合だけ、実際に画像から確認できる水平線・支持線・抵抗線・トレンドラインの位置を正規化座標で返してください。推測で線を増やさないでください。',
-    'ロング/ショートの方向が画像または指示から明確に判断できない場合はnoneにしてください。',
-    '',
-    '必ず次のJSONオブジェクトだけを返してください。',
-    '{',
-    '  "subject": "画像の内容を一文で説明",',
-    '  "texts": ["画像内で読める文字"],',
-    '  "palette": ["#RRGGBB"],',
-    '  "headline": "12字以内",',
-    '  "altText": "80文字以内",',
-    '  "caution": "確認事項。なければ空文字",',
-    '  "chart": {',
-    '    "isChart": true,',
-    '    "horizontal": [0.0, 0.0],',
-    '    "trend": [{"x1":0.0,"y1":0.0,"x2":1.0,"y2":1.0}],',
-    '    "direction": "long"',
-    '  }',
-    '}',
-    'horizontalはY座標だけを0〜1で返します。trendはx1,y1,x2,y2を0〜1で返します。',
-    '線が確認できなければ空配列にしてください。chart.isChartがfalseなら他のchart項目も空配列/noneにしてください。'
-  ].join('\n');
-  const res=await fetch('https://api.openai.com/v1/chat/completions',{
-    method:'POST',
-    headers:{'content-type':'application/json','authorization':'Bearer '+state.api.openaiKey},
-    body:JSON.stringify({
-      model:'gpt-4.1-mini',
-      temperature:0,
-      response_format:{type:'json_object'},
-      messages:[{role:'user',content:[
-        {type:'text',text:schemaText},
-        {type:'image_url',image_url:{url:`data:${mediaType};base64,${b64}`}}
-      ]}]
-    })
-  });
-  let data=null;
-  try{data=await res.json()}catch(e){}
-  if(!res.ok) throw new Error(data?.error?.message||`OpenAI画像解析 HTTP ${res.status}`);
-  const text=data?.choices?.[0]?.message?.content||'';
-  return parseVisionJSON(text);
-}
-
+/* ---------- Vision ---------- */
 async function analyzeImage(media){
-  // OpenAIを優先。OpenAIキーが未設定の場合だけ既存Anthropic Visionへフォールバック。
-  if(state.api.openaiKey) return openaiVisionAnalyze(media);
   const m=media.src.match(/^data:(.*?);base64,(.*)$/);
   if(!m) throw new Error('画像の形式を読み取れませんでした');
   const[,mediaType,b64]=m;
-  const raw=await callClaude({ temperature:0, max_tokens:1000,
-    system:'画像を客観的に説明します。JSONオブジェクトだけを返してください。',
+  const raw=await callClaude({ temperature:0, max_tokens:800,
+    system:'画像を客観的に説明します。出力はJSONオブジェクトのみ。説明文やコードフェンスを付けない。',
     messages:[{role:'user',content:[
       {type:'image',source:{type:'base64',media_type:mediaType,data:b64}},
-      {type:'text',text:'画像を解析し、subject,texts,palette,headline,altText,caution,chart(isChart,horizontal,trend,direction)を含むJSONオブジェクトだけを返してください。チャート上で実際に確認できる線だけを返し、推測で増やさないでください。'}
-    ]}]});
-  return parseVisionJSON(raw.text);
+      {type:'text',text:['この画像をX投稿に添付します。次のJSONで答えてください。','{',
+        '  "subject": "何が写っているか一文で",','  "texts": ["画像内に読み取れる文字。なければ空配列"],',
+        '  "palette": ["目立つ色を#RRGGBBで最大4つ"],','  "headline": "画像に重ねる見出しとして使える12字以内の言葉",',
+        '  "altText": "代替テキスト。80文字以内",','  "caution": "投稿前に確認すべき点。なければ空文字",',
+        '  "chart": {"isChart": true/false, "horizontal": [0.0-1.0], "trend": [{"x1":0.0,"y1":0.0,"x2":1.0,"y2":1.0}], "direction": "long/short/none"}','}',
+        'チャート画像なら、実際の画像上で確認できる支持線・抵抗線・トレンドラインの位置を、画像の左上を(0,0)、右下を(1,1)とした正規化座標で最大3本まで返してください。推測で大量の線を作らないでください。チャートでなければ chart.isChart=false にしてください。'].join('\n')}]}]});
+  return parseLooseJSON(raw.text);
 }
 
 /* ============================================================
@@ -3958,6 +3883,138 @@ renderLog();
 renderMonitor();
 log('デスクを起動しました');
 </script>
+
+<script>
+/* Post Cockpit: deterministic chart overlay compositor.
+   The uploaded chart is preserved pixel-for-pixel; only explicitly selected
+   overlays are drawn. No AI image generation is used for chart composition. */
+window.PostCockpitChartComposer = {
+  async compose(opts) {
+    const {
+      imageFile,
+      direction = "none",
+      showArrow = true,
+      horizontalLines = [],
+      trendLines = [],
+      iconDataUrl = "",
+      iconPosition = "top-right",
+      imageText = ""
+    } = opts || {};
+
+    if (!imageFile) throw new Error("チャート画像が選択されていません。");
+
+    const src = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("チャート画像を読み込めませんでした。"));
+      img.src = URL.createObjectURL(imageFile);
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = src.naturalWidth || src.width;
+    canvas.height = src.naturalHeight || src.height;
+    const ctx = canvas.getContext("2d");
+
+    // Preserve original chart exactly.
+    ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+
+    const W = canvas.width, H = canvas.height;
+
+    // Only explicitly supplied horizontal lines.
+    ctx.save();
+    ctx.lineWidth = Math.max(2, Math.round(W / 500));
+    ctx.strokeStyle = "#f59e0b";
+    for (const y of horizontalLines) {
+      const yy = Math.max(0, Math.min(1, Number(y))) * H;
+      ctx.beginPath();
+      ctx.moveTo(0, yy);
+      ctx.lineTo(W, yy);
+      ctx.stroke();
+    }
+
+    // Only explicitly supplied trend lines.
+    for (const line of trendLines) {
+      const x1 = Math.max(0, Math.min(1, Number(line.x1))) * W;
+      const y1 = Math.max(0, Math.min(1, Number(line.y1))) * H;
+      const x2 = Math.max(0, Math.min(1, Number(line.x2))) * W;
+      const y2 = Math.max(0, Math.min(1, Number(line.y2))) * H;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Direction arrow only when explicitly requested.
+    if (showArrow && (direction === "long" || direction === "short")) {
+      const x0 = W * 0.55;
+      const y0 = H * 0.58;
+      const x1 = W * 0.78;
+      const y1 = direction === "long" ? H * 0.30 : H * 0.82;
+
+      ctx.save();
+      ctx.strokeStyle = direction === "long" ? "#16a34a" : "#dc2626";
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.lineWidth = Math.max(4, Math.round(W / 180));
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      const angle = Math.atan2(y1 - y0, x1 - x0);
+      const head = Math.max(14, Math.round(W / 45));
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1 - head * Math.cos(angle - Math.PI / 6), y1 - head * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x1 - head * Math.cos(angle + Math.PI / 6), y1 - head * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Registered account icon only; never AI-generated.
+    if (iconDataUrl) {
+      const icon = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = () => reject(new Error("登録したアイコン画像を読み込めませんでした。"));
+        i.src = iconDataUrl;
+      });
+      const size = Math.round(Math.min(W, H) * 0.13);
+      const margin = Math.round(size * 0.18);
+      let x = W - size - margin, y = margin;
+      if (iconPosition === "top-left") x = margin;
+      if (iconPosition === "bottom-right") y = H - size - margin;
+      if (iconPosition === "bottom-left") { x = margin; y = H - size - margin; }
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(icon, x, y, size, size);
+      ctx.restore();
+    }
+
+    // Optional text: draw nothing when empty.
+    if (String(imageText || "").trim()) {
+      ctx.save();
+      ctx.font = `bold ${Math.max(20, Math.round(W / 32))}px sans-serif`;
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "rgba(0,0,0,.65)";
+      ctx.lineWidth = Math.max(3, Math.round(W / 400));
+      const pad = Math.round(W / 45);
+      const text = String(imageText).trim();
+      ctx.strokeText(text, pad, H - pad);
+      ctx.fillText(text, pad, H - pad);
+      ctx.restore();
+    }
+
+    return await new Promise(resolve => canvas.toBlob(resolve, "image/png", 1));
+  }
+};
+</script>
+
 </body>
 </html>
 
