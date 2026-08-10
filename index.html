@@ -181,6 +181,20 @@ tailwind.config={theme:{extend:{
           <div class="tag text-ink-dim mt-1">各アカウント用のブランド版画像はブラウザ内で合成します</div>
         </div>
         <div id="thumbs" class="mt-4 flex flex-wrap gap-3"></div>
+        <div class="mt-5 pt-5 border-t border-hair">
+          <div class="text-[12px] font-bold text-ink-700 mb-2">画像の作り方</div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <label class="cursor-pointer"><input type="radio" name="postType" value="chart_analysis" checked class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">📈 チャート分析</b><div class="tag text-ink-dim mt-1">元チャート＋ライン＋方向矢印</div></div></label>
+            <label class="cursor-pointer"><input type="radio" name="postType" value="chart_point" class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">💡 チャート＋ワンポイント</b><div class="tag text-ink-dim mt-1">チャートを主役に短い解説</div></div></label>
+            <label class="cursor-pointer"><input type="radio" name="postType" value="table_point" class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">📋 ワンポイント（表）</b><div class="tag text-ink-dim mt-1">項目を整理した表形式</div></div></label>
+            <label class="cursor-pointer"><input type="radio" name="postType" value="table_knowledge" class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">🧠 ノウハウ（表）</b><div class="tag text-ink-dim mt-1">知識・注意点を表形式</div></div></label>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-3 mt-3">
+            <label class="block"><div class="text-[11.5px] font-bold text-ink-700 mb-1.5">方向矢印</div><select id="postDirection" class="inp"><option value="auto">本文から自動判定</option><option value="long">ロング（上方向）</option><option value="short">ショート（下方向）</option><option value="none">入れない</option></select></label>
+            <label class="flex items-center gap-2 text-[11.5px] text-ink-700 mt-6"><input id="postAvatar" type="checkbox" checked class="w-3.5 h-3.5">プロフィール画像を画像内に表示する</label>
+          </div>
+          <p class="text-[10.5px] text-ink-dim mt-2">元チャートのローソク足や文字はAIに描き直させず、そのまま使います。ライン・矢印・プロフィール画像・文字だけを後から合成します。</p>
+        </div>
         <div id="visionBox" class="hidden mt-4"></div>
       </section>
 
@@ -552,6 +566,17 @@ tailwind.config={theme:{extend:{
         </div>
       </div>
 
+      <div class="pt-4 mt-1 border-t border-hair">
+        <div class="eyebrow mb-1">プロフィール画像</div>
+        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-3">このアカウント専用のプロフィール画像を登録します。画像生成時にそのまま配置するため、AIが顔や人物を描き直すことはありません。</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <input id="fAvatarFile" type="file" accept="image/*" class="hidden">
+          <button id="fAvatarChoose" type="button" class="btn-ghost text-[12px] px-3 py-2 rounded-lg">プロフィール画像を添付</button>
+          <button id="fAvatarClear" type="button" class="btn-ghost text-[12px] px-3 py-2 rounded-lg">削除</button>
+          <div id="fAvatarPreview" class="w-14 h-14 rounded-full overflow-hidden border border-hair bg-slate-100 grid place-items-center text-[11px] text-ink-dim">未設定</div>
+        </div>
+      </div>
+
       <div class="pt-4 border-t border-hair flex gap-4">
         <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">識別色</div>
           <input id="fHue" type="color" value="#2563EB" class="w-16 h-10 rounded-lg border border-hair bg-white cursor-pointer"></label>
@@ -912,6 +937,7 @@ function normalizeAccount(a){
     actionPrompt:String(a.actionPrompt||''),
     actionPolicy:normalizeActionPolicy(a.actionPolicy),
     actionDistribution:normalizeActionDistribution(a.actionDistribution||a.actionPolicy),
+    avatar:String(a.avatar||''),
     chart:{style:['none','horizontal','trend','both'].includes(a.chart?.style)?a.chart.style:'both',density:['light','standard','strong'].includes(a.chart?.density)?a.chart.density:'standard',color:a.chart?.color||'#FFFFFF',glow:a.chart?.glow!==false}, persona:{...blankPersona(),...(a.persona||{})} };
 }
 function childrenOf(parentId){ return state.accounts.filter(a=>a.parentId===parentId); }
@@ -1170,7 +1196,7 @@ function renderGrowth(){
 function growthThemeLabels(ids){return ids.map(id=>GROWTH_THEMES.find(x=>x[0]===id)?.[1]||id)}
 function growthPrompt(acc,theme,count){const p=acc.persona||{};const recent=state.growth.schedules.filter(x=>x.accountId===acc.id&&x.text).slice(-10).map(x=>x.text).join('\n---\n');return `あなたはSNS投稿の編集者です。以下のアカウント本人として、独立した日常・学習・仕事・趣味などの投稿案を作成してください。特定の第三者を装った体験談、架空の実績・利益、虚偽の推薦、他アカウントのエンゲージメントを誘導する文面は作らないでください。\n\n【アカウント】\n名前:${acc.name}\nハンドル:${acc.handle}\n一人称:${p.firstPerson||'私'}\n人物像:${p.speaker||''}\n口調:${p.tone||''}\n読者:${p.reader||''}\n避ける表現:${p.ng||''}\nプロフィール:${p.bio||''}\n独自プロンプト:${acc.actionPrompt||''}\n\n【今日のテーマ】${theme}\n【投稿数】${count}\n【希望】自然な日本語、1投稿140〜240字程度、同じ言い回しを繰り返さない。\n【直近投稿】\n${recent||'なし'}\n\nJSON配列だけを返してください。形式：["投稿本文1","投稿本文2","投稿本文3"]`}
 async function generateGrowthCandidates(){const id=$('#growthAccount').value,acc=getAcc(id);if(!acc)return;const plan=growthPlan(acc);const themes=growthThemeLabels(plan.themes);if(!apiReady()){toast('先に文章生成APIを設定してください','warn');openSettings();return}$('#growthGenerate').disabled=true;$('#growthGenerate').textContent='生成中…';try{const theme=themes[Math.floor(Math.random()*themes.length)]||'日常';const r=await callAnthropicAPI(growthPrompt(acc,theme,3),acc.persona,{max_tokens:1200,temperature:.9});const arr=parseLooseJSON(r.text);state.growth.candidates[id]=Array.isArray(arr)?arr.slice(0,3).map(x=>String(x)):[];saveGrowth();renderGrowthCandidates();log(`${acc.name}の育成投稿候補を生成`,'act')}catch(e){toast('育成投稿の生成に失敗：'+e.message,'err')}finally{$('#growthGenerate').disabled=false;$('#growthGenerate').textContent='AIで3案生成'}}
-function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.growth.candidates[id]||[];$('#growthCandidates').innerHTML=arr.length?arr.map((text,i)=>`<div class="glass-sub p-4"><textarea data-growth-text="${i}" class="inp w-full min-h-[110px] resize-y text-[12.5px] leading-relaxed">${esc(text)}</textarea><div class="flex flex-wrap gap-2 mt-3"><button data-growth-schedule="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">今日の予定に追加</button><button data-growth-post="${i}" class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg">確認してXへ投稿</button><button data-growth-open="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">X投稿画面を開く</button></div></div>`).join(''):'<div class="glass-sub p-5 text-[12px] text-ink-dim">まだ候補がありません。</div>'}
+function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.growth.candidates[id]||[];$('#growthCandidates').innerHTML=arr.length?arr.map((text,i)=>`<div class="glass-sub p-4"><textarea data-growth-text="${i}" class="inp w-full min-h-[110px] resize-y text-[12.5px] leading-relaxed">${esc(text)}</textarea><div class="flex flex-wrap gap-2 mt-3"><button data-growth-schedule="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">今日の予定に追加</button><button data-growth-post="${i}" class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg">確認してXへ投稿</button></div></div>`).join(''):'<div class="glass-sub p-5 text-[12px] text-ink-dim">まだ候補がありません。</div>'}
 function growthEditedText(i){const el=document.querySelector(`[data-growth-text="${i}"]`);return el?el.value.trim():''}
 function addGrowthSchedule(text){const id=$('#growthAccount').value,acc=getAcc(id),plan=growthPlan(acc);if(!text)return;const now=new Date(),[hh,mm]=plan.time.split(':').map(Number);const at=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm);if(at<now)at.setDate(at.getDate()+1);state.growth.schedules.unshift({id:'g'+Date.now().toString(36),accountId:id,handle:acc.handle,text,scheduledAt:at.toISOString(),status:'scheduled'});saveGrowth();renderGrowthSchedule();toast('育成スケジュールに追加しました')}
 function renderGrowthSchedule(){const list=state.growth.schedules.slice().sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));$('#growthScheduleCount').textContent=`${list.length}件`;$('#growthSchedule').innerHTML=list.length?list.slice(0,30).map(x=>{const a=getAcc(x.accountId);return `<div class="glass-sub p-3 flex flex-wrap gap-3 items-start"><div class="min-w-0 flex-1"><div class="flex gap-2 items-center"><b class="text-[12px]">${esc(a?.name||x.handle)}</b><span class="tag text-ink-dim">${x.status==='posted'?'投稿済み':'予約'}</span><span class="tag text-ink-dim">${new Date(x.scheduledAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div><div class="text-[12px] leading-relaxed mt-1">${esc(x.text)}</div></div>${x.status!=='posted'?`<div class="flex gap-1.5"><button data-growth-schedule-post="${x.id}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">投稿</button><button data-growth-schedule-open="${x.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">開く</button></div>`:''}</div>`}).join(''):'<div class="text-[12px] text-ink-dim">予約はまだありません。</div>'}
@@ -1192,6 +1218,7 @@ const state={
 };
 normalizeHierarchy();
 state.accounts.filter(a=>a.active&&isMainAccount(a)).slice(0,3).forEach(a=>{state.selected.add(a.id);state.vSelected.add(a.id)});
+let editingAvatar='';
 
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1798,6 +1825,8 @@ function draftUserPrompt(base,acc){
     '--- ここから ---',base,'--- ここまで ---',vision,'',
     '【このアカウントの設定】',personaLines(acc).map(s=>'- '+s).join('\n'),'',
     '【長さ】','- '+lengthRule,'',
+    `【画像タイプ】${selectedPostType()}（チャート分析なら添付チャートを主役にし、表タイプなら本文の要点を表形式に整理する）`,
+    `【方向】${selectedDirection()==='auto'?'本文から自動判定':selectedDirection()}`,
     '【組み方】スマホのXで読むことを前提に整える。',
     layoutRules.map(s=>'- '+s).join('\n'),'- '+emojiRule,'',
     $('#tagToggle').checked?`末尾に空行を1つ空けて ${m.tags.join(' ')} を付ける。`:'ハッシュタグは付けない。',
@@ -1883,8 +1912,9 @@ async function analyzeImage(media){
       {type:'text',text:['この画像をX投稿に添付します。次のJSONで答えてください。','{',
         '  "subject": "何が写っているか一文で",','  "texts": ["画像内に読み取れる文字。なければ空配列"],',
         '  "palette": ["目立つ色を#RRGGBBで最大4つ"],','  "headline": "画像に重ねる見出しとして使える12字以内の言葉",',
-        '  "altText": "代替テキスト。80文字以内",','  "caution": "投稿前に確認すべき点。なければ空文字"','}',
-        'チャート画像なら、銘柄・時間足・期間が読み取れる場合はsubjectに含めてください。'].join('\n')}]}]});
+        '  "altText": "代替テキスト。80文字以内",','  "caution": "投稿前に確認すべき点。なければ空文字",',
+        '  "chart": {"isChart": true/false, "horizontal": [0.0-1.0], "trend": [{"x1":0.0,"y1":0.0,"x2":1.0,"y2":1.0}], "direction": "long/short/none"}','}',
+        'チャート画像なら、実際の画像上で確認できる支持線・抵抗線・トレンドラインの位置を、画像の左上を(0,0)、右下を(1,1)とした正規化座標で最大3本まで返してください。推測で大量の線を作らないでください。チャートでなければ chart.isChart=false にしてください。'].join('\n')}]}]});
   return parseLooseJSON(raw.text);
 }
 
@@ -1917,8 +1947,26 @@ function roundRect(ctx,x,y,w,h,r){
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
+function selectedPostType(){ return document.querySelector('input[name=postType]:checked')?.value||'chart_analysis'; }
+function selectedDirection(){ return $('#postDirection')?.value||'auto'; }
+function detectDirection(text){ const t=String(text||''); if(/ショート|売り|下落|下降|戻り売り|下向き/.test(t))return 'short'; if(/ロング|買い|上昇|上向き|押し目買い/.test(t))return 'long'; return 'none'; }
+function drawArrow(ctx,x1,y1,x2,y2,color,width){
+  const ang=Math.atan2(y2-y1,x2-x1), head=Math.max(18,width*5); ctx.save(); ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.shadowColor=color;ctx.shadowBlur=width*3;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6),y2-head*Math.sin(ang-Math.PI/6));ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6),y2-head*Math.sin(ang+Math.PI/6));ctx.closePath();ctx.fill();ctx.restore();
+}
+function drawAvatar(ctx,src,W,H){ if(!src)return; const img=new Image(); }
+function drawAvatarLoaded(ctx,img,W,H){ const size=Math.round(Math.min(W,H)*.13),x=Math.round(W*.055),y=Math.round(H*.055); ctx.save();ctx.beginPath();ctx.arc(x+size/2,y+size/2,size/2+5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.96)';ctx.fill();ctx.clip();ctx.drawImage(img,x,y,size,size);ctx.restore(); ctx.save();ctx.beginPath();ctx.arc(x+size/2,y+size/2,size/2+5,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=4;ctx.stroke();ctx.restore();}
+function drawTable(ctx,rows,W,H,hue){
+  const list=(rows||[]).slice(0,6); if(!list.length)return; const x=W*.08,y=H*.25,w=W*.84,rowH=Math.min(H*.1,86),headH=rowH*1.1;
+  ctx.save(); ctx.fillStyle='rgba(255,255,255,.95)'; roundRect(ctx,x,y,w,headH+rowH*list.length,24);ctx.fill();
+  ctx.fillStyle=hue;roundRect(ctx,x,y,w,headH,24);ctx.fill();
+  ctx.font=`800 ${Math.round(W*.028)}px "Zen Kaku Gothic New",sans-serif`;ctx.fillStyle='#fff';ctx.fillText('ワンポイント',x+24,y+headH*.68);
+  list.forEach((r,i)=>{const yy=y+headH+i*rowH;ctx.strokeStyle='#E2E8F0';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x+w,yy);ctx.stroke();ctx.font=`700 ${Math.round(W*.022)}px "Zen Kaku Gothic New",sans-serif`;ctx.fillStyle='#0F172A';ctx.fillText(String(r[0]||''),x+24,yy+rowH*.42);ctx.font=`500 ${Math.round(W*.019)}px "Zen Kaku Gothic New",sans-serif`;ctx.fillStyle='#334155';const lines=wrapText(ctx,String(r[1]||''),w*.55);lines.slice(0,2).forEach((ln,j)=>ctx.fillText(ln,x+w*.38,yy+rowH*.38+j*rowH*.28));}); ctx.restore();
+}
+
 /* 背景 + テロップ を1枚描く。タブ2のスライドとタブ1のバナーで共用 */
-async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34,dim=.5,chart=null}){
+async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34,dim=.5,chart=null,chartOverlay=null,postType='chart_analysis',direction='none',avatarSrc='',tableRows=[]}){
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const ctx=c.getContext('2d');
 
@@ -1930,26 +1978,41 @@ async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34
   ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
 
   // アカウント固有のチャート・ラインを正確にCanvas描画。AI画像生成には任せない。
-  if(chart && chart.style && chart.style!=='none'){
+  if(postType!=='table_point'&&postType!=='table_knowledge'&&chart && chart.style && chart.style!=='none'){
     const color=chart.color||'#FFFFFF';
     const density=chart.density==='light'?0.28:(chart.density==='strong'?0.58:0.42);
     ctx.save(); ctx.globalAlpha=density; ctx.strokeStyle=color; ctx.lineWidth=Math.max(2,Math.round(W*.003));
     if(chart.glow){ctx.shadowColor=color;ctx.shadowBlur=Math.round(W*.012);}
-    if(['horizontal','both'].includes(chart.style)){
+    const ov=chartOverlay?.isChart?chartOverlay:null;
+    if(ov?.horizontal?.length){
+      ov.horizontal.slice(0,3).forEach(y=>{const yy=Math.max(.03,Math.min(.97,Number(y)||0));ctx.beginPath();ctx.moveTo(W*.06,H*yy);ctx.lineTo(W*.94,H*yy);ctx.stroke();});
+    } else if(['horizontal','both'].includes(chart.style)){
       const ys=chart.density==='light'?[.37,.62]:chart.density==='strong'?[.27,.42,.58,.73]:[.34,.66];
       ys.forEach(y=>{ctx.beginPath();ctx.moveTo(W*.08,H*y);ctx.lineTo(W*.92,H*y);ctx.stroke();});
     }
-    if(['trend','both'].includes(chart.style)){
+    if(ov?.trend?.length){
+      ov.trend.slice(0,3).forEach(t=>{const x1=Math.max(.02,Math.min(.98,Number(t.x1)||0)),y1=Math.max(.02,Math.min(.98,Number(t.y1)||0)),x2=Math.max(.02,Math.min(.98,Number(t.x2)||0)),y2=Math.max(.02,Math.min(.98,Number(t.y2)||0));ctx.beginPath();ctx.moveTo(W*x1,H*y1);ctx.lineTo(W*x2,H*y2);ctx.stroke();});
+    } else if(['trend','both'].includes(chart.style)){
       ctx.beginPath(); ctx.moveTo(W*.12,H*.72); ctx.lineTo(W*.46,H*.52); ctx.lineTo(W*.88,H*.32); ctx.stroke();
       if(chart.density==='strong'){ctx.beginPath();ctx.moveTo(W*.12,H*.28);ctx.lineTo(W*.48,H*.44);ctx.lineTo(W*.88,H*.60);ctx.stroke();}
     }
     ctx.restore();
+    const dir=direction==='auto'?(chartOverlay?.direction&&chartOverlay.direction!=='none'?chartOverlay.direction:detectDirection(body+' '+lead)):direction;
+    if(dir!=='none'){
+      const sx=W*.56, sy=H*.70, ex=dir==='long'?W*.84:W*.84, ey=dir==='long'?H*.38:H*.84;
+      drawArrow(ctx,sx,sy,ex,ey,dir==='long'?'#22C55E':'#EF4444',Math.max(5,Math.round(W*.008)));
+      ctx.font=`900 ${Math.round(W*.026)}px "Zen Kaku Gothic New",sans-serif`;ctx.fillStyle=dir==='long'?'#22C55E':'#EF4444';ctx.fillText(dir==='long'?'LONG':'SHORT',ex-W*.11,ey-(dir==='long'?18:-18));
+    }
   }
 
   // 文字を読ませるための暗幕
   const g2=ctx.createLinearGradient(0,0,0,H);
   g2.addColorStop(0,`rgba(6,10,22,${dim*.75})`); g2.addColorStop(.45,`rgba(6,10,22,${dim*.35})`); g2.addColorStop(1,`rgba(6,10,22,${dim*1.05})`);
   ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+
+  if(postType==='table_point'||postType==='table_knowledge') drawTable(ctx,tableRows,W,H,hue);
+
+  if(avatarSrc){ try{ const av=await loadImage(avatarSrc); drawAvatarLoaded(ctx,av,W,H); }catch(e){} }
 
   const pad=Math.round(W*.078);
   const maxW=W-pad*2;
@@ -2568,7 +2631,7 @@ function renderAccounts(){
     return `<section class="glass p-5 sm:p-6">
       <div class="flex flex-wrap items-center gap-3 mb-3">
         <span class="tag" style="background:${a.hue}18;color:${a.hue}">MAIN</span>
-        <span class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc((a.name||'?').slice(0,1))}</span>
+        ${a.avatar?`<img src="${esc(a.avatar)}" class="w-9 h-9 rounded-xl object-cover border border-hair shrink-0" alt="">`:`<span class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc((a.name||'?').slice(0,1))}</span>`}
         <div class="min-w-0"><div class="text-[14px] font-bold leading-tight truncate">${esc(a.name)} <span class="font-mono text-[11px] font-normal text-ink-dim">${esc(a.handle)}</span></div>
           <div class="tag text-ink-dim mt-0.5">${esc(a.team)} ・ ${esc(a.voice)} ・ ${esc(a.stance)}</div></div>
         <span class="tag ml-auto text-ink-dim">子 ${allChildren.length} / 10</span>
@@ -2630,6 +2693,7 @@ function fillArchetype(key){
 function openModal(id,parentId=null){
   state.editingId=id||null;
   const a=id?getAcc(id):null;
+  editingAvatar=a?.avatar||'';
   $('#modalTitle').textContent=a?'アカウントを編集':'アカウントを追加';
   $('#fName').value=a?a.name:''; $('#fHandle').value=a?a.handle:'';
   $('#fTeam').value=a?a.team:''; $('#fHue').value=a?a.hue:'#2563EB';
@@ -2661,6 +2725,7 @@ function openModal(id,parentId=null){
   $('#teamOptions').innerHTML=[...new Set(state.accounts.map(x=>x.team).filter(Boolean))].map(t=>`<option value="${esc(t)}">`).join('');
   $('#modalDelete').classList.toggle('hidden',!a);
   $('#modalErr').classList.add('hidden');
+  $('#fAvatarPreview').innerHTML=editingAvatar?`<img src="${esc(editingAvatar)}" class="w-full h-full object-cover" alt="">`:'未設定';
   $('#modal').classList.remove('hidden');
   setTimeout(()=>$('#fName').focus(),60);
 }
@@ -2673,6 +2738,22 @@ document.addEventListener('keydown',e=>{
   if(!$('#modal').classList.contains('hidden'))closeModal();
   if(!$('#setModal').classList.contains('hidden'))closeSet();
 });
+async function resizeAvatar(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader(); r.onload=()=>{
+      const img=new Image(); img.onload=()=>{
+        const size=256, c=document.createElement('canvas'); c.width=size; c.height=size;
+        const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,size,size);
+        const scale=Math.max(size/img.width,size/img.height),w=img.width*scale,h=img.height*scale;
+        ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h); resolve(c.toDataURL('image/jpeg',.86));
+      }; img.onerror=()=>reject(new Error('画像を読み込めませんでした')); img.src=r.result;
+    }; r.onerror=()=>reject(new Error('画像を読み込めませんでした')); r.readAsDataURL(file);
+  });
+}
+$('#fAvatarChoose').onclick=()=>$('#fAvatarFile').click();
+$('#fAvatarFile').onchange=async e=>{ const f=e.target.files?.[0]; if(!f)return; try{editingAvatar=await resizeAvatar(f);$('#fAvatarPreview').innerHTML=`<img src="${esc(editingAvatar)}" class="w-full h-full object-cover" alt="">`;toast('プロフィール画像を設定しました');}catch(err){toast(err.message,'err')} e.target.value=''; };
+$('#fAvatarClear').onclick=()=>{editingAvatar='';$('#fAvatarPreview').textContent='未設定';};
+
 $('#modalSave').onclick=()=>{
   const name=$('#fName').value.trim(); let handle=$('#fHandle').value.trim();
   const err=$('#modalErr'),fail=m=>{err.textContent=m;err.classList.remove('hidden')};
@@ -2693,7 +2774,7 @@ $('#modalSave').onclick=()=>{
   const actionDistribution=normalizeActionDistribution({randomize:$('#fActionRandom').checked,allowedActions,weights,replyStyle:$('#fReplyStyle').value,quoteStyle:$('#fQuoteStyle').value,disclosureRequired:$('#fDisclosure').checked});
   const data={ name,handle,team:$('#fTeam').value.trim()||'未分類',voice:$('#fVoice').value,stance:$('#fStance').value,
     length:$('#fLength').value,layout:$('#fLayout').value,hue:$('#fHue').value,note:$('#fNote').value.trim(),active:$('#fActive').checked,
-    parentId:selectedParent, actionRole:null, actionPolicy:normalizeActionPolicy(actionDistribution), actionDistribution:selectedParent?null:actionDistribution, actionPrompt:$('#fActionPrompt').value.trim(), chart:{style:$('#fChartStyle').value,density:$('#fChartDensity').value,color:$('#fChartColor').value,glow:$('#fChartGlow').checked},
+    parentId:selectedParent, actionRole:null, actionPolicy:normalizeActionPolicy(actionDistribution), actionDistribution:selectedParent?null:actionDistribution, actionPrompt:$('#fActionPrompt').value.trim(), avatar:editingAvatar, chart:{style:$('#fChartStyle').value,density:$('#fChartDensity').value,color:$('#fChartColor').value,glow:$('#fChartGlow').checked},
     persona:{firstPerson:$('#pFirst').value.trim(),speaker:$('#pSpeaker').value.trim(),tone:$('#pTone').value.trim(),
       reader:$('#pReader').value.trim(),ng:$('#pNG').value.trim(),emoji:$('#pEmoji').value,bio:$('#pBio').value.trim()} };
   if(state.editingId) Object.assign(getAcc(state.editingId),data);
@@ -3060,8 +3141,16 @@ function lengthChipHTML(text,acc,i){
   return `<span class="tag" data-count="${i}" style="${color}">${n} 字 / 目標 ${esc(L.target)}${note}</span>`;
 }
 
+function parseTableRows(base){
+  const lines=String(base||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  const rows=[]; for(const line of lines){ const m=line.match(/^([^：:|｜]{1,20})[：:|｜](.+)$/); if(m) rows.push([m[1].trim(),m[2].trim()]); }
+  if(rows.length)return rows; return lines.slice(0,5).map((x,i)=>[`POINT ${i+1}`,x.slice(0,80)]);
+}
+
 async function tune(){
   const base=$('#baseText').value.trim();
+  state.postType=selectedPostType(); state.postDirection=selectedDirection(); state.includeAvatar=$('#postAvatar')?.checked!==false;
+  state.tableRows=parseTableRows(base);
   if(!base){ toast('先に参考文章を入れてください','warn'); $('#baseText').focus(); return; }
   if(!apiReady()){ toast('文章生成にはAnthropic APIキー（または中継設定）が必要です','warn'); openSettings(); return; }
   const accounts=state.accounts.filter(a=>a.active&&state.selected.has(a.id));
@@ -3101,9 +3190,12 @@ async function tune(){
   const times=buildSchedule(accounts.length);
   state.drafts=accounts.map((acc,i)=>({acc,text:results[i].text||'（生成に失敗しました。もう一度お試しください）',
     at:times[i],status:'ready',reviews:[],image:null,truncated:!!results[i].truncated,failed:results[i].failed,
+    postType:state.postType,direction:state.postDirection,includeAvatar:state.includeAvatar,tableRows:state.tableRows,
     quoteUrl:'',articleUrl:'',actions:[]}));
   ls.classList.add('hidden'); $('#lane').classList.remove('hidden');
   renderLane();
+  const imageJobs=state.drafts.map((d,i)=>buildCardImage(i).catch(e=>log(`${d.acc.name} 画像合成失敗：${e.message}`,'err')));
+  await Promise.all(imageJobs);
   btn.disabled=false; icon.classList.remove('spin'); label.textContent='もう一度書き分ける';
   $('#reshuffleBtn').disabled=false;
   log(`${accounts.length}件を書き分け（${MARKETS[state.market].label}）`,'ok');
@@ -3117,6 +3209,8 @@ $('#reshuffleBtn').onclick=()=>{
   renderLane(); log('公開時刻を組み直した','act');
 };
 
+function postTypeLabel(v){ return ({chart_analysis:'チャート分析',chart_point:'チャート＋ワンポイント',table_point:'ワンポイント（表）',table_knowledge:'ノウハウ（表）'})[v]||'チャート分析'; }
+
 function renderLane(){
   $('#laneMeta').textContent=state.drafts.length?`${state.drafts.length} アカウント / 最終 ${fmtTime(state.drafts[state.drafts.length-1].at)}`:'';
   $('#lane').innerHTML=state.drafts.map((d,i)=>{
@@ -3129,7 +3223,7 @@ function renderLane(){
         <div class="w-9 h-9 rounded-xl grid place-items-center font-bold text-[13px] shrink-0" style="background:${a.hue}1f;color:${a.hue}">${esc(a.name.slice(0,1))}</div>
         <div class="min-w-0"><div class="text-[14px] font-bold leading-tight truncate">${esc(a.name)}
           <span class="font-mono text-[11px] font-normal text-ink-dim">${esc(a.handle)}</span></div>
-          <div class="tag text-ink-dim mt-0.5">${esc(a.voice)} ・ ${esc(a.stance)}</div></div>
+          <div class="tag text-ink-dim mt-0.5">${esc(a.voice)} ・ ${esc(a.stance)} ・ ${esc(postTypeLabel(d.postType||state.postType||'chart_analysis'))}</div></div>
         <div class="ml-auto flex items-center gap-2 shrink-0">
           <div class="flex flex-col gap-0.5">
             <button data-up="${i}" ${i===0?'disabled':''} class="btn-ghost w-6 h-4 rounded grid place-items-center text-[9px] leading-none" title="1つ前の時刻と入れ替え">▲</button>
@@ -3410,7 +3504,8 @@ async function buildCardImage(i){
   try{
     const first=d.text.split('\n').map(s=>s.trim()).filter(Boolean)[0]||d.acc.name;
     const lead=(state.vision?.headline||first).replace(/[#＃]\S+/g,'').replace(/^[📌📊🌍⚠️🔀🧮■▼]\s*/,'').slice(0,20);
-    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:'',chart:d.acc.chart,
+    const pt=d.postType||state.postType||selectedPostType(); const dir=d.direction||state.postDirection||selectedDirection();
+    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:(pt==='table_point'||pt==='table_knowledge')?'':d.text,chart:d.acc.chart,postType:pt,direction:dir,chartOverlay:state.vision?.chart,avatarSrc:d.includeAvatar===false?'':d.acc.avatar,tableRows:d.tableRows||state.tableRows||[],
       footer:d.acc.handle,index:0,total:1,tint:.28,dim:.42});
     state.backgrounds.push({name:`${d.acc.name} 合成`,src:d.image,from:`${d.acc.name}用`});
     state.accountBg[d.acc.id]=d.image;   // タブ②の背景として引き継ぐ
