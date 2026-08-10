@@ -3704,23 +3704,6 @@ $('#clock').textContent=fmtTime(new Date());
 
 if(window.innerWidth>=1024) $('#sidebar').classList.remove('-translate-x-full');
 
-/* ============================================================
-   React orchestration layer
-   ------------------------------------------------------------
-   新規運用機能はReactコンポーネント単位で分離。既存のCanvas/生成
-   エンジンはDOM APIを維持し、段階的にコンポーネントへ移行できる構造。
-   ============================================================ */
-(function mountReactOperations(){
-  if(!window.React||!window.ReactDOM) return;
-  const {useEffect,useState}=React;
-  function ApiTestStatus(){const [msg,setMsg]=useState('API接続テストは設定画面から実行できます。');useEffect(()=>{const el=document.querySelector('#setMsg');if(!el)return;const mo=new MutationObserver(()=>setMsg(el.textContent||'API接続テストは設定画面から実行できます。'));mo.observe(el,{childList:true,characterData:true,subtree:true});return()=>mo.disconnect()},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'ApiTestStatus','data-status':msg},msg)}
-  function WebhookStatus(){const [count,setCount]=useState(0);useEffect(()=>{const tick=()=>setCount(state.api.webhooks.length);const id=setInterval(tick,1000);tick();return()=>clearInterval(id)},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'WebhookStatus','data-destinations':count},String(count))}
-  function AccountHierarchy(){const [count,setCount]=useState(0);useEffect(()=>{const id=setInterval(()=>setCount(state.accounts.filter(a=>a.parentId).length),1000);return()=>clearInterval(id)},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'AccountHierarchy','data-action-accounts':count},String(count))}
-  function HistoryBridge(){const [count,setCount]=useState(state.history.length);useEffect(()=>{const id=setInterval(()=>setCount(state.history.length),1000);return()=>clearInterval(id)},[]);return React.createElement('div',{className:'hidden',['data-react-component']:'HistoryBridge','data-history-count':count},String(count))}
-  function OperationsRoot(){return React.createElement(React.Fragment,null,React.createElement(ApiTestStatus),React.createElement(WebhookStatus),React.createElement(AccountHierarchy),React.createElement(HistoryBridge))}
-  ReactDOM.createRoot(document.getElementById('reactOpsRoot')).render(React.createElement(OperationsRoot));
-})();
-
 state.history=loadHistory();
 loadExternalPersonaAccounts();
 const boot=loadSettings();
@@ -3737,7 +3720,7 @@ renderAccounts();
 renderGrowth();
 $('#navHistCount').textContent=state.history.length;
 renderLog();
-renderMonitor();
+try{renderMonitor();}catch(e){console.warn('[Post Cockpit] monitor init skipped',e)}
 log('デスクを起動しました');
 </script>
 </body>
