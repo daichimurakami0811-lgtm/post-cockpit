@@ -2326,6 +2326,40 @@ $('#setSave').onclick=()=>{
   toast(state.api.key?'API設定を保存しました':'Anthropicのキーが空です。文章生成にはキーが必要です','warn');
   log('API設定を更新','act');
 };
+
+// X APIバックエンド接続確認
+$('#xRefresh').onclick=async()=>{
+  const btn=$('#xRefresh');
+  const el=$('#xStatus');
+  const url=$('#fXBackendUrl').value.trim().replace(/\/$/,'');
+  if(!url){
+    el.textContent='バックエンドURL未設定';
+    return;
+  }
+  // 入力欄の値を即時反映（保存前でも接続テスト可能）
+  state.api.xBackendUrl=url;
+  btn.disabled=true;
+  btn.textContent='確認中…';
+  el.textContent='接続を確認しています…';
+  try{
+    const r=await fetch(url+'/api/x/accounts',{method:'GET',headers:{'Accept':'application/json'}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||j.detail||`HTTP ${r.status}`);
+    const accounts=Array.isArray(j.accounts)?j.accounts:[];
+    el.textContent=`接続済み ${accounts.filter(a=>a.connected).length}件 / 登録 ${accounts.length}件`;
+    toast('X APIバックエンドに接続できました','ok');
+    log('X APIバックエンド接続確認成功','ok');
+  }catch(e){
+    console.error('[Post Cockpit] X backend status failed',e);
+    el.textContent='接続確認失敗';
+    toast(`X APIバックエンドに接続できません：${e.message}`,'warn');
+    log(`X APIバックエンド接続確認失敗：${e.message}`,'err');
+  }finally{
+    btn.disabled=false;
+    btn.textContent='接続状態を更新';
+  }
+};
+
 $('#keyClear').onclick=()=>{
   if(!confirm('保存されたAPIキー（Anthropic・OpenAIの両方）を消します。よろしいですか？'))return;
   Store.remove(STORE.api); state.api=loadApi();
