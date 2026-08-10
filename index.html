@@ -1054,6 +1054,142 @@ function saveSettings(){
 /* ============================================================
    3. 状態
    ============================================================ */
+/* ============================================================
+   6c. 新着監視デスク
+   ------------------------------------------------------------
+   監視の実体はX APIバックエンド側。ブラウザは未処理イベントを
+   /api/x/monitor/poll から取得する。投稿は自動実行せず、人間確認で
+   XのWeb画面を開く。
+   ============================================================ */
+const DEFAULT_MONITOR={
+  targets:[
+    {id:'mt_yahoo',handle:'@YahooNewsTopics',name:'Yahoo!ニュース',enabled:true},
+    {id:'mt_nhk',handle:'@nhk_news',name:'NHKニュース',enabled:true},
+    {id:'mt_ntv',handle:'@news24ntv',name:'日テレNEWS NNN',enabled:true},
+    {id:'mt_asahi',handle:'@tv_asahi_news',name:'テレ朝NEWS',enabled:true},
+    {id:'mt_shutoken',handle:'@nhk_shutoken',name:'NHK@首都圏',enabled:false}
+  ],
+  inbox:[],running:false,lastPollAt:null
+};
+function loadMonitor(){
+  try{const x=Store.read(STORE.monitor,null); if(!x||typeof x!=='object')return JSON.parse(JSON.stringify(DEFAULT_MONITOR));
+    return {...JSON.parse(JSON.stringify(DEFAULT_MONITOR)),...x,running:false,targets:Array.isArray(x.targets)?x.targets:DEFAULT_MONITOR.targets,inbox:Array.isArray(x.inbox)?x.inbox:[]};
+  }catch(e){return JSON.parse(JSON.stringify(DEFAULT_MONITOR))}
+}
+function saveMonitor(){Store.write(STORE.monitor,state.monitor)}
+function normalizeWatchHandle(v){v=String(v||'').trim();if(!v)return '';if(!v.startsWith('@'))v='@'+v;return v.replace(/\s/g,'')}
+function renderMonitor(){
+  const m=state.monitor;
+  $('#navMonitorCount').textContent=m.inbox.filter(x=>!x.read).length;
+  $('#monitorTargetCount').textContent=`${m.targets.filter(x=>x.enabled).length}/${m.targets.length}件`;
+  $('#monitorInboxCount').textContent=`${m.inbox.length}件`;
+  $('#monitorStatus').textContent=m.running?'監視中':'停止中';
+  $('#monitorStart').textContent=m.running?'監視を停止':'監視を開始';
+  $('#monitorLiveDot').style.background=m.running?'#10B981':'#CBD5E1';
+  $('#monitorTargetList').innerHTML=m.targets.map(t=>`<div class="glass-sub p-3 flex items-center gap-2.5">
+    <input type="checkbox" data-monitor-toggle="${esc(t.id)}" ${t.enabled?'checked':''} class="w-3.5 h-3.5">
+    <div class="min-w-0 flex-1"><div class="font-mono text-[11.5px] font-bold truncate">${esc(t.handle)}</div><div class="text-[10.5px] text-ink-dim truncate">${esc(t.name||'監視対象')}</div></div>
+    <button data-monitor-del="${esc(t.id)}" class="btn-danger text-[10.5px] px-2 py-1 rounded-lg">削除</button>
+  </div>`).join('')||'<div class="text-[11.5px] text-ink-dim">監視対象がありません。</div>';
+  $('#monitorInbox').innerHTML=m.inbox.length?m.inbox.slice(0,50).map((x,i)=>monitorCardHTML(x,i)).join(''):'<div class="glass-sub p-6 text-center text-[12px] text-ink-dim">まだ新着ポストはありません。</div>';
+}
+function monitorCardHTML(x,i){
+  const id=String(x.tweetId||x.id||'');
+  const text=String(x.text||'');
+  const when=x.createdAt?fmtDate(x.createdAt):'';
+  return `<article class="glass-sub p-4 ${x.read?'opacity-75':''}">
+    <div class="flex flex-wrap items-center gap-2 mb-2"><span class="tag" style="color:var(--ac)">${esc(x.authorName||x.authorHandle||'監視対象')}</span><span class="font-mono text-[10.5px] text-ink-dim">${esc(x.authorHandle||'')}</span><span class="tag ml-auto text-ink-dim">${esc(when)}</span></div>
+    <div class="text-[12.5px] leading-relaxed whitespace-pre-wrap">${esc(text)}</div>
+    <div class="flex flex-wrap gap-2 mt-3">
+      ${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">元ポストを開く</a>`:''}
+      <button data-monitor-draft="${i}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">AIで返信案</button>
+      ${x.url?`<button data-monitor-reply="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">Xで返信画面</button>`:''}
+      ${x.url?`<button data-monitor-quote="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">Xで引用画面</button>`:''}
+      <button data-monitor-read="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">${x.read?'未読に戻す':'既読にする'}</button>
+    </div>
+    ${x.draft?`<div class="mt-3 pt-3 border-t border-hair"><div class="text-[10.5px] text-ink-dim mb-1.5">AI返信案（必ず確認してから投稿）</div><textarea data-monitor-text="${i}" rows="3" class="inp w-full text-[12px] leading-relaxed">${esc(x.draft)}</textarea><div class="flex gap-2 mt-2"><button data-monitor-openreply="${i}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">確認してX返信画面を開く</button><button data-monitor-copy="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">コピー</button></div></div>`:''}
+  </article>`;
+}
+function monitorPrompt(x){
+  return `あなたはSNSの返信文編集者です。次の公開ポストに対する自然で短い返信案を1件作成してください。\n\n重要：架空の体験談、利益実績、第三者の推薦、なりすまし、誇張、購入誘導を作らないでください。元ポストに書かれていない事実を追加しないでください。相手の投稿内容への感想・質問・補足など、普通のユーザーとして自然な内容にしてください。\n\n【投稿者】${x.authorName||''} ${x.authorHandle||''}\n【投稿本文】\n${x.text||''}\n\n返信本文だけを返してください。`;
+}
+async function generateMonitorDraft(i){
+  const x=state.monitor.inbox[i]; if(!x)return;
+  if(!apiReady()){toast('先に文章生成APIを設定してください','warn');openSettings();return}
+  try{
+    const r=await callAnthropicAPI(monitorPrompt(x),null,{max_tokens:500,temperature:.7});
+    x.draft=String(r.text||'').trim().replace(/^```[\s\S]*?\n|```$/g,'').trim(); x.read=true; saveMonitor(); renderMonitor(); toast('返信案を生成しました'); log(`${x.authorHandle||'監視対象'}への返信案を生成`,'act');
+  }catch(e){toast('返信案の生成に失敗：'+e.message,'err');log(`監視返信案生成失敗：${e.message}`,'err')}
+}
+function monitorOpenReply(i){const x=state.monitor.inbox[i];if(!x?.url)return;const t=(document.querySelector(`[data-monitor-text="${i}"]`)||{}).value?.trim()||x.draft||'';if(!t){toast('返信文がありません','warn');return}const id=parseTweetUrl(x.url);if(!id.ok){toast('元ポストURLを解析できません','warn');return}window.open(`https://x.com/intent/post?in_reply_to=${encodeURIComponent(id.id)}&text=${encodeURIComponent(t)}`,'_blank','noopener');x.read=true;x.draft=t;saveMonitor();renderMonitor();log('X返信画面を開いた（手動投稿）','act')}
+function monitorOpenQuote(i){const x=state.monitor.inbox[i];if(!x?.url)return;const t=(document.querySelector(`[data-monitor-text="${i}"]`)||{}).value?.trim()||x.draft||'';const u=t?`${t}\n${x.url}`:x.url;window.open(`https://x.com/intent/post?text=${encodeURIComponent(u)}`,'_blank','noopener');x.read=true;saveMonitor();renderMonitor();log('X引用画面を開いた（手動投稿）','act')}
+async function pollMonitor(){
+  if(!state.monitor.running||!xBackendUrl())return;
+  try{
+    const handles=state.monitor.targets.filter(x=>x.enabled).map(x=>x.handle.replace(/^@/,''));
+    if(!handles.length)return;
+    const j=await xFetch('/api/x/monitor/poll',{method:'POST',body:JSON.stringify({handles,limit:30})});
+    const items=Array.isArray(j.items)?j.items:[]; let added=0;
+    const seen=new Set(state.monitor.inbox.map(x=>String(x.tweetId||x.id)));
+    items.forEach(x=>{const key=String(x.tweetId||x.id||'');if(!key||seen.has(key))return;state.monitor.inbox.unshift({...x,read:false});seen.add(key);added++});
+    state.monitor.inbox=state.monitor.inbox.slice(0,100);state.monitor.lastPollAt=new Date().toISOString();saveMonitor();renderMonitor();if(added)log(`新着ポストを${added}件検知`,'ok');
+  }catch(e){log(`新着監視の取得失敗：${e.message}`,'err')}
+}
+let monitorTimer=null;
+function startMonitor(){
+  if(!xBackendUrl()){openSettings();toast('先にX APIバックエンドURLを設定してください','warn');return}
+  state.monitor.running=true;saveMonitor();renderMonitor();pollMonitor();clearInterval(monitorTimer);monitorTimer=setInterval(pollMonitor,Math.max(5,+$('#monitorInterval').value||10)*1000);toast('新着監視を開始しました');log('新着監視を開始','act')
+}
+function stopMonitor(){state.monitor.running=false;saveMonitor();renderMonitor();clearInterval(monitorTimer);monitorTimer=null;toast('新着監視を停止しました');log('新着監視を停止','act')}
+$('#monitorAdd').onclick=()=>{const h=normalizeWatchHandle($('#monitorHandle').value);if(!h)return;const exists=state.monitor.targets.some(x=>x.handle.toLowerCase()===h.toLowerCase());if(exists){toast('そのアカウントは登録済みです','warn');return}state.monitor.targets.push({id:'mt_'+Date.now().toString(36),handle:h,name:h.replace(/^@/,''),enabled:true});$('#monitorHandle').value='';saveMonitor();renderMonitor();log(`${h}を監視対象に追加`,'act')};
+$('#monitorRefresh').onclick=()=>pollMonitor();
+$('#monitorStart').onclick=()=>state.monitor.running?stopMonitor():startMonitor();
+$('#monitorInterval').onchange=()=>{if(state.monitor.running){startMonitor()}};
+document.addEventListener('click',e=>{
+  const tg=e.target.closest('[data-monitor-toggle]');if(tg){const t=state.monitor.targets.find(x=>x.id===tg.dataset.monitorToggle);if(t){t.enabled=tg.checked;saveMonitor();renderMonitor()}return}
+  const dl=e.target.closest('[data-monitor-del]');if(dl){state.monitor.targets=state.monitor.targets.filter(x=>x.id!==dl.dataset.monitorDel);saveMonitor();renderMonitor();return}
+  const dr=e.target.closest('[data-monitor-draft]');if(dr){generateMonitorDraft(+dr.dataset.monitorDraft);return}
+  const rp=e.target.closest('[data-monitor-reply]');if(rp){monitorOpenReply(+rp.dataset.monitorReply);return}
+  const qt=e.target.closest('[data-monitor-quote]');if(qt){monitorOpenQuote(+qt.dataset.monitorQuote);return}
+  const rd=e.target.closest('[data-monitor-read]');if(rd){const x=state.monitor.inbox[+rd.dataset.monitorRead];if(x){x.read=!x.read;saveMonitor();renderMonitor()}return}
+  const or=e.target.closest('[data-monitor-openreply]');if(or){monitorOpenReply(+or.dataset.monitorOpenreply);return}
+  const cp=e.target.closest('[data-monitor-copy]');if(cp){const x=state.monitor.inbox[+cp.dataset.monitorCopy];const t=(document.querySelector(`[data-monitor-text="${cp.dataset.monitorCopy}"]`)||{}).value||x?.draft||'';if(t)copyText(t);return}
+});
+
+/* ============================================================
+   6b. アカウント育成デスク
+   ============================================================ */
+const GROWTH_KEY='postcockpit.growth.v1';
+const GROWTH_THEMES=[['daily','日常'],['learning','学び'],['work','仕事'],['hobby','趣味'],['market','マーケット'],['news','ニュース感想'],['question','問いかけ'],['reflection','振り返り']];
+function defaultGrowth(){return {plans:{},schedules:[],candidates:{}}}
+function loadGrowth(){try{const x=JSON.parse(localStorage.getItem('postcockpit.growth.v1')||'null');return x&&typeof x==='object'?{...defaultGrowth(),...x}:defaultGrowth()}catch(e){return defaultGrowth()}}
+function saveGrowth(){try{localStorage.setItem('postcockpit.growth.v1',JSON.stringify(state.growth));return true}catch(e){toast('育成データを保存できませんでした','warn');return false}}
+function growthChildren(){return state.accounts.filter(a=>a.parentId&&a.active)}
+function growthPlan(acc){const p=state.growth.plans[acc.id]||{};return {themes:Array.isArray(p.themes)&&p.themes.length?p.themes:['daily','learning','hobby'],dailyCount:+p.dailyCount||1,time:p.time||'20:00'}}
+function renderGrowth(){
+  const children=growthChildren();
+  $('#navGrowthCount').textContent=state.growth.schedules.filter(x=>x.status!=='posted').length;
+  const sel=$('#growthAccount');
+  if(!children.length){sel.innerHTML='<option value="">子アカウントがありません</option>';$('#growthAccountMeta').textContent='アカウント管理でメインアカウントの子を登録してください。';$('#growthCandidates').innerHTML='<div class="glass-sub p-5 text-[12px] text-ink-dim">子アカウントを登録するとここから育成投稿を作成できます。</div>';renderGrowthSchedule();return}
+  const prev=sel.value;sel.innerHTML=children.map(a=>`<option value="${esc(a.id)}">${esc(a.name)}（${esc(a.handle)}）</option>`).join('');sel.value=children.some(a=>a.id===prev)?prev:children[0].id;
+  const acc=getAcc(sel.value),plan=growthPlan(acc);$('#growthAccountMeta').innerHTML=`<b>${esc(acc.name)}</b> ${esc(acc.handle)}<br><span class="text-ink-dim">親：${esc(parentAccount(acc)?.name||'未設定')} ・ ${esc(acc.voice||'')} ・ ${esc(acc.stance||'')}</span>`;
+  $('#growthThemes').innerHTML=GROWTH_THEMES.map(([id,label])=>`<label class="glass-sub p-2.5 flex items-center gap-2 text-[11.5px] cursor-pointer"><input type="checkbox" data-growth-theme="${id}" ${plan.themes.includes(id)?'checked':''} class="w-3.5 h-3.5">${label}</label>`).join('');$('#growthDailyCount').value=String(plan.dailyCount);$('#growthTime').value=plan.time;renderGrowthSchedule();
+}
+function growthThemeLabels(ids){return ids.map(id=>GROWTH_THEMES.find(x=>x[0]===id)?.[1]||id)}
+function growthPrompt(acc,theme,count){const p=acc.persona||{};const recent=state.growth.schedules.filter(x=>x.accountId===acc.id&&x.text).slice(-10).map(x=>x.text).join('\n---\n');return `あなたはSNS投稿の編集者です。以下のアカウント本人として、独立した日常・学習・仕事・趣味などの投稿案を作成してください。特定の第三者を装った体験談、架空の実績・利益、虚偽の推薦、他アカウントのエンゲージメントを誘導する文面は作らないでください。\n\n【アカウント】\n名前:${acc.name}\nハンドル:${acc.handle}\n一人称:${p.firstPerson||'私'}\n人物像:${p.speaker||''}\n口調:${p.tone||''}\n読者:${p.reader||''}\n避ける表現:${p.ng||''}\nプロフィール:${p.bio||''}\n独自プロンプト:${acc.actionPrompt||''}\n\n【今日のテーマ】${theme}\n【投稿数】${count}\n【希望】自然な日本語、1投稿140〜240字程度、同じ言い回しを繰り返さない。\n【直近投稿】\n${recent||'なし'}\n\nJSON配列だけを返してください。形式：["投稿本文1","投稿本文2","投稿本文3"]`}
+async function generateGrowthCandidates(){const id=$('#growthAccount').value,acc=getAcc(id);if(!acc)return;const plan=growthPlan(acc);const themes=growthThemeLabels(plan.themes);if(!apiReady()){toast('先に文章生成APIを設定してください','warn');openSettings();return}$('#growthGenerate').disabled=true;$('#growthGenerate').textContent='生成中…';try{const theme=themes[Math.floor(Math.random()*themes.length)]||'日常';const r=await callAnthropicAPI(growthPrompt(acc,theme,3),acc.persona,{max_tokens:1200,temperature:.9});const arr=parseLooseJSON(r.text);state.growth.candidates[id]=Array.isArray(arr)?arr.slice(0,3).map(x=>String(x)):[];saveGrowth();renderGrowthCandidates();log(`${acc.name}の育成投稿候補を生成`,'act')}catch(e){toast('育成投稿の生成に失敗：'+e.message,'err')}finally{$('#growthGenerate').disabled=false;$('#growthGenerate').textContent='AIで3案生成'}}
+function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.growth.candidates[id]||[];$('#growthCandidates').innerHTML=arr.length?arr.map((text,i)=>`<div class="glass-sub p-4"><textarea data-growth-text="${i}" class="inp w-full min-h-[110px] resize-y text-[12.5px] leading-relaxed">${esc(text)}</textarea><div class="flex flex-wrap gap-2 mt-3"><button data-growth-schedule="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">今日の予定に追加</button><button data-growth-post="${i}" class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg">確認してXへ投稿</button><button data-growth-open="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">X投稿画面を開く</button></div></div>`).join(''):'<div class="glass-sub p-5 text-[12px] text-ink-dim">まだ候補がありません。</div>'}
+function growthEditedText(i){const el=document.querySelector(`[data-growth-text="${i}"]`);return el?el.value.trim():''}
+function addGrowthSchedule(text){const id=$('#growthAccount').value,acc=getAcc(id),plan=growthPlan(acc);if(!text)return;const now=new Date(),[hh,mm]=plan.time.split(':').map(Number);const at=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm);if(at<now)at.setDate(at.getDate()+1);state.growth.schedules.unshift({id:'g'+Date.now().toString(36),accountId:id,handle:acc.handle,text,scheduledAt:at.toISOString(),status:'scheduled'});saveGrowth();renderGrowthSchedule();toast('育成スケジュールに追加しました')}
+function renderGrowthSchedule(){const list=state.growth.schedules.slice().sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));$('#growthScheduleCount').textContent=`${list.length}件`;$('#growthSchedule').innerHTML=list.length?list.slice(0,30).map(x=>{const a=getAcc(x.accountId);return `<div class="glass-sub p-3 flex flex-wrap gap-3 items-start"><div class="min-w-0 flex-1"><div class="flex gap-2 items-center"><b class="text-[12px]">${esc(a?.name||x.handle)}</b><span class="tag text-ink-dim">${x.status==='posted'?'投稿済み':'予約'}</span><span class="tag text-ink-dim">${new Date(x.scheduledAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div><div class="text-[12px] leading-relaxed mt-1">${esc(x.text)}</div></div>${x.status!=='posted'?`<div class="flex gap-1.5"><button data-growth-schedule-post="${x.id}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">投稿</button><button data-growth-schedule-open="${x.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">開く</button></div>`:''}</div>`}).join(''):'<div class="text-[12px] text-ink-dim">予約はまだありません。</div>'}
+async function growthPost(accountId,text,scheduleId){const acc=getAcc(accountId);if(!acc||!text)return;if(!state.api.xBackendUrl){growthOpen(text);return}if(state.api.xRequireConfirm!==false&&!confirm(`${acc.name}（${acc.handle}）からXへ投稿します。\n\n${text}\n\n投稿してよろしいですか？`))return;try{await xFetch('/api/x/action',{method:'POST',body:JSON.stringify({accountId:acc.id,action:'post',text})});if(scheduleId){const x=state.growth.schedules.find(x=>x.id===scheduleId);if(x)x.status='posted'}saveGrowth();renderGrowthSchedule();toast('Xへの投稿が完了しました');log(`${acc.name}の育成投稿をXへ送信`,'ok')}catch(e){toast('X投稿に失敗：'+e.message,'err');log(`${acc.name}の育成投稿失敗：${e.message}`,'err')}}
+function growthOpen(text){const u='https://x.com/intent/post?text='+encodeURIComponent(text);window.open(u,'_blank','noopener');copyText(text)}
+$('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCandidates()});$('#growthGenerate').onclick=generateGrowthCandidates;
+$('#growthSavePlan').onclick=()=>{const id=$('#growthAccount').value;if(!id)return;const themes=$$('#growthThemes [data-growth-theme]:checked').map(x=>x.dataset.growthTheme);state.growth.plans[id]={themes:themes.length?themes:['daily'],dailyCount:+$('#growthDailyCount').value,time:$('#growthTime').value};saveGrowth();renderGrowth();toast('育成設定を保存しました');log('育成設定を更新','act')};
+$('#growthExport').onclick=()=>downloadJSON(state.growth,`post-cockpit-growth-${new Date().toISOString().slice(0,10)}.json`);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-growth-schedule]');if(b){addGrowthSchedule(growthEditedText(+b.dataset.growthSchedule));return}const p=e.target.closest('[data-growth-post]');if(p){growthPost($('#growthAccount').value,growthEditedText(+p.dataset.growthPost));return}const o=e.target.closest('[data-growth-open]');if(o){growthOpen(growthEditedText(+o.dataset.growthOpen));return}const sp=e.target.closest('[data-growth-schedule-post]');if(sp){const x=state.growth.schedules.find(x=>x.id===sp.dataset.growthSchedulePost);if(x)growthPost(x.accountId,x.text,x.id);return}const so=e.target.closest('[data-growth-schedule-open]');if(so){const x=state.growth.schedules.find(x=>x.id===so.dataset.growthScheduleOpen);if(x)growthOpen(x.text)}});
+
+
 const state={
   view:'main', tab:'image', market:'usdjpy',
   accounts:loadAccounts(), api:loadApi(), history:[], monitor:loadMonitor(),
@@ -1924,141 +2060,6 @@ async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
 }
 
 /* ============================================================
-   6c. 新着監視デスク
-   ------------------------------------------------------------
-   監視の実体はX APIバックエンド側。ブラウザは未処理イベントを
-   /api/x/monitor/poll から取得する。投稿は自動実行せず、人間確認で
-   XのWeb画面を開く。
-   ============================================================ */
-const DEFAULT_MONITOR={
-  targets:[
-    {id:'mt_yahoo',handle:'@YahooNewsTopics',name:'Yahoo!ニュース',enabled:true},
-    {id:'mt_nhk',handle:'@nhk_news',name:'NHKニュース',enabled:true},
-    {id:'mt_ntv',handle:'@news24ntv',name:'日テレNEWS NNN',enabled:true},
-    {id:'mt_asahi',handle:'@tv_asahi_news',name:'テレ朝NEWS',enabled:true},
-    {id:'mt_shutoken',handle:'@nhk_shutoken',name:'NHK@首都圏',enabled:false}
-  ],
-  inbox:[],running:false,lastPollAt:null
-};
-function loadMonitor(){
-  try{const x=Store.read(STORE.monitor,null); if(!x||typeof x!=='object')return JSON.parse(JSON.stringify(DEFAULT_MONITOR));
-    return {...JSON.parse(JSON.stringify(DEFAULT_MONITOR)),...x,running:false,targets:Array.isArray(x.targets)?x.targets:DEFAULT_MONITOR.targets,inbox:Array.isArray(x.inbox)?x.inbox:[]};
-  }catch(e){return JSON.parse(JSON.stringify(DEFAULT_MONITOR))}
-}
-function saveMonitor(){Store.write(STORE.monitor,state.monitor)}
-function normalizeWatchHandle(v){v=String(v||'').trim();if(!v)return '';if(!v.startsWith('@'))v='@'+v;return v.replace(/\s/g,'')}
-function renderMonitor(){
-  const m=state.monitor;
-  $('#navMonitorCount').textContent=m.inbox.filter(x=>!x.read).length;
-  $('#monitorTargetCount').textContent=`${m.targets.filter(x=>x.enabled).length}/${m.targets.length}件`;
-  $('#monitorInboxCount').textContent=`${m.inbox.length}件`;
-  $('#monitorStatus').textContent=m.running?'監視中':'停止中';
-  $('#monitorStart').textContent=m.running?'監視を停止':'監視を開始';
-  $('#monitorLiveDot').style.background=m.running?'#10B981':'#CBD5E1';
-  $('#monitorTargetList').innerHTML=m.targets.map(t=>`<div class="glass-sub p-3 flex items-center gap-2.5">
-    <input type="checkbox" data-monitor-toggle="${esc(t.id)}" ${t.enabled?'checked':''} class="w-3.5 h-3.5">
-    <div class="min-w-0 flex-1"><div class="font-mono text-[11.5px] font-bold truncate">${esc(t.handle)}</div><div class="text-[10.5px] text-ink-dim truncate">${esc(t.name||'監視対象')}</div></div>
-    <button data-monitor-del="${esc(t.id)}" class="btn-danger text-[10.5px] px-2 py-1 rounded-lg">削除</button>
-  </div>`).join('')||'<div class="text-[11.5px] text-ink-dim">監視対象がありません。</div>';
-  $('#monitorInbox').innerHTML=m.inbox.length?m.inbox.slice(0,50).map((x,i)=>monitorCardHTML(x,i)).join(''):'<div class="glass-sub p-6 text-center text-[12px] text-ink-dim">まだ新着ポストはありません。</div>';
-}
-function monitorCardHTML(x,i){
-  const id=String(x.tweetId||x.id||'');
-  const text=String(x.text||'');
-  const when=x.createdAt?fmtDate(x.createdAt):'';
-  return `<article class="glass-sub p-4 ${x.read?'opacity-75':''}">
-    <div class="flex flex-wrap items-center gap-2 mb-2"><span class="tag" style="color:var(--ac)">${esc(x.authorName||x.authorHandle||'監視対象')}</span><span class="font-mono text-[10.5px] text-ink-dim">${esc(x.authorHandle||'')}</span><span class="tag ml-auto text-ink-dim">${esc(when)}</span></div>
-    <div class="text-[12.5px] leading-relaxed whitespace-pre-wrap">${esc(text)}</div>
-    <div class="flex flex-wrap gap-2 mt-3">
-      ${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">元ポストを開く</a>`:''}
-      <button data-monitor-draft="${i}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">AIで返信案</button>
-      ${x.url?`<button data-monitor-reply="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">Xで返信画面</button>`:''}
-      ${x.url?`<button data-monitor-quote="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">Xで引用画面</button>`:''}
-      <button data-monitor-read="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">${x.read?'未読に戻す':'既読にする'}</button>
-    </div>
-    ${x.draft?`<div class="mt-3 pt-3 border-t border-hair"><div class="text-[10.5px] text-ink-dim mb-1.5">AI返信案（必ず確認してから投稿）</div><textarea data-monitor-text="${i}" rows="3" class="inp w-full text-[12px] leading-relaxed">${esc(x.draft)}</textarea><div class="flex gap-2 mt-2"><button data-monitor-openreply="${i}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">確認してX返信画面を開く</button><button data-monitor-copy="${i}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">コピー</button></div></div>`:''}
-  </article>`;
-}
-function monitorPrompt(x){
-  return `あなたはSNSの返信文編集者です。次の公開ポストに対する自然で短い返信案を1件作成してください。\n\n重要：架空の体験談、利益実績、第三者の推薦、なりすまし、誇張、購入誘導を作らないでください。元ポストに書かれていない事実を追加しないでください。相手の投稿内容への感想・質問・補足など、普通のユーザーとして自然な内容にしてください。\n\n【投稿者】${x.authorName||''} ${x.authorHandle||''}\n【投稿本文】\n${x.text||''}\n\n返信本文だけを返してください。`;
-}
-async function generateMonitorDraft(i){
-  const x=state.monitor.inbox[i]; if(!x)return;
-  if(!apiReady()){toast('先に文章生成APIを設定してください','warn');openSettings();return}
-  try{
-    const r=await callAnthropicAPI(monitorPrompt(x),null,{max_tokens:500,temperature:.7});
-    x.draft=String(r.text||'').trim().replace(/^```[\s\S]*?\n|```$/g,'').trim(); x.read=true; saveMonitor(); renderMonitor(); toast('返信案を生成しました'); log(`${x.authorHandle||'監視対象'}への返信案を生成`,'act');
-  }catch(e){toast('返信案の生成に失敗：'+e.message,'err');log(`監視返信案生成失敗：${e.message}`,'err')}
-}
-function monitorOpenReply(i){const x=state.monitor.inbox[i];if(!x?.url)return;const t=(document.querySelector(`[data-monitor-text="${i}"]`)||{}).value?.trim()||x.draft||'';if(!t){toast('返信文がありません','warn');return}const id=parseTweetUrl(x.url);if(!id.ok){toast('元ポストURLを解析できません','warn');return}window.open(`https://x.com/intent/post?in_reply_to=${encodeURIComponent(id.id)}&text=${encodeURIComponent(t)}`,'_blank','noopener');x.read=true;x.draft=t;saveMonitor();renderMonitor();log('X返信画面を開いた（手動投稿）','act')}
-function monitorOpenQuote(i){const x=state.monitor.inbox[i];if(!x?.url)return;const t=(document.querySelector(`[data-monitor-text="${i}"]`)||{}).value?.trim()||x.draft||'';const u=t?`${t}\n${x.url}`:x.url;window.open(`https://x.com/intent/post?text=${encodeURIComponent(u)}`,'_blank','noopener');x.read=true;saveMonitor();renderMonitor();log('X引用画面を開いた（手動投稿）','act')}
-async function pollMonitor(){
-  if(!state.monitor.running||!xBackendUrl())return;
-  try{
-    const handles=state.monitor.targets.filter(x=>x.enabled).map(x=>x.handle.replace(/^@/,''));
-    if(!handles.length)return;
-    const j=await xFetch('/api/x/monitor/poll',{method:'POST',body:JSON.stringify({handles,limit:30})});
-    const items=Array.isArray(j.items)?j.items:[]; let added=0;
-    const seen=new Set(state.monitor.inbox.map(x=>String(x.tweetId||x.id)));
-    items.forEach(x=>{const key=String(x.tweetId||x.id||'');if(!key||seen.has(key))return;state.monitor.inbox.unshift({...x,read:false});seen.add(key);added++});
-    state.monitor.inbox=state.monitor.inbox.slice(0,100);state.monitor.lastPollAt=new Date().toISOString();saveMonitor();renderMonitor();if(added)log(`新着ポストを${added}件検知`,'ok');
-  }catch(e){log(`新着監視の取得失敗：${e.message}`,'err')}
-}
-let monitorTimer=null;
-function startMonitor(){
-  if(!xBackendUrl()){openSettings();toast('先にX APIバックエンドURLを設定してください','warn');return}
-  state.monitor.running=true;saveMonitor();renderMonitor();pollMonitor();clearInterval(monitorTimer);monitorTimer=setInterval(pollMonitor,Math.max(5,+$('#monitorInterval').value||10)*1000);toast('新着監視を開始しました');log('新着監視を開始','act')
-}
-function stopMonitor(){state.monitor.running=false;saveMonitor();renderMonitor();clearInterval(monitorTimer);monitorTimer=null;toast('新着監視を停止しました');log('新着監視を停止','act')}
-$('#monitorAdd').onclick=()=>{const h=normalizeWatchHandle($('#monitorHandle').value);if(!h)return;const exists=state.monitor.targets.some(x=>x.handle.toLowerCase()===h.toLowerCase());if(exists){toast('そのアカウントは登録済みです','warn');return}state.monitor.targets.push({id:'mt_'+Date.now().toString(36),handle:h,name:h.replace(/^@/,''),enabled:true});$('#monitorHandle').value='';saveMonitor();renderMonitor();log(`${h}を監視対象に追加`,'act')};
-$('#monitorRefresh').onclick=()=>pollMonitor();
-$('#monitorStart').onclick=()=>state.monitor.running?stopMonitor():startMonitor();
-$('#monitorInterval').onchange=()=>{if(state.monitor.running){startMonitor()}};
-document.addEventListener('click',e=>{
-  const tg=e.target.closest('[data-monitor-toggle]');if(tg){const t=state.monitor.targets.find(x=>x.id===tg.dataset.monitorToggle);if(t){t.enabled=tg.checked;saveMonitor();renderMonitor()}return}
-  const dl=e.target.closest('[data-monitor-del]');if(dl){state.monitor.targets=state.monitor.targets.filter(x=>x.id!==dl.dataset.monitorDel);saveMonitor();renderMonitor();return}
-  const dr=e.target.closest('[data-monitor-draft]');if(dr){generateMonitorDraft(+dr.dataset.monitorDraft);return}
-  const rp=e.target.closest('[data-monitor-reply]');if(rp){monitorOpenReply(+rp.dataset.monitorReply);return}
-  const qt=e.target.closest('[data-monitor-quote]');if(qt){monitorOpenQuote(+qt.dataset.monitorQuote);return}
-  const rd=e.target.closest('[data-monitor-read]');if(rd){const x=state.monitor.inbox[+rd.dataset.monitorRead];if(x){x.read=!x.read;saveMonitor();renderMonitor()}return}
-  const or=e.target.closest('[data-monitor-openreply]');if(or){monitorOpenReply(+or.dataset.monitorOpenreply);return}
-  const cp=e.target.closest('[data-monitor-copy]');if(cp){const x=state.monitor.inbox[+cp.dataset.monitorCopy];const t=(document.querySelector(`[data-monitor-text="${cp.dataset.monitorCopy}"]`)||{}).value||x?.draft||'';if(t)copyText(t);return}
-});
-
-/* ============================================================
-   6b. アカウント育成デスク
-   ============================================================ */
-const GROWTH_KEY='postcockpit.growth.v1';
-const GROWTH_THEMES=[['daily','日常'],['learning','学び'],['work','仕事'],['hobby','趣味'],['market','マーケット'],['news','ニュース感想'],['question','問いかけ'],['reflection','振り返り']];
-function defaultGrowth(){return {plans:{},schedules:[],candidates:{}}}
-function loadGrowth(){try{const x=JSON.parse(localStorage.getItem('postcockpit.growth.v1')||'null');return x&&typeof x==='object'?{...defaultGrowth(),...x}:defaultGrowth()}catch(e){return defaultGrowth()}}
-function saveGrowth(){try{localStorage.setItem('postcockpit.growth.v1',JSON.stringify(state.growth));return true}catch(e){toast('育成データを保存できませんでした','warn');return false}}
-function growthChildren(){return state.accounts.filter(a=>a.parentId&&a.active)}
-function growthPlan(acc){const p=state.growth.plans[acc.id]||{};return {themes:Array.isArray(p.themes)&&p.themes.length?p.themes:['daily','learning','hobby'],dailyCount:+p.dailyCount||1,time:p.time||'20:00'}}
-function renderGrowth(){
-  const children=growthChildren();
-  $('#navGrowthCount').textContent=state.growth.schedules.filter(x=>x.status!=='posted').length;
-  const sel=$('#growthAccount');
-  if(!children.length){sel.innerHTML='<option value="">子アカウントがありません</option>';$('#growthAccountMeta').textContent='アカウント管理でメインアカウントの子を登録してください。';$('#growthCandidates').innerHTML='<div class="glass-sub p-5 text-[12px] text-ink-dim">子アカウントを登録するとここから育成投稿を作成できます。</div>';renderGrowthSchedule();return}
-  const prev=sel.value;sel.innerHTML=children.map(a=>`<option value="${esc(a.id)}">${esc(a.name)}（${esc(a.handle)}）</option>`).join('');sel.value=children.some(a=>a.id===prev)?prev:children[0].id;
-  const acc=getAcc(sel.value),plan=growthPlan(acc);$('#growthAccountMeta').innerHTML=`<b>${esc(acc.name)}</b> ${esc(acc.handle)}<br><span class="text-ink-dim">親：${esc(parentAccount(acc)?.name||'未設定')} ・ ${esc(acc.voice||'')} ・ ${esc(acc.stance||'')}</span>`;
-  $('#growthThemes').innerHTML=GROWTH_THEMES.map(([id,label])=>`<label class="glass-sub p-2.5 flex items-center gap-2 text-[11.5px] cursor-pointer"><input type="checkbox" data-growth-theme="${id}" ${plan.themes.includes(id)?'checked':''} class="w-3.5 h-3.5">${label}</label>`).join('');$('#growthDailyCount').value=String(plan.dailyCount);$('#growthTime').value=plan.time;renderGrowthSchedule();
-}
-function growthThemeLabels(ids){return ids.map(id=>GROWTH_THEMES.find(x=>x[0]===id)?.[1]||id)}
-function growthPrompt(acc,theme,count){const p=acc.persona||{};const recent=state.growth.schedules.filter(x=>x.accountId===acc.id&&x.text).slice(-10).map(x=>x.text).join('\n---\n');return `あなたはSNS投稿の編集者です。以下のアカウント本人として、独立した日常・学習・仕事・趣味などの投稿案を作成してください。特定の第三者を装った体験談、架空の実績・利益、虚偽の推薦、他アカウントのエンゲージメントを誘導する文面は作らないでください。\n\n【アカウント】\n名前:${acc.name}\nハンドル:${acc.handle}\n一人称:${p.firstPerson||'私'}\n人物像:${p.speaker||''}\n口調:${p.tone||''}\n読者:${p.reader||''}\n避ける表現:${p.ng||''}\nプロフィール:${p.bio||''}\n独自プロンプト:${acc.actionPrompt||''}\n\n【今日のテーマ】${theme}\n【投稿数】${count}\n【希望】自然な日本語、1投稿140〜240字程度、同じ言い回しを繰り返さない。\n【直近投稿】\n${recent||'なし'}\n\nJSON配列だけを返してください。形式：["投稿本文1","投稿本文2","投稿本文3"]`}
-async function generateGrowthCandidates(){const id=$('#growthAccount').value,acc=getAcc(id);if(!acc)return;const plan=growthPlan(acc);const themes=growthThemeLabels(plan.themes);if(!apiReady()){toast('先に文章生成APIを設定してください','warn');openSettings();return}$('#growthGenerate').disabled=true;$('#growthGenerate').textContent='生成中…';try{const theme=themes[Math.floor(Math.random()*themes.length)]||'日常';const r=await callAnthropicAPI(growthPrompt(acc,theme,3),acc.persona,{max_tokens:1200,temperature:.9});const arr=parseLooseJSON(r.text);state.growth.candidates[id]=Array.isArray(arr)?arr.slice(0,3).map(x=>String(x)):[];saveGrowth();renderGrowthCandidates();log(`${acc.name}の育成投稿候補を生成`,'act')}catch(e){toast('育成投稿の生成に失敗：'+e.message,'err')}finally{$('#growthGenerate').disabled=false;$('#growthGenerate').textContent='AIで3案生成'}}
-function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.growth.candidates[id]||[];$('#growthCandidates').innerHTML=arr.length?arr.map((text,i)=>`<div class="glass-sub p-4"><textarea data-growth-text="${i}" class="inp w-full min-h-[110px] resize-y text-[12.5px] leading-relaxed">${esc(text)}</textarea><div class="flex flex-wrap gap-2 mt-3"><button data-growth-schedule="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">今日の予定に追加</button><button data-growth-post="${i}" class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg">確認してXへ投稿</button><button data-growth-open="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">X投稿画面を開く</button></div></div>`).join(''):'<div class="glass-sub p-5 text-[12px] text-ink-dim">まだ候補がありません。</div>'}
-function growthEditedText(i){const el=document.querySelector(`[data-growth-text="${i}"]`);return el?el.value.trim():''}
-function addGrowthSchedule(text){const id=$('#growthAccount').value,acc=getAcc(id),plan=growthPlan(acc);if(!text)return;const now=new Date(),[hh,mm]=plan.time.split(':').map(Number);const at=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm);if(at<now)at.setDate(at.getDate()+1);state.growth.schedules.unshift({id:'g'+Date.now().toString(36),accountId:id,handle:acc.handle,text,scheduledAt:at.toISOString(),status:'scheduled'});saveGrowth();renderGrowthSchedule();toast('育成スケジュールに追加しました')}
-function renderGrowthSchedule(){const list=state.growth.schedules.slice().sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));$('#growthScheduleCount').textContent=`${list.length}件`;$('#growthSchedule').innerHTML=list.length?list.slice(0,30).map(x=>{const a=getAcc(x.accountId);return `<div class="glass-sub p-3 flex flex-wrap gap-3 items-start"><div class="min-w-0 flex-1"><div class="flex gap-2 items-center"><b class="text-[12px]">${esc(a?.name||x.handle)}</b><span class="tag text-ink-dim">${x.status==='posted'?'投稿済み':'予約'}</span><span class="tag text-ink-dim">${new Date(x.scheduledAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div><div class="text-[12px] leading-relaxed mt-1">${esc(x.text)}</div></div>${x.status!=='posted'?`<div class="flex gap-1.5"><button data-growth-schedule-post="${x.id}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">投稿</button><button data-growth-schedule-open="${x.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">開く</button></div>`:''}</div>`}).join(''):'<div class="text-[12px] text-ink-dim">予約はまだありません。</div>'}
-async function growthPost(accountId,text,scheduleId){const acc=getAcc(accountId);if(!acc||!text)return;if(!state.api.xBackendUrl){growthOpen(text);return}if(state.api.xRequireConfirm!==false&&!confirm(`${acc.name}（${acc.handle}）からXへ投稿します。\n\n${text}\n\n投稿してよろしいですか？`))return;try{await xFetch('/api/x/action',{method:'POST',body:JSON.stringify({accountId:acc.id,action:'post',text})});if(scheduleId){const x=state.growth.schedules.find(x=>x.id===scheduleId);if(x)x.status='posted'}saveGrowth();renderGrowthSchedule();toast('Xへの投稿が完了しました');log(`${acc.name}の育成投稿をXへ送信`,'ok')}catch(e){toast('X投稿に失敗：'+e.message,'err');log(`${acc.name}の育成投稿失敗：${e.message}`,'err')}}
-function growthOpen(text){const u='https://x.com/intent/post?text='+encodeURIComponent(text);window.open(u,'_blank','noopener');copyText(text)}
-$('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCandidates()});$('#growthGenerate').onclick=generateGrowthCandidates;
-$('#growthSavePlan').onclick=()=>{const id=$('#growthAccount').value;if(!id)return;const themes=$$('#growthThemes [data-growth-theme]:checked').map(x=>x.dataset.growthTheme);state.growth.plans[id]={themes:themes.length?themes:['daily'],dailyCount:+$('#growthDailyCount').value,time:$('#growthTime').value};saveGrowth();renderGrowth();toast('育成設定を保存しました');log('育成設定を更新','act')};
-$('#growthExport').onclick=()=>downloadJSON(state.growth,`post-cockpit-growth-${new Date().toISOString().slice(0,10)}.json`);
-document.addEventListener('click',e=>{const b=e.target.closest('[data-growth-schedule]');if(b){addGrowthSchedule(growthEditedText(+b.dataset.growthSchedule));return}const p=e.target.closest('[data-growth-post]');if(p){growthPost($('#growthAccount').value,growthEditedText(+p.dataset.growthPost));return}const o=e.target.closest('[data-growth-open]');if(o){growthOpen(growthEditedText(+o.dataset.growthOpen));return}const sp=e.target.closest('[data-growth-schedule-post]');if(sp){const x=state.growth.schedules.find(x=>x.id===sp.dataset.growthSchedulePost);if(x)growthPost(x.accountId,x.text,x.id);return}const so=e.target.closest('[data-growth-schedule-open]');if(so){const x=state.growth.schedules.find(x=>x.id===so.dataset.growthScheduleOpen);if(x)growthOpen(x.text)}});
-
-/* ============================================================
    7. サイドバー / タブ / ビュー
    ============================================================ */
 function openNav(){ $('#sidebar').classList.remove('-translate-x-full'); $('#navScrim').classList.remove('hidden'); }
@@ -2364,7 +2365,7 @@ $('#keyTest').onclick=async()=>{
    X OAuth 2.0 PKCE はバックエンドで処理。ブラウザにはXアクセストークンを保存しない。
    実行は必ず1アクションずつ、ユーザー確認を経て行う。
    ============================================================ */
-function xBackendUrl(){ return String(state.api.xBackendUrl||'').replace(/\/$/,''); }
+function xBackendUrl(){ if(typeof state==='undefined'||!state.api)return ''; return String(state.api.xBackendUrl||'').replace(/\/$/,''); }
 async function xFetch(path,options={}){
   const base=xBackendUrl(); if(!base) throw new Error('X APIバックエンドURLが未設定です');
   const headers={'Content-Type':'application/json',...(options.headers||{})};
@@ -3720,7 +3721,7 @@ renderAccounts();
 renderGrowth();
 $('#navHistCount').textContent=state.history.length;
 renderLog();
-try{renderMonitor();}catch(e){console.warn('[Post Cockpit] monitor init skipped',e)}
+renderMonitor();
 log('デスクを起動しました');
 </script>
 </body>
@@ -3728,5 +3729,5 @@ log('デスクを起動しました');
 
 <script>
 // v24 X API UI bootstrap
-window.addEventListener('load',()=>{try{refreshXStatus();}catch(e){}});
+window.addEventListener('load',()=>{setTimeout(()=>{try{if(typeof state!=='undefined')refreshXStatus();}catch(e){console.warn('[Post Cockpit] X status init skipped',e)}},0);});
 </script>
