@@ -3724,130 +3724,159 @@ if (
     });
   }
 
-  // 注意BOXを左下寄りへ
-if (warning) {
-  const warnX = W * .045;
-  const warnY = H * .58;
-  const warnW = W * .34;
-  const warnH = H * .16;
+// 左下：注意ポイント＋チャート根拠を統合
+if (warning || chartEvidence) {
+  const infoX = W * .045;
+  const infoY = H * .59;
+  const infoW = W * .34;
+  const infoH = H * .19;
 
-    ctx.fillStyle = 'rgba(255,247,237,.96)';
+  ctx.save();
 
-    roundRect(
-      ctx,
-      warnX,
-      warnY,
-      warnW,
-      warnH,
-      W * .012
-    );
+  // 背景
+  ctx.fillStyle =
+    warning
+      ? 'rgba(255,251,235,.96)'
+      : 'rgba(255,255,255,.95)';
 
-    ctx.fill();
+  roundRect(
+    ctx,
+    infoX,
+    infoY,
+    infoW,
+    infoH,
+    W * .012
+  );
 
-    ctx.strokeStyle = '#F59E0B';
-    ctx.lineWidth = Math.max(
-      2,
-      Math.round(W * .002)
-    );
+  ctx.fill();
 
-    roundRect(
-      ctx,
-      warnX,
-      warnY,
-      warnW,
-      warnH,
-      W * .012
-    );
+  // 枠線
+  ctx.strokeStyle =
+    warning
+      ? '#F59E0B'
+      : '#475569';
 
-    ctx.stroke();
+  ctx.lineWidth = Math.max(
+    2,
+    Math.round(W * .002)
+  );
 
-    ctx.font =
-      `900 ${Math.round(W * .014)}px "Zen Kaku Gothic New",sans-serif`;
+  roundRect(
+    ctx,
+    infoX,
+    infoY,
+    infoW,
+    infoH,
+    W * .012
+  );
 
-    ctx.fillStyle = '#B45309';
+  ctx.stroke();
 
-    ctx.fillText(
-      '⚠ 注意ポイント',
-      warnX + W * .018,
-      warnY + H * .045
-    );
+  let infoPy =
+    infoY + H * .043;
 
-    ctx.font =
-      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
+  // タイトル
+  ctx.font =
+    `900 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
 
-    ctx.fillStyle = '#7C2D12';
+  ctx.fillStyle =
+    warning
+      ? '#B45309'
+      : '#334155';
 
-    const warnLines =
+  ctx.fillText(
+    warning
+      ? '⚠ 今回の注意ポイント'
+      : 'チャート上の根拠',
+    infoX + W * .02,
+    infoPy
+  );
+
+  infoPy += H * .038;
+
+  ctx.font =
+    `700 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#0F172A';
+
+  // 注意点を優先表示
+  if (warning) {
+    const warningLines =
       wrapText(
         ctx,
         warning,
-        warnW - W * .036
+        infoW - W * .04
       );
 
-    warnLines
-      .slice(0, 3)
-      .forEach((line, i) => {
+    warningLines
+      .slice(0, 2)
+      .forEach(line => {
         ctx.fillText(
           line,
-          warnX + W * .018,
-          warnY + H * (.085 + i * .034)
+          infoX + W * .02,
+          infoPy
         );
+
+        infoPy += H * .029;
       });
   }
 
-  // 左下：チャート根拠
-  if (chartEvidence) {
-    const evidenceX = W * .045;
-    const evidenceY = H * .60;
-    const evidenceW = W * .36;
-    const evidenceH = H * .18;
+  // チャート根拠
+  if (
+    chartEvidence &&
+    infoPy < infoY + infoH - H * .045
+  ) {
+    if (warning) {
+      infoPy += H * .008;
 
-    ctx.fillStyle = 'rgba(255,255,255,.94)';
+      ctx.font =
+        `800 ${Math.round(W * .0105)}px "Zen Kaku Gothic New",sans-serif`;
 
-    roundRect(
-      ctx,
-      evidenceX,
-      evidenceY,
-      evidenceW,
-      evidenceH,
-      W * .012
-    );
+      ctx.fillStyle = '#64748B';
 
-    ctx.fill();
+      ctx.fillText(
+        '根拠',
+        infoX + W * .02,
+        infoPy
+      );
+
+      infoPy += H * .027;
+    }
 
     ctx.font =
-      `900 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
+      `700 ${Math.round(W * .011)}px "Zen Kaku Gothic New",sans-serif`;
 
     ctx.fillStyle = '#334155';
-
-    ctx.fillText(
-      'チャート上の根拠',
-      evidenceX + W * .02,
-      evidenceY + H * .045
-    );
-
-    ctx.font =
-      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#0F172A';
 
     const evidenceLines =
       wrapText(
         ctx,
         chartEvidence,
-        evidenceW - W * .04
+        infoW - W * .04
       );
 
     evidenceLines
-      .slice(0, 3)
-      .forEach((line, i) => {
+      .slice(0, warning ? 2 : 3)
+      .forEach(line => {
+        if (
+          infoPy >
+          infoY + infoH - H * .025
+        ) {
+          return;
+        }
+
         ctx.fillText(
           line,
-          evidenceX + W * .02,
-          evidenceY + H * (.088 + i * .032)
+          infoX + W * .02,
+          infoPy
         );
+
+        infoPy += H * .028;
       });
   }
+
+  ctx.restore();
+}
 
   // 右下：まとめ
   if (summary) {
