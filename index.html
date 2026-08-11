@@ -2473,7 +2473,7 @@ if (leadLines.length) {
     y - leadSize * .88,
     Math.round(W * .011),
     leadLines.length * leadLH - leadLH * .2,
-    999
+    Math.round(W * .006)
   );
 
   ctx.fill();
@@ -4001,6 +4001,15 @@ async function buildCardImage(i){
     const first=d.text.split('\n').map(s=>s.trim()).filter(Boolean)[0]||d.acc.name;
     const lead=(state.vision?.headline||first).replace(/[#＃]\S+/g,'').replace(/^[📌📊🌍⚠️🔀🧮■▼]\s*/,'').slice(0,20);
     const pt=d.postType||state.postType||selectedPostType(); const dir=d.direction||state.postDirection||selectedDirection();
+    console.log(
+  "[AVATAR DEBUG]",
+  JSON.stringify({
+    account: d.acc.handle,
+    hasAvatar: Boolean(d.acc.avatar),
+    avatarLength: String(d.acc.avatar || "").length,
+    includeAvatar: d.includeAvatar !== false
+  })
+);
     d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:(pt==='chart_analysis'||pt==='table_point'||pt==='table_knowledge')?'':d.text,chart:d.acc.chart,postType:pt,direction:dir,chartOverlay:state.vision?.chart,avatarSrc:d.includeAvatar===false?'':d.acc.avatar,tableRows:d.tableRows||state.tableRows||[],
       footer:d.acc.handle,index:0,total:1,tint:.28,dim:.42});
     state.backgrounds.push({name:`${d.acc.name} 合成`,src:d.image,from:`${d.acc.name}用`});
