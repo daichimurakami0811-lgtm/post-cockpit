@@ -4394,7 +4394,24 @@ async function buildCardImage(i){
     state.accountBg[d.acc.id]=d.image;   // タブ②の背景として引き継ぐ
     renderBgGrid(); renderAccBg(); renderLane();
     log(`${d.acc.name} 用の画像を合成`,'ok');
-  }catch(e){ toast('画像の合成に失敗しました','err'); btn.disabled=false; btn.textContent='この垢用の画像を合成'; }
+  } catch(e) {
+
+  console.error(
+    "[IMAGE COMPOSE ERROR]",
+    {
+      message: e?.message || String(e),
+      stack: e?.stack || null
+    }
+  );
+
+  toast(
+    '画像の合成に失敗しました：' +
+    (e?.message || String(e)),
+    'err'
+  );
+
+  btn.disabled = false;
+  btn.textContent = 'この垢用の画像を合成';
 }
 
 /* ============================================================
