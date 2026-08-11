@@ -1981,6 +1981,7 @@ async function analyzeImage(media, strategyText = ""){
 "    ],",
 '    "entry": {',
 '      "price": "number",',
+'      "x": "number_0_to_1",',
 '      "y": "number_0_to_1",',
 '      "side": "long_or_short",',
 '      "label": "string"',
@@ -2047,6 +2048,14 @@ async function analyzeImage(media, strategyText = ""){
 "- pullback_long / breakout_long の direction は long とする。",
 "- return_short / breakdown_short の direction は short とする。",
 "- direction と strategyType は必ず整合させる。",
+"- entry.x は今回のチャート上で実際にエントリー判断をする横位置を0〜1で返す。",
+"- entry.x は固定値を使わず、今回のローソク足・反発地点・ブレイク地点から毎回判断する。",
+"- pullback_long は押し目から反発を確認する地点を entry.x の基準にする。",
+"- breakout_long は上抜け確認地点を entry.x の基準にする。",
+"- return_short は戻りから反落を確認する地点を entry.x の基準にする。",
+"- breakdown_short は下抜け確認地点を entry.x の基準にする。",
+"- entry.y は entry.price と今回の価格軸に整合させる。",
+"- entry.x / entry.y は矢印を描くための位置情報であり、過去の解析結果を流用しない。",
   ].join("\n");
 
   const run = async (retry = false) => {
@@ -2871,19 +2880,34 @@ const entryArrowY =
       )
     : sy;
 
-// ENTRY価格付近に短い矢印を表示
-const ax1 = W * .72;
-const ax2 = W * .82;
+// Visionが今回のチャートから判断したエントリーX座標
+const rawEntryX =
+  Number(entryData?.x);
+
+const entryX =
+  Number.isFinite(rawEntryX)
+    ? W * Math.max(
+        .08,
+        Math.min(.92, rawEntryX)
+      )
+    : W * .76;
+
+// 矢印の先端をエントリー位置に合わせる
+const ax2 = entryX;
+
+// 矢印の始点は少し左側
+const ax1 =
+  Math.max(
+    W * .08,
+    entryX - W * .055
+  );
+
+const ay2 = entryArrowY;
 
 const ay1 =
   dir === 'long'
-    ? entryArrowY + H * .035
-    : entryArrowY - H * .035;
-
-const ay2 =
-  dir === 'long'
-    ? entryArrowY - H * .015
-    : entryArrowY + H * .015;
+    ? entryArrowY + H * .025
+    : entryArrowY - H * .025;
 
 drawArrow(
   ctx,
@@ -2893,8 +2917,8 @@ drawArrow(
   ay2,
   arrowColor,
   Math.max(
-    5,
-    Math.round(W * .007)
+    4,
+    Math.round(W * .005)
   )
 );
 
