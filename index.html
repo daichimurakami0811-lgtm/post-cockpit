@@ -3051,216 +3051,314 @@ if (
   postType === 'chart_analysis' &&
   chartOverlay?.isChart
 ) {
-  // チャート分析タイトル
-ctx.save();
+  const entry = chartOverlay.entry;
+  const tp = chartOverlay.takeProfit;
+  const sl = chartOverlay.stopLoss;
 
-const titleX = W * .16;
-const titleY = H * .075;
+  const keyLevels = Array.isArray(chartOverlay.keyLevels)
+    ? chartOverlay.keyLevels
+    : [];
 
-ctx.font =
-  `900 ${Math.round(W * .025)}px "Zen Kaku Gothic New",sans-serif`;
+  const scenario =
+    chartOverlay?.scenario || {};
 
-ctx.textBaseline = 'middle';
+  const strategyType =
+    chartOverlay?.strategyType || 'none';
 
-// 白背景
-ctx.shadowColor = 'rgba(15,23,42,.16)';
-ctx.shadowBlur = Math.round(W * .008);
-ctx.shadowOffsetY = Math.round(H * .004);
+  let strategyTitle = 'チャート戦略';
 
-ctx.fillStyle = 'rgba(255,255,255,.94)';
+  switch (strategyType) {
+    case 'pullback_long':
+      strategyTitle = '▲ 押し目買い';
+      break;
 
-roundRect(
-  ctx,
-  titleX,
-  titleY,
-  W * .31,
-  H * .075,
-  W * .012
-);
+    case 'breakout_long':
+      strategyTitle = '▲ 上抜けロング';
+      break;
 
-ctx.fill();
+    case 'return_short':
+      strategyTitle = '▼ 戻り売り';
+      break;
 
-ctx.shadowColor = 'transparent';
+    case 'breakdown_short':
+      strategyTitle = '▼ 下抜けショート';
+      break;
 
-// 左アクセント
-ctx.fillStyle =
-  chartOverlay.direction === 'short'
-    ? '#DC2626'
-    : '#15803D';
-
-roundRect(
-  ctx,
-  titleX,
-  titleY,
-  W * .008,
-  H * .075,
-  W * .004
-);
-
-ctx.fill();
-
-// タイトル
-ctx.fillStyle = '#0F172A';
-
-const strategyType =
-  chartOverlay?.strategyType || 'none';
-
-let strategyTitle;
-
-switch (strategyType) {
-  case 'pullback_long':
-    strategyTitle = '▲ チャート戦略・押し目買い';
-    break;
-
-  case 'breakout_long':
-    strategyTitle = '▲ チャート戦略・上抜けロング';
-    break;
-
-  case 'return_short':
-    strategyTitle = '▼ チャート戦略・戻り売り';
-    break;
-
-  case 'breakdown_short':
-    strategyTitle = '▼ チャート戦略・下抜けショート';
-    break;
-
-  default:
-    strategyTitle =
-      chartOverlay.direction === 'short'
-        ? '▼ チャート戦略・ショート'
-        : chartOverlay.direction === 'long'
-          ? '▲ チャート戦略・ロング'
-          : 'チャート戦略';
-}
-
-ctx.fillText(
-  strategyTitle,
-  titleX + W * .025,
-  titleY + H * .038
-);
-
-ctx.restore();
-const entry = chartOverlay.entry;
-const tp = chartOverlay.takeProfit;
-const sl = chartOverlay.stopLoss;
-const keyLevels = Array.isArray(chartOverlay.keyLevels)
-  ? chartOverlay.keyLevels
-  : [];
-
-const boxW = Math.round(W * .20);
-
-const entryBoxX = Math.round(W * .055);
-const rightBoxX = Math.round(W - boxW - W * .055);
-
-
-// BOXの縦位置を保持
-let entryBoxY = null;
-let tpBoxY = null;
-let slBoxY = null;
-
-const boxH = Math.round(H * .105);
-const minGap = Math.round(H * .035);
-
-function separateY(y, others = []) {
-  let out = y;
-
-  for (const other of others) {
-    if (Math.abs(out - other) < boxH + minGap) {
-      out = other + boxH + minGap;
-    }
+    default:
+      strategyTitle =
+        chartOverlay.direction === 'short'
+          ? '▼ ショート戦略'
+          : chartOverlay.direction === 'long'
+            ? '▲ ロング戦略'
+            : 'チャート戦略';
   }
 
-  return Math.max(
-    H * .06,
-    Math.min(
-      H - boxH - H * .06,
-      out
-    )
-  );
-}
+  const panelX = W * .045;
+  const panelY = H * .12;
+  const panelW = W * .28;
+  const panelH = H * .68;
 
-// 重要価格ラベル
-if (keyLevels.length) {
+  ctx.save();
+
+  // パネル背景
+  ctx.shadowColor = 'rgba(15,23,42,.18)';
+  ctx.shadowBlur = Math.round(W * .012);
+  ctx.shadowOffsetY = Math.round(H * .006);
+
+  ctx.fillStyle = 'rgba(255,255,255,.96)';
+
+  roundRect(
+    ctx,
+    panelX,
+    panelY,
+    panelW,
+    panelH,
+    W * .014
+  );
+
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+
+  // 左アクセント
+  const accent =
+    chartOverlay.direction === 'short'
+      ? '#DC2626'
+      : '#15803D';
+
+  ctx.fillStyle = accent;
+
+  roundRect(
+    ctx,
+    panelX,
+    panelY,
+    W * .008,
+    panelH,
+    W * .004
+  );
+
+  ctx.fill();
+
+  let py = panelY + H * .06;
+
+  // タイトル
+  ctx.font =
+    `900 ${Math.round(W * .024)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#0F172A';
+
+  ctx.fillText(
+    strategyTitle,
+    panelX + W * .025,
+    py
+  );
+
+  py += H * .075;
+
+  // ENTRY
+  if (entry?.price != null) {
+    ctx.font =
+      `800 ${Math.round(W * .012)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#64748B';
+    ctx.fillText(
+      'ENTRY',
+      panelX + W * .025,
+      py
+    );
+
+    ctx.font =
+      `900 ${Math.round(W * .022)}px "JetBrains Mono",monospace`;
+
+    ctx.fillStyle = '#15803D';
+    ctx.fillText(
+      String(entry.price),
+      panelX + W * .025,
+      py + H * .04
+    );
+
+    py += H * .09;
+  }
+
+  // TAKE PROFIT
+  if (tp?.price != null) {
+    ctx.font =
+      `800 ${Math.round(W * .012)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#64748B';
+    ctx.fillText(
+      'TAKE PROFIT',
+      panelX + W * .025,
+      py
+    );
+
+    ctx.font =
+      `900 ${Math.round(W * .022)}px "JetBrains Mono",monospace`;
+
+    ctx.fillStyle = '#15803D';
+    ctx.fillText(
+      String(tp.price),
+      panelX + W * .025,
+      py + H * .04
+    );
+
+    py += H * .09;
+  }
+
+  // STOP LOSS
+  if (sl?.price != null) {
+    ctx.font =
+      `800 ${Math.round(W * .012)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#64748B';
+    ctx.fillText(
+      'STOP LOSS',
+      panelX + W * .025,
+      py
+    );
+
+    ctx.font =
+      `900 ${Math.round(W * .022)}px "JetBrains Mono",monospace`;
+
+    ctx.fillStyle = '#DC2626';
+    ctx.fillText(
+      String(sl.price),
+      panelX + W * .025,
+      py + H * .04
+    );
+
+    py += H * .09;
+  }
+
+  // KEY LEVELS
   keyLevels
     .slice(0, 2)
-    .forEach((level, i) => {
-      const price = Number(level?.price);
+    .forEach(level => {
+      if (level?.price == null) return;
 
-      if (!Number.isFinite(price)) {
-        return;
-      }
+      ctx.font =
+        `800 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
 
-      const priceY = safePriceY(
-        price,
-        .30 + i * .15
+      ctx.fillStyle = '#64748B';
+
+      ctx.fillText(
+        String(level.label || '重要価格'),
+        panelX + W * .025,
+        py
       );
 
-      // ラベルがCanvas外へ出ないように制限
-      const labelY = Math.max(
-        H * .16,
-        Math.min(
-          H * .68,
-          priceY - H * .032
-        )
+      ctx.font =
+        `900 ${Math.round(W * .017)}px "JetBrains Mono",monospace`;
+
+      ctx.fillStyle =
+        level.type === 'warning'
+          ? '#DC2626'
+          : level.type === 'resistance'
+            ? '#D97706'
+            : '#15803D';
+
+      ctx.fillText(
+        String(level.price),
+        panelX + W * .025,
+        py + H * .032
       );
 
-      // 重要価格ラベルは中央付近へ配置
-      const labelX =
-        i % 2 === 0
-          ? W * .33
-          : W * .53;
-
-      drawKeyLevelLabel(
-        ctx,
-        {
-          x: labelX,
-          y: labelY,
-          price: price,
-          label:
-            level.label ||
-            '重要価格',
-          type:
-            level.type ||
-            'support'
-        },
-        W,
-        H
-      );
+      py += H * .072;
     });
+
+  // MAIN SCENARIO
+  if (scenario.main) {
+    py += H * .01;
+
+    ctx.font =
+      `800 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = accent;
+
+    ctx.fillText(
+      'MAIN SCENARIO',
+      panelX + W * .025,
+      py
+    );
+
+    py += H * .032;
+
+    ctx.font =
+      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#0F172A';
+
+    const mainLines = wrapText(
+      ctx,
+      String(scenario.main),
+      panelW - W * .05
+    );
+
+    mainLines
+      .slice(0, 3)
+      .forEach(line => {
+        ctx.fillText(
+          line,
+          panelX + W * .025,
+          py
+        );
+
+        py += H * .032;
+      });
+  }
+
+  // ALTERNATIVE
+  if (scenario.alternative) {
+    py += H * .018;
+
+    ctx.font =
+      `800 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#64748B';
+
+    ctx.fillText(
+      'INVALIDATION',
+      panelX + W * .025,
+      py
+    );
+
+    py += H * .032;
+
+    ctx.font =
+      `700 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#475569';
+
+    const altLines = wrapText(
+      ctx,
+      String(scenario.alternative),
+      panelW - W * .05
+    );
+
+    altLines
+      .slice(0, 2)
+      .forEach(line => {
+        ctx.fillText(
+          line,
+          panelX + W * .025,
+          py
+        );
+
+        py += H * .03;
+      });
+  }
+
+  ctx.restore();
 }
   
-// エントリー
+// ENTRYライン
 if (entry && entry.price != null) {
-const entryPriceY =
-  safePriceY(
-    entry.price,
-    Number(entry.y) || .50
-  );
+  const entryPriceY =
+    safePriceY(
+      entry.price,
+      Number(entry.y) || .50
+    );
 
-const entryBaseY =
-  entryPriceY - H * .05;
-
-entryBoxY = separateY(entryBaseY);
-const entryY = entryBoxY;
-
-  drawStrategyBox(
-    ctx,
-    {
-      x: entryBoxX,
-      y: entryY,
-      w: boxW,
-      title: 'エントリー',
-      price: entry.price,
-      tone:
-        entry.side === 'short'
-          ? 'short'
-          : 'long'
-    },
-    W,
-    H
-  );
-
-  // エントリーBOX → チャート価格位置への接続線
   ctx.save();
 
   ctx.strokeStyle =
@@ -3277,167 +3375,92 @@ const entryY = entryBoxY;
 
   ctx.beginPath();
 
-ctx.moveTo(
-  entryBoxX + boxW,
-  entryPriceY
-);
+  ctx.moveTo(
+    W * .34,
+    entryPriceY
+  );
 
-ctx.lineTo(
-  W * .94,
-  entryPriceY
-);
+  ctx.lineTo(
+    W * .94,
+    entryPriceY
+  );
 
   ctx.stroke();
   ctx.restore();
 }
 
-// 利確目標
+
+// TAKE PROFITライン
 if (tp && tp.price != null) {
-const tpPriceY =
-  safePriceY(
-    tp.price,
-    Number(tp.y) || .25
-  );
+  const tpPriceY =
+    safePriceY(
+      tp.price,
+      Number(tp.y) || .25
+    );
 
-const tpBaseY =
-  tpPriceY - H * .05;
-
-tpBoxY = separateY(
-  tpBaseY,
-  [entryBoxY].filter(v => v != null)
-);
-
-const tpY = tpBoxY;
-
-  drawStrategyBox(
-    ctx,
-    {
-      x: rightBoxX,
-      y: tpY,
-      w: boxW,
-      title: '利確目標',
-      price: tp.price,
-      tone: 'long'
-    },
-    W,
-    H
-  );
-
-  // 利確BOX → チャート価格位置への接続線
   ctx.save();
+
   ctx.strokeStyle = '#16A34A';
+
   ctx.lineWidth = Math.max(
     2,
     Math.round(W * .0025)
   );
+
   ctx.setLineDash([10, 8]);
 
   ctx.beginPath();
 
-ctx.moveTo(
-  W * .56,
-  tpPriceY
-);
+  ctx.moveTo(
+    W * .34,
+    tpPriceY
+  );
 
-ctx.lineTo(
-  rightBoxX,
-  tpPriceY
-);
+  ctx.lineTo(
+    W * .94,
+    tpPriceY
+  );
 
   ctx.stroke();
   ctx.restore();
 }
 
-// 損切り
+
+// STOP LOSSライン
 if (sl && sl.price != null) {
-const slPriceY =
-  safePriceY(
-    sl.price,
-    Number(sl.y) || .75
-  );
-
-const slBaseY =
-  slPriceY - H * .05;
-
-slBoxY = separateY(
-  slBaseY,
-  [entryBoxY, tpBoxY].filter(v => v != null)
-);
-
-const slY = slBoxY;
-
-  drawStrategyBox(
-    ctx,
-    {
-      x: rightBoxX,
-      y: slY,
-      w: boxW,
-      title: '損切り',
-      price: sl.price,
-      tone: 'short'
-    },
-    W,
-    H
-  );
+  const slPriceY =
+    safePriceY(
+      sl.price,
+      Number(sl.y) || .75
+    );
 
   ctx.save();
+
   ctx.strokeStyle = '#DC2626';
-  ctx.lineWidth = Math.max(2, Math.round(W * .0025));
+
+  ctx.lineWidth = Math.max(
+    2,
+    Math.round(W * .0025)
+  );
+
   ctx.setLineDash([10, 8]);
 
   ctx.beginPath();
 
-ctx.moveTo(
-  W * .56,
-  slPriceY
-);
+  ctx.moveTo(
+    W * .34,
+    slPriceY
+  );
 
-ctx.lineTo(
-  rightBoxX,
-  slPriceY
-);
+  ctx.lineTo(
+    W * .94,
+    slPriceY
+  );
 
   ctx.stroke();
   ctx.restore();
 }
 
-const scenario = chartOverlay.scenario;
-
-if (scenario?.main) {
-  drawScenarioBox(
-    ctx,
-    {
-      x: W * .055,
-      y: H * .76,
-      w: W * .36,
-      title: 'メインシナリオ',
-      text: scenario.main,
-      tone:
-        chartOverlay.direction === 'short'
-          ? 'short'
-          : 'long'
-    },
-    W,
-    H
-  );
-}
-
-if (scenario?.alternative) {
-  drawScenarioBox(
-    ctx,
-    {
-      x: W * .59,
-      y: H * .76,
-      w: W * .355,
-      title: '代替シナリオ',
-      text: scenario.alternative,
-      tone: 'neutral'
-    },
-    W,
-    H
-  );
-}
-  
 }
 
 // チャート分析では元チャートを見せるため暗幕をかけない。
