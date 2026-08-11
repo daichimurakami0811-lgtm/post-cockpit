@@ -4388,6 +4388,20 @@ async function buildCardImage(i){
     includeAvatar: d.includeAvatar !== false
   })
 );
+    console.log(
+  "[CHART MODE DEBUG]",
+  JSON.stringify({
+    pt,
+    statePostType: state.postType,
+    selectedPostType: selectedPostType(),
+    hasChartOverlay: Boolean(state.vision?.chart),
+    isChart: Boolean(state.vision?.chart?.isChart),
+    hasEntry: Boolean(state.vision?.chart?.entry),
+    hasTakeProfit: Boolean(state.vision?.chart?.takeProfit),
+    hasStopLoss: Boolean(state.vision?.chart?.stopLoss),
+    hasScenario: Boolean(state.vision?.chart?.scenario)
+  })
+);
     d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead: pt === 'chart_analysis' ? '' : lead,body:(pt==='chart_analysis'||pt==='table_point'||pt==='table_knowledge')?'':d.text,chart:d.acc.chart,postType:pt,direction:dir,chartOverlay:state.vision?.chart,avatarSrc:d.includeAvatar===false?'':d.acc.avatar,tableRows:d.tableRows||state.tableRows||[],
       footer:d.acc.handle,index:0,total:1,tint:.28,dim:.42});
     state.backgrounds.push({name:`${d.acc.name} 合成`,src:d.image,from:`${d.acc.name}用`});
