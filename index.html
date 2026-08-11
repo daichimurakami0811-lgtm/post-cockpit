@@ -3133,336 +3133,6 @@ if (
 
   ctx.save();
 
-// チャート＋ワンポイント専用レイアウト
-if (
-  postType === 'chart_point' &&
-  chartPointData
-) {
-  const adviceTitle =
-    String(chartPointData.adviceTitle || '').trim();
-
-  const mainLesson =
-    String(chartPointData.mainLesson || '').trim();
-
-  const checkPoints =
-    Array.isArray(chartPointData.checkPoints)
-      ? chartPointData.checkPoints
-          .map(v => String(v || '').trim())
-          .filter(Boolean)
-          .slice(0, 4)
-      : [];
-
-  const warning =
-    String(chartPointData.warning || '').trim();
-
-  const chartEvidence =
-    String(chartPointData.chartEvidence || '').trim();
-
-  const summary =
-    String(chartPointData.summary || '').trim();
-
-  const annotations =
-    Array.isArray(chartPointData.annotations)
-      ? chartPointData.annotations.slice(0, 3)
-      : [];
-
-  ctx.save();
-
-  // 全体を少し読みやすくする薄い白レイヤー
-  ctx.fillStyle = 'rgba(255,255,255,.12)';
-  ctx.fillRect(0, 0, W, H);
-
-  // 左上：メイン解説BOX
-  const mainX = W * .045;
-  const mainY = H * .08;
-  const mainW = W * .36;
-  const mainH = H * .48;
-
-  ctx.shadowColor = 'rgba(15,23,42,.16)';
-  ctx.shadowBlur = Math.round(W * .01);
-  ctx.shadowOffsetY = Math.round(H * .005);
-
-  ctx.fillStyle = 'rgba(255,255,255,.95)';
-
-  roundRect(
-    ctx,
-    mainX,
-    mainY,
-    mainW,
-    mainH,
-    W * .012
-  );
-
-  ctx.fill();
-
-  ctx.shadowColor = 'transparent';
-
-  // タイトル
-  ctx.fillStyle = '#0F172A';
-
-  ctx.font =
-    `900 ${Math.round(W * .023)}px "Zen Kaku Gothic New",sans-serif`;
-
-  const titleLines =
-    wrapText(
-      ctx,
-      adviceTitle || 'ワンポイント',
-      mainW - W * .05
-    );
-
-  let py = mainY + H * .06;
-
-  titleLines
-    .slice(0, 2)
-    .forEach(line => {
-      ctx.fillText(
-        line,
-        mainX + W * .025,
-        py
-      );
-
-      py += H * .05;
-    });
-
-  // メイン要点
-  if (mainLesson) {
-    py += H * .01;
-
-    ctx.font =
-      `700 ${Math.round(W * .014)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#334155';
-
-    const lessonLines =
-      wrapText(
-        ctx,
-        mainLesson,
-        mainW - W * .05
-      );
-
-    lessonLines
-      .slice(0, 4)
-      .forEach(line => {
-        ctx.fillText(
-          line,
-          mainX + W * .025,
-          py
-        );
-
-        py += H * .034;
-      });
-  }
-
-  // チェックポイント
-  if (checkPoints.length) {
-    py += H * .018;
-
-    ctx.font =
-      `800 ${Math.round(W * .012)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#15803D';
-
-    ctx.fillText(
-      'CHECK POINT',
-      mainX + W * .025,
-      py
-    );
-
-    py += H * .035;
-
-    ctx.font =
-      `700 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#0F172A';
-
-    checkPoints.forEach(point => {
-      if (py > mainY + mainH - H * .035) return;
-
-      const pointLines =
-        wrapText(
-          ctx,
-          '✓ ' + point,
-          mainW - W * .055
-        );
-
-      pointLines
-        .slice(0, 2)
-        .forEach(line => {
-          ctx.fillText(
-            line,
-            mainX + W * .025,
-            py
-          );
-
-          py += H * .032;
-        });
-
-      py += H * .006;
-    });
-  }
-
-  // 右上：注意BOX
-  if (warning) {
-    const warnX = W * .63;
-    const warnY = H * .08;
-    const warnW = W * .30;
-    const warnH = H * .18;
-
-    ctx.fillStyle = 'rgba(255,247,237,.96)';
-
-    roundRect(
-      ctx,
-      warnX,
-      warnY,
-      warnW,
-      warnH,
-      W * .012
-    );
-
-    ctx.fill();
-
-    ctx.strokeStyle = '#F59E0B';
-    ctx.lineWidth = Math.max(
-      2,
-      Math.round(W * .002)
-    );
-
-    roundRect(
-      ctx,
-      warnX,
-      warnY,
-      warnW,
-      warnH,
-      W * .012
-    );
-
-    ctx.stroke();
-
-    ctx.font =
-      `900 ${Math.round(W * .014)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#B45309';
-
-    ctx.fillText(
-      '⚠ 注意ポイント',
-      warnX + W * .018,
-      warnY + H * .045
-    );
-
-    ctx.font =
-      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#7C2D12';
-
-    const warnLines =
-      wrapText(
-        ctx,
-        warning,
-        warnW - W * .036
-      );
-
-    warnLines
-      .slice(0, 3)
-      .forEach((line, i) => {
-        ctx.fillText(
-          line,
-          warnX + W * .018,
-          warnY + H * (.085 + i * .034)
-        );
-      });
-  }
-
-  // 左下：チャート根拠
-  if (chartEvidence) {
-    const evidenceX = W * .045;
-    const evidenceY = H * .60;
-    const evidenceW = W * .36;
-    const evidenceH = H * .18;
-
-    ctx.fillStyle = 'rgba(255,255,255,.94)';
-
-    roundRect(
-      ctx,
-      evidenceX,
-      evidenceY,
-      evidenceW,
-      evidenceH,
-      W * .012
-    );
-
-    ctx.fill();
-
-    ctx.font =
-      `900 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#334155';
-
-    ctx.fillText(
-      'チャート上の根拠',
-      evidenceX + W * .02,
-      evidenceY + H * .045
-    );
-
-    ctx.font =
-      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
-
-    ctx.fillStyle = '#0F172A';
-
-    const evidenceLines =
-      wrapText(
-        ctx,
-        chartEvidence,
-        evidenceW - W * .04
-      );
-
-    evidenceLines
-      .slice(0, 3)
-      .forEach((line, i) => {
-        ctx.fillText(
-          line,
-          evidenceX + W * .02,
-          evidenceY + H * (.088 + i * .032)
-        );
-      });
-  }
-
-  // 右下：まとめ
-  if (summary) {
-    const sumX = W * .50;
-    const sumY = H * .62;
-    const sumW = W * .43;
-    const sumH = H * .16;
-
-    ctx.fillStyle = 'rgba(240,253,244,.96)';
-
-    roundRect(
-      ctx,
-      sumX,
-      sumY,
-      sumW,
-      sumH,
-      W * .012
-    );
-
-    ctx.fill();
-
-    ctx.strokeStyle = '#16A34A';
-    ctx.lineWidth = Math.max(
-      2,
-      Math.round(W * .002)
-    );
-
-    roundRect(
-      ctx,
-      sumX,
-      sumY,
-      sumW,
-      sumH,
-      W * .012
-    );
-
-    ctx.stroke();
-
     ctx.font =
       `900 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
 
@@ -4000,6 +3670,336 @@ if (sl && sl.price != null) {
 
 }
 
+// チャート＋ワンポイント専用レイアウト
+if (
+  postType === 'chart_point' &&
+  chartPointData
+) {
+  const adviceTitle =
+    String(chartPointData.adviceTitle || '').trim();
+
+  const mainLesson =
+    String(chartPointData.mainLesson || '').trim();
+
+  const checkPoints =
+    Array.isArray(chartPointData.checkPoints)
+      ? chartPointData.checkPoints
+          .map(v => String(v || '').trim())
+          .filter(Boolean)
+          .slice(0, 4)
+      : [];
+
+  const warning =
+    String(chartPointData.warning || '').trim();
+
+  const chartEvidence =
+    String(chartPointData.chartEvidence || '').trim();
+
+  const summary =
+    String(chartPointData.summary || '').trim();
+
+  const annotations =
+    Array.isArray(chartPointData.annotations)
+      ? chartPointData.annotations.slice(0, 3)
+      : [];
+
+  ctx.save();
+
+  // 全体を少し読みやすくする薄い白レイヤー
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  ctx.fillRect(0, 0, W, H);
+
+  // 左上：メイン解説BOX
+  const mainX = W * .045;
+  const mainY = H * .08;
+  const mainW = W * .36;
+  const mainH = H * .48;
+
+  ctx.shadowColor = 'rgba(15,23,42,.16)';
+  ctx.shadowBlur = Math.round(W * .01);
+  ctx.shadowOffsetY = Math.round(H * .005);
+
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+
+  roundRect(
+    ctx,
+    mainX,
+    mainY,
+    mainW,
+    mainH,
+    W * .012
+  );
+
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+
+  // タイトル
+  ctx.fillStyle = '#0F172A';
+
+  ctx.font =
+    `900 ${Math.round(W * .023)}px "Zen Kaku Gothic New",sans-serif`;
+
+  const titleLines =
+    wrapText(
+      ctx,
+      adviceTitle || 'ワンポイント',
+      mainW - W * .05
+    );
+
+  let py = mainY + H * .06;
+
+  titleLines
+    .slice(0, 2)
+    .forEach(line => {
+      ctx.fillText(
+        line,
+        mainX + W * .025,
+        py
+      );
+
+      py += H * .05;
+    });
+
+  // メイン要点
+  if (mainLesson) {
+    py += H * .01;
+
+    ctx.font =
+      `700 ${Math.round(W * .014)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#334155';
+
+    const lessonLines =
+      wrapText(
+        ctx,
+        mainLesson,
+        mainW - W * .05
+      );
+
+    lessonLines
+      .slice(0, 4)
+      .forEach(line => {
+        ctx.fillText(
+          line,
+          mainX + W * .025,
+          py
+        );
+
+        py += H * .034;
+      });
+  }
+
+  // チェックポイント
+  if (checkPoints.length) {
+    py += H * .018;
+
+    ctx.font =
+      `800 ${Math.round(W * .012)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#15803D';
+
+    ctx.fillText(
+      'CHECK POINT',
+      mainX + W * .025,
+      py
+    );
+
+    py += H * .035;
+
+    ctx.font =
+      `700 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#0F172A';
+
+    checkPoints.forEach(point => {
+      if (py > mainY + mainH - H * .035) return;
+
+      const pointLines =
+        wrapText(
+          ctx,
+          '✓ ' + point,
+          mainW - W * .055
+        );
+
+      pointLines
+        .slice(0, 2)
+        .forEach(line => {
+          ctx.fillText(
+            line,
+            mainX + W * .025,
+            py
+          );
+
+          py += H * .032;
+        });
+
+      py += H * .006;
+    });
+  }
+
+  // 右上：注意BOX
+  if (warning) {
+    const warnX = W * .63;
+    const warnY = H * .08;
+    const warnW = W * .30;
+    const warnH = H * .18;
+
+    ctx.fillStyle = 'rgba(255,247,237,.96)';
+
+    roundRect(
+      ctx,
+      warnX,
+      warnY,
+      warnW,
+      warnH,
+      W * .012
+    );
+
+    ctx.fill();
+
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = Math.max(
+      2,
+      Math.round(W * .002)
+    );
+
+    roundRect(
+      ctx,
+      warnX,
+      warnY,
+      warnW,
+      warnH,
+      W * .012
+    );
+
+    ctx.stroke();
+
+    ctx.font =
+      `900 ${Math.round(W * .014)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#B45309';
+
+    ctx.fillText(
+      '⚠ 注意ポイント',
+      warnX + W * .018,
+      warnY + H * .045
+    );
+
+    ctx.font =
+      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#7C2D12';
+
+    const warnLines =
+      wrapText(
+        ctx,
+        warning,
+        warnW - W * .036
+      );
+
+    warnLines
+      .slice(0, 3)
+      .forEach((line, i) => {
+        ctx.fillText(
+          line,
+          warnX + W * .018,
+          warnY + H * (.085 + i * .034)
+        );
+      });
+  }
+
+  // 左下：チャート根拠
+  if (chartEvidence) {
+    const evidenceX = W * .045;
+    const evidenceY = H * .60;
+    const evidenceW = W * .36;
+    const evidenceH = H * .18;
+
+    ctx.fillStyle = 'rgba(255,255,255,.94)';
+
+    roundRect(
+      ctx,
+      evidenceX,
+      evidenceY,
+      evidenceW,
+      evidenceH,
+      W * .012
+    );
+
+    ctx.fill();
+
+    ctx.font =
+      `900 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#334155';
+
+    ctx.fillText(
+      'チャート上の根拠',
+      evidenceX + W * .02,
+      evidenceY + H * .045
+    );
+
+    ctx.font =
+      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#0F172A';
+
+    const evidenceLines =
+      wrapText(
+        ctx,
+        chartEvidence,
+        evidenceW - W * .04
+      );
+
+    evidenceLines
+      .slice(0, 3)
+      .forEach((line, i) => {
+        ctx.fillText(
+          line,
+          evidenceX + W * .02,
+          evidenceY + H * (.088 + i * .032)
+        );
+      });
+  }
+
+  // 右下：まとめ
+  if (summary) {
+    const sumX = W * .50;
+    const sumY = H * .62;
+    const sumW = W * .43;
+    const sumH = H * .16;
+
+    ctx.fillStyle = 'rgba(240,253,244,.96)';
+
+    roundRect(
+      ctx,
+      sumX,
+      sumY,
+      sumW,
+      sumH,
+      W * .012
+    );
+
+    ctx.fill();
+
+    ctx.strokeStyle = '#16A34A';
+    ctx.lineWidth = Math.max(
+      2,
+      Math.round(W * .002)
+    );
+
+    roundRect(
+      ctx,
+      sumX,
+      sumY,
+      sumW,
+      sumH,
+      W * .012
+    );
+
+    ctx.stroke();
+  
 // チャート分析・チャート＋ワンポイントでは
 // 元チャートを見せるため暗幕をかけない。
 if(
