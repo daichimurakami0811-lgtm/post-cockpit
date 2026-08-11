@@ -2037,7 +2037,7 @@ async function analyzeImage(media, strategyText = ""){
   const run = async (retry = false) => {
     const raw = await callClaude({
       temperature: 0,
-      max_tokens: 2000,
+      max_tokens: 4000,
 
       system:
         "あなたは金融チャート画像の解析担当です。短く完全なJSONオブジェクトだけを返してください。説明文は禁止です。",
