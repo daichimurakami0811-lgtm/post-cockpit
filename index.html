@@ -1966,7 +1966,8 @@ async function analyzeImage(media, strategyText = ""){
   '  "headline": "画像に載せる短い見出し。12文字以内",',
 '  "chart": {',
 '    "isChart": true,',
-'    "direction": "long",',
+'    "direction": "long_or_short_or_none",',
+'    "strategyType": "pullback_long_or_breakout_long_or_return_short_or_breakdown_short_or_none",',
 '    "priceMin": "number",',
 '    "priceMax": "number",',
 '    "plotTop": "number_0_to_1",',
@@ -2032,6 +2033,20 @@ async function analyzeImage(media, strategyText = ""){
 "- keyLevels.type は support / resistance / warning のいずれかにする。",
 "- entry / takeProfit / stopLoss と完全に同じ意味の価格は keyLevels に重複させない。",
 "- 明確な重要価格がない場合は keyLevels を空配列 [] にする。",
+"- strategyType は今回の売買戦略を表し、次の5種類から必ず1つ選ぶ。",
+"- pullback_long: 支持帯や押し目候補まで下落した後、反発を確認してロング。",
+"- breakout_long: レジスタンスや直近高値を上抜けたことを条件にロング。",
+"- return_short: 抵抗帯や戻り高値まで上昇した後、反落を確認してショート。",
+"- breakdown_short: サポートや直近安値を下抜けたことを条件にショート。",
+"- 戦略を明確に判断できない場合のみ strategyType=none とする。",
+"- 投稿文章に売買条件が明記されている場合は、その内容を最優先してstrategyTypeを決定する。",
+"- 「反発確認」「押し目」「下げ止まり」「支持帯からロング」は pullback_long を優先する。",
+"- 「上抜け」「ブレイク」「高値更新でロング」は breakout_long を優先する。",
+"- 「反落確認」「戻り売り」「抵抗帯からショート」は return_short を優先する。",
+"- 「下抜け」「割れ」「安値更新でショート」は breakdown_short を優先する。",
+"- pullback_long / breakout_long の direction は long とする。",
+"- return_short / breakdown_short の direction は short とする。",
+"- direction と strategyType は必ず整合させる。",
   ].join("\n");
 
   const run = async (retry = false) => {
@@ -2853,20 +2868,60 @@ const mid2X = sx + W * .075;
 let mid1Y;
 let mid2Y;
 
-if (dir === 'long') {
-  // 一度押してから反発
-  mid1Y = sy + H * .045;
+// strategyType に応じて矢印形状を変更
+switch (strategyType) {
 
-  // その後、高値方向へ上昇
-  mid2Y =
-    sy + (ey - sy) * .52;
-} else {
-  // 一度戻してから反落
-  mid1Y = sy - H * .045;
+  // ① 押し目買い
+  // 少し下げる → 反発 → 上昇
+  case 'pullback_long':
+    mid1Y = sy + H * .022;
 
-  // その後、安値方向へ下落
-  mid2Y =
-    sy + (ey - sy) * .52;
+    mid2Y =
+      sy + (ey - sy) * .52;
+    break;
+
+
+  // ② 上抜けロング
+  // 高値付近でもみ合う → 上抜け
+  case 'breakout_long':
+    mid1Y = sy - H * .004;
+
+    mid2Y = sy - H * .008;
+    break;
+
+
+  // ③ 戻り売り
+  // 少し上げる → 反落 → 下落
+  case 'return_short':
+    mid1Y = sy - H * .022;
+
+    mid2Y =
+      sy + (ey - sy) * .52;
+    break;
+
+
+  // ④ 下抜けショート
+  // 安値付近でもみ合う → 下抜け
+  case 'breakdown_short':
+    mid1Y = sy + H * .004;
+
+    mid2Y = sy + H * .008;
+    break;
+
+
+  // strategyTypeが取れなかった場合
+  default:
+    if (dir === 'long') {
+      mid1Y = sy + H * .015;
+
+      mid2Y =
+        sy + (ey - sy) * .52;
+    } else {
+      mid1Y = sy - H * .015;
+
+      mid2Y =
+        sy + (ey - sy) * .52;
+    }
 }
 
 
@@ -3043,10 +3098,39 @@ ctx.fill();
 // タイトル
 ctx.fillStyle = '#0F172A';
 
+const strategyType =
+  chartOverlay?.strategyType || 'none';
+
+let strategyTitle;
+
+switch (strategyType) {
+  case 'pullback_long':
+    strategyTitle = '▲ チャート戦略・押し目買い';
+    break;
+
+  case 'breakout_long':
+    strategyTitle = '▲ チャート戦略・上抜けロング';
+    break;
+
+  case 'return_short':
+    strategyTitle = '▼ チャート戦略・戻り売り';
+    break;
+
+  case 'breakdown_short':
+    strategyTitle = '▼ チャート戦略・下抜けショート';
+    break;
+
+  default:
+    strategyTitle =
+      chartOverlay.direction === 'short'
+        ? '▼ チャート戦略・ショート'
+        : chartOverlay.direction === 'long'
+          ? '▲ チャート戦略・ロング'
+          : 'チャート戦略';
+}
+
 ctx.fillText(
-  chartOverlay.direction === 'short'
-    ? '▼ チャート戦略・戻り売り'
-    : '▲ チャート戦略・押し目買い',
+  strategyTitle,
   titleX + W * .025,
   titleY + H * .038
 );
