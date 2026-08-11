@@ -2540,7 +2540,7 @@ const tpData = chartOverlay?.takeProfit || null;
 const slData = chartOverlay?.stopLoss || null;
 
 const sx =
-  W * .72;
+  W * .73;
 
 const sy =
   entryData?.y != null
@@ -2548,7 +2548,7 @@ const sy =
     : H * (ar?.y1 ?? .55);
 
 const ex =
-  W * .88;
+  W * .84;
 
 const ey =
   dir === 'long'
@@ -2562,20 +2562,26 @@ const ey =
           ? H * Number(slData.y)
           : H * (ar?.y2 ?? .78)
       );
+
+      const arrowStartY =
+  dir === 'long'
+    ? sy + H * .015
+    : sy - H * .015;
+
+const arrowEndY =
+  dir === 'long'
+    ? ey + H * .025
+    : ey - H * .025;
+
       drawArrow(
-        ctx,
-        sx,
-        sy,
-        ex,
-        ey,
-        dir === 'long'
-          ? '#22C55E'
-          : '#EF4444',
-        Math.max(
-          5,
-          Math.round(W * .008)
-        )
-      );
+  ctx,
+  sx,
+  arrowStartY,
+  ex,
+  arrowEndY,
+  dir === 'long' ? '#22C55E' : '#EF4444',
+  Math.max(5, Math.round(W * .008))
+);
 
       ctx.font =
         `900 ${Math.round(W * .026)}px "Zen Kaku Gothic New",sans-serif`;
