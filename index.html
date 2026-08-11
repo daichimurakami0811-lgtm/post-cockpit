@@ -1348,11 +1348,48 @@ async function callAnthropicAPI(prompt, persona=null, opts={}){
   return{ text:cleanDraft(text), truncated:stopReason==='max_tokens' };
 }
 function parseLooseJSON(text){
-  let t=String(text).trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
-  const s=t.search(/[\[{]/); const isArr=t[s]==='[';
-  const e=isArr?t.lastIndexOf(']'):t.lastIndexOf('}');
-  if(s>=0&&e>s) t=t.slice(s,e+1);
-  return JSON.parse(t);
+  let t = String(text ?? "")
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  if (!t) {
+    throw new Error("AIからJSONが返ってきませんでした");
+  }
+
+  const s = t.search(/[\[{]/);
+
+  if (s < 0) {
+    throw new Error("AIの返答にJSONが含まれていません");
+  }
+
+  const isArr = t[s] === "[";
+  const closeChar = isArr ? "]" : "}";
+  const e = t.lastIndexOf(closeChar);
+
+  if (e <= s) {
+    throw new Error("AIのJSONが途中で切れています");
+  }
+
+  t = t.slice(s, e + 1);
+
+  try {
+    return JSON.parse(t);
+  } catch (e) {
+    console.error(
+      "[JSON PARSE ERROR]",
+      JSON.stringify({
+        message: e.message,
+        preview: t.slice(0, 300),
+        length: t.length
+      })
+    );
+
+    throw new Error(
+      `AIのJSON解析に失敗しました: ${e.message}`
+    );
+  }
 }
 function cleanDraft(t){
   let s=String(t||'').trim();
@@ -1902,20 +1939,80 @@ async function generateTelop(base,acc,slides){
 
 /* ---------- Vision ---------- */
 async function analyzeImage(media){
-  const m=media.src.match(/^data:(.*?);base64,(.*)$/);
-  if(!m) throw new Error('画像の形式を読み取れませんでした');
-  const[,mediaType,b64]=m;
-  const raw=await callClaude({ temperature:0, max_tokens:800,
-    system:'画像を客観的に説明します。出力はJSONオブジェクトのみ。説明文やコードフェンスを付けない。',
-    messages:[{role:'user',content:[
-      {type:'image',source:{type:'base64',media_type:mediaType,data:b64}},
-      {type:'text',text:['この画像をX投稿に添付します。次のJSONで答えてください。','{',
-        '  "subject": "何が写っているか一文で",','  "texts": ["画像内に読み取れる文字。なければ空配列"],',
-        '  "palette": ["目立つ色を#RRGGBBで最大4つ"],','  "headline": "画像に重ねる見出しとして使える12字以内の言葉",',
-        '  "altText": "代替テキスト。80文字以内",','  "caution": "投稿前に確認すべき点。なければ空文字",',
-        '  "chart": {"isChart": true/false, "horizontal": [0.0-1.0], "trend": [{"x1":0.0,"y1":0.0,"x2":1.0,"y2":1.0}], "direction": "long/short/none"}','}',
-        'チャート画像なら、実際の画像上で確認できる支持線・抵抗線・トレンドラインの位置を、画像の左上を(0,0)、右下を(1,1)とした正規化座標で最大3本まで返してください。推測で大量の線を作らないでください。チャートでなければ chart.isChart=false にしてください。'].join('\n')}]}]});
-  return parseLooseJSON(raw.text);
+  const m = media.src.match(/^data:(.*?);base64,(.*)$/);
+
+  if (!m) {
+    throw new Error("画像の形式を読み取れませんでした");
+  }
+
+  const [, mediaType, b64] = m;
+
+  const prompt = [
+    "この画像をX投稿に添付します。次のJSONで答えてください。",
+    "{",
+    '  "subject": "何が写っているか一文で",',
+    '  "texts": ["画像内に読み取れる文字。なければ空配列"],',
+    '  "palette": ["目立つ色を#RRGGBBで最大4つ"],',
+    '  "headline": "画像に重ねる見出しとして使える12字以内の言葉",',
+    '  "altText": "代替テキスト。80文字以内",',
+    '  "caution": "投稿前に確認すべき点。なければ空文字",',
+    '  "chart": {',
+    '    "isChart": true/false,',
+    '    "horizontal": [0.0-1.0],',
+    '    "trend": [{"x1":0.0,"y1":0.0,"x2":1.0,"y2":1.0}],',
+    '    "direction": "long/short/none"',
+    "  }",
+    "}",
+    "チャート画像なら、実際の画像上で確認できる支持線・抵抗線・トレンドラインの位置を、",
+    "画像の左上を(0,0)、右下を(1,1)とした正規化座標で最大3本まで返してください。",
+    "推測で大量の線を作らないでください。",
+    "チャートでなければ chart.isChart=false にしてください。",
+    "説明文やMarkdownは付けず、JSONオブジェクトだけを返してください。"
+  ].join("\n");
+
+  const run = async (retry = false) => {
+    const raw = await callClaude({
+      temperature: 0,
+      max_tokens: 1200,
+      system:
+        "画像を客観的に説明します。必ず有効なJSONオブジェクトだけを返してください。コードフェンスや前置きは禁止です。",
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType,
+              data: b64
+            }
+          },
+          {
+            type: "text",
+            text: retry
+              ? prompt + "\n\n前回の返答はJSONとして解析できませんでした。今回は必ず完全なJSONだけを返してください。"
+              : prompt
+          }
+        ]
+      }]
+    });
+
+    return parseLooseJSON(raw.text);
+  };
+
+  try {
+    return await run(false);
+  } catch (e) {
+    console.warn("[VISION RETRY]", e.message);
+
+    try {
+      return await run(true);
+    } catch (retryError) {
+      throw new Error(
+        `画像解析に2回失敗しました: ${retryError.message}`
+      );
+    }
+  }
 }
 
 /* ============================================================
