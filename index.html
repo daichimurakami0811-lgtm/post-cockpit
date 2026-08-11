@@ -2611,26 +2611,52 @@ if (
   const tp = chartOverlay.takeProfit;
   const sl = chartOverlay.stopLoss;
 
-  const boxW = Math.round(W * .20);
-  const boxX = Math.round(W * .055);
+const boxW = Math.round(W * .20);
+
+const entryBoxX = Math.round(W * .055);
+const rightBoxX = Math.round(W - boxW - W * .055);
+
+// BOXの縦位置を保持
+let entryBoxY = null;
+let tpBoxY = null;
+let slBoxY = null;
+
+const boxH = Math.round(H * .105);
+const minGap = Math.round(H * .035);
+
+function separateY(y, others = []) {
+  let out = y;
+
+  for (const other of others) {
+    if (Math.abs(out - other) < boxH + minGap) {
+      out = other + boxH + minGap;
+    }
+  }
+
+  return Math.max(
+    H * .06,
+    Math.min(
+      H - boxH - H * .06,
+      out
+    )
+  );
+}
 
 // エントリー
 if (entry && entry.price != null) {
-  const entryY = Math.max(
-    H * .08,
-    Math.min(
-      H * .82,
-      H * (Number(entry.y) || .50) - H * .05
-    )
-  );
+const entryBaseY =
+  H * (Number(entry.y) || .50) - H * .05;
+
+entryBoxY = separateY(entryBaseY);
+const entryY = entryBoxY;
 
   drawStrategyBox(
     ctx,
     {
-      x: boxX,
+      x: entryBoxX,
       y: entryY,
       w: boxW,
-      title: entry.label || 'エントリー',
+      title: 'エントリー',
       price: entry.price,
       tone:
         entry.side === 'short'
@@ -2659,7 +2685,7 @@ if (entry && entry.price != null) {
   ctx.beginPath();
 
   ctx.moveTo(
-    boxX + boxW,
+    entryBoxX + boxW,
     entryY + H * .052
   );
 
@@ -2674,21 +2700,23 @@ if (entry && entry.price != null) {
 
 // 利確目標
 if (tp && tp.price != null) {
-  const tpY = Math.max(
-    H * .08,
-    Math.min(
-      H * .82,
-      H * (Number(tp.y) || .25) - H * .05
-    )
-  );
+const tpBaseY =
+  H * (Number(tp.y) || .25) - H * .05;
+
+tpBoxY = separateY(
+  tpBaseY,
+  [entryBoxY].filter(v => v != null)
+);
+
+const tpY = tpBoxY;
 
   drawStrategyBox(
     ctx,
     {
-      x: W - boxW - W * .055,
+      x: rightBoxX,
       y: tpY,
       w: boxW,
-      title: tp.label || '利確目標',
+      title: '利確目標',
       price: tp.price,
       tone: 'long'
     },
@@ -2708,7 +2736,7 @@ if (tp && tp.price != null) {
   ctx.beginPath();
 
   ctx.moveTo(
-    W - boxW - W * .055,
+    rightBoxX,
     tpY + H * .052
   );
 
@@ -2723,13 +2751,15 @@ if (tp && tp.price != null) {
 
 // 損切り
 if (sl && sl.price != null) {
-  const slY = Math.max(
-    H * .08,
-    Math.min(
-      H * .82,
-      H * (Number(sl.y) || .75) - H * .05
-    )
-  );
+const slBaseY =
+  H * (Number(sl.y) || .75) - H * .05;
+
+slBoxY = separateY(
+  slBaseY,
+  [entryBoxY, tpBoxY].filter(v => v != null)
+);
+
+const slY = slBoxY;
 
   drawStrategyBox(
     ctx,
@@ -2737,7 +2767,7 @@ if (sl && sl.price != null) {
       x: W - boxW - W * .055,
       y: slY,
       w: boxW,
-      title: sl.label || '損切り',
+      title: '損切り',
       price: sl.price,
       tone: 'short'
     },
