@@ -5605,6 +5605,15 @@ if (pt === 'chart_point') {
   );
 }
     console.log(
+  '[CHART POINT DATA]',
+  {
+    pt,
+    hasData: !!chartPointData,
+    data: chartPointData
+  }
+);
+    
+    console.log(
   "[AVATAR DEBUG]",
   JSON.stringify({
     account: d.acc.handle,
