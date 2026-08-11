@@ -2770,9 +2770,6 @@ const entryY = entryBoxY;
 
   ctx.beginPath();
 
-const entryPriceY =
-  H * (Number(entryPriceY) || .50);
-
 ctx.moveTo(
   entryBoxX + boxW,
   entryPriceY
@@ -2830,9 +2827,6 @@ const tpY = tpBoxY;
 
   ctx.beginPath();
 
-const tpPriceY =
-  H * (Number(tpPriceY) || .25);
-
 ctx.moveTo(
   W * .56,
   tpPriceY
@@ -2868,7 +2862,7 @@ const slY = slBoxY;
   drawStrategyBox(
     ctx,
     {
-      x: W - boxW - W * .055,
+      x: rightBoxX,
       y: slY,
       w: boxW,
       title: '損切り',
@@ -2885,9 +2879,6 @@ const slY = slBoxY;
   ctx.setLineDash([10, 8]);
 
   ctx.beginPath();
-
-const slPriceY =
-  H * (Number(slPriceY) || .75);
 
 ctx.moveTo(
   W * .56,
