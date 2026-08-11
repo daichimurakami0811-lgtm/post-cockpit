@@ -2800,6 +2800,9 @@ if (ov?.horizontal?.length) {
           )
         : direction;
 
+    const strategyType =
+  chartOverlay?.strategyType || 'none';
+    
     if (dir !== 'none') {
       const ar = chartOverlay?.arrow || null;
 
@@ -3103,7 +3106,7 @@ const strategyType =
 
 let strategyTitle;
 
-switch (strategyType) {
+switch (arrowStrategyType) {
   case 'pullback_long':
     strategyTitle = '▲ チャート戦略・押し目買い';
     break;
