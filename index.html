@@ -3724,12 +3724,11 @@ if (
     });
   }
 
-  // 右上：注意BOX
-  if (warning) {
-    const warnX = W * .63;
-    const warnY = H * .08;
-    const warnW = W * .30;
-    const warnH = H * .18;
+  // 注意BOXを左下寄りへ
+const warnX = W * .045;
+const warnY = H * .58;
+const warnW = W * .34;
+const warnH = H * .16;
 
     ctx.fillStyle = 'rgba(255,247,237,.96)';
 
