@@ -2156,8 +2156,13 @@ function drawArrow(ctx,x1,y1,x2,y2,color,width){
 function drawAvatar(ctx,src,W,H){ if(!src)return; const img=new Image(); }
 function drawAvatarLoaded(ctx,img,W,H){
   const size=Math.round(Math.min(W,H)*.14);
-  const x=Math.round(W*.045);
-  const y=Math.round(H*.045);
+　const x = Math.round(
+  W - size - W * .055
+);
+
+　const y = Math.round(
+  H - size - H * .06
+);
 
   ctx.save();
 
@@ -2852,167 +2857,46 @@ const arrowEndY =
     ? ey + H * .018
     : ey - H * .018;
 
-
-// シナリオ折れ線
+// エントリー方向矢印
 const arrowColor =
   dir === 'long'
     ? '#22C55E'
     : '#EF4444';
 
-const lineWidth =
+const entryArrowY =
+  entryData?.price != null
+    ? safePriceY(
+        entryData.price,
+        Number(entryData.y) || .55
+      )
+    : sy;
+
+// ENTRY価格付近に短い矢印を表示
+const ax1 = W * .72;
+const ax2 = W * .82;
+
+const ay1 =
+  dir === 'long'
+    ? entryArrowY + H * .035
+    : entryArrowY - H * .035;
+
+const ay2 =
+  dir === 'long'
+    ? entryArrowY - H * .015
+    : entryArrowY + H * .015;
+
+drawArrow(
+  ctx,
+  ax1,
+  ay1,
+  ax2,
+  ay2,
+  arrowColor,
   Math.max(
     5,
     Math.round(W * .007)
-  );
-
-// 中間地点
-const mid1X = sx + W * .035;
-const mid2X = sx + W * .075;
-
-let mid1Y;
-let mid2Y;
-
-// strategyType に応じて矢印形状を変更
-switch (chartOverlay?.strategyType || 'none') {
-
-  // ① 押し目買い
-  // 少し下げる → 反発 → 上昇
-  case 'pullback_long':
-    mid1Y = sy + H * .022;
-
-    mid2Y =
-      sy + (ey - sy) * .52;
-    break;
-
-
-  // ② 上抜けロング
-  // 高値付近でもみ合う → 上抜け
-  case 'breakout_long':
-    mid1Y = sy - H * .004;
-
-    mid2Y = sy - H * .008;
-    break;
-
-
-  // ③ 戻り売り
-  // 少し上げる → 反落 → 下落
-  case 'return_short':
-    mid1Y = sy - H * .022;
-
-    mid2Y =
-      sy + (ey - sy) * .52;
-    break;
-
-
-  // ④ 下抜けショート
-  // 安値付近でもみ合う → 下抜け
-  case 'breakdown_short':
-    mid1Y = sy + H * .004;
-
-    mid2Y = sy + H * .008;
-    break;
-
-
-  // strategyTypeが取れなかった場合
-  default:
-    if (dir === 'long') {
-      mid1Y = sy + H * .015;
-
-      mid2Y =
-        sy + (ey - sy) * .52;
-    } else {
-      mid1Y = sy - H * .015;
-
-      mid2Y =
-        sy + (ey - sy) * .52;
-    }
-}
-
-
-// 折れ線本体
-ctx.save();
-
-ctx.strokeStyle = arrowColor;
-ctx.lineWidth = lineWidth;
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round';
-
-ctx.shadowColor =
-  dir === 'long'
-    ? 'rgba(34,197,94,.28)'
-    : 'rgba(239,68,68,.28)';
-
-ctx.shadowBlur =
-  Math.round(W * .012);
-
-ctx.beginPath();
-
-ctx.moveTo(
-  sx,
-  arrowStartY
+  )
 );
-
-ctx.lineTo(
-  mid1X,
-  mid1Y
-);
-
-ctx.lineTo(
-  mid2X,
-  mid2Y
-);
-
-ctx.lineTo(
-  ex,
-  arrowEndY
-);
-
-ctx.stroke();
-
-
-// 矢印の先端
-const angle = Math.atan2(
-  arrowEndY - mid2Y,
-  ex - mid2X
-);
-
-const headLength =
-  Math.max(
-    16,
-    Math.round(W * .022)
-  );
-
-ctx.fillStyle = arrowColor;
-
-ctx.beginPath();
-
-ctx.moveTo(
-  ex,
-  arrowEndY
-);
-
-ctx.lineTo(
-  ex -
-    headLength *
-    Math.cos(angle - Math.PI / 6),
-  arrowEndY -
-    headLength *
-    Math.sin(angle - Math.PI / 6)
-);
-
-ctx.lineTo(
-  ex -
-    headLength *
-    Math.cos(angle + Math.PI / 6),
-  arrowEndY -
-    headLength *
-    Math.sin(angle + Math.PI / 6)
-);
-
-ctx.closePath();
-ctx.fill();
-
-ctx.restore();
 
       ctx.font =
         `900 ${Math.round(W * .026)}px "Zen Kaku Gothic New",sans-serif`;
@@ -3266,89 +3150,149 @@ if (
       py += H * .072;
     });
 
-  // MAIN SCENARIO
-  if (scenario.main) {
-    py += H * .01;
+// MAIN SCENARIO / INVALIDATION
+const panelBottom =
+  panelY + panelH - H * .035;
 
-    ctx.font =
-      `800 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
+const scenarioAvailableH =
+  Math.max(
+    H * .10,
+    panelBottom - py
+  );
 
-    ctx.fillStyle = accent;
+const hasMain =
+  Boolean(scenario?.main);
 
-    ctx.fillText(
-      'MAIN SCENARIO',
-      panelX + W * .025,
-      py
-    );
+const hasAlt =
+  Boolean(scenario?.alternative);
 
-    py += H * .032;
+const scenarioCount =
+  (hasMain ? 1 : 0) +
+  (hasAlt ? 1 : 0);
 
-    ctx.font =
-      `700 ${Math.round(W * .0125)}px "Zen Kaku Gothic New",sans-serif`;
+// 残りスペースに応じて文字サイズを自動調整
+const scenarioBodySize =
+  scenarioAvailableH < H * .18
+    ? Math.round(W * .0095)
+    : scenarioAvailableH < H * .24
+      ? Math.round(W * .0105)
+      : Math.round(W * .0115);
 
-    ctx.fillStyle = '#0F172A';
+const scenarioLabelSize =
+  Math.max(
+    Math.round(W * .0095),
+    scenarioBodySize
+  );
 
-    const mainLines = wrapText(
-      ctx,
-      String(scenario.main),
-      panelW - W * .05
-    );
+const scenarioLineH =
+  scenarioBodySize * 1.45;
 
-    mainLines
-      .slice(0, 3)
-      .forEach(line => {
-        ctx.fillText(
-          line,
-          panelX + W * .025,
-          py
-        );
 
-        py += H * .032;
-      });
-  }
+// MAIN SCENARIO
+if (hasMain) {
+  py += H * .01;
 
-  // ALTERNATIVE
-  if (scenario.alternative) {
-    py += H * .018;
+  ctx.font =
+    `800 ${scenarioLabelSize}px "Zen Kaku Gothic New",sans-serif`;
 
-    ctx.font =
-      `800 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
+  ctx.fillStyle = accent;
 
-    ctx.fillStyle = '#64748B';
+  ctx.fillText(
+    'MAIN SCENARIO',
+    panelX + W * .025,
+    py
+  );
 
-    ctx.fillText(
-      'INVALIDATION',
-      panelX + W * .025,
-      py
-    );
+  py += H * .027;
 
-    py += H * .032;
+  ctx.font =
+    `700 ${scenarioBodySize}px "Zen Kaku Gothic New",sans-serif`;
 
-    ctx.font =
-      `700 ${Math.round(W * .0115)}px "Zen Kaku Gothic New",sans-serif`;
+  ctx.fillStyle = '#0F172A';
 
-    ctx.fillStyle = '#475569';
+  const mainLines = wrapText(
+    ctx,
+    String(scenario.main),
+    panelW - W * .05
+  );
 
-    const altLines = wrapText(
-      ctx,
-      String(scenario.alternative),
-      panelW - W * .05
-    );
+  // ALTERNATIVEもある場合はMAINを最大2行に抑える
+  const maxMainLines =
+    hasAlt
+      ? 2
+      : 3;
 
-    altLines
-      .slice(0, 2)
-      .forEach(line => {
-        ctx.fillText(
-          line,
-          panelX + W * .025,
-          py
-        );
+  mainLines
+    .slice(0, maxMainLines)
+    .forEach(line => {
+      if (
+        py + scenarioLineH >
+        panelBottom
+      ) {
+        return;
+      }
 
-        py += H * .03;
-      });
-  }
+      ctx.fillText(
+        line,
+        panelX + W * .025,
+        py
+      );
 
-  ctx.restore();
+      py += scenarioLineH;
+    });
+}
+
+
+// INVALIDATION
+if (
+  hasAlt &&
+  py < panelBottom - H * .055
+) {
+  py += H * .014;
+
+  ctx.font =
+    `800 ${scenarioLabelSize}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#64748B';
+
+  ctx.fillText(
+    'INVALIDATION',
+    panelX + W * .025,
+    py
+  );
+
+  py += H * .027;
+
+  ctx.font =
+    `700 ${scenarioBodySize}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#475569';
+
+  const altLines = wrapText(
+    ctx,
+    String(scenario.alternative),
+    panelW - W * .05
+  );
+
+  altLines
+    .slice(0, 2)
+    .forEach(line => {
+      if (
+        py + scenarioLineH >
+        panelBottom
+      ) {
+        return;
+      }
+
+      ctx.fillText(
+        line,
+        panelX + W * .025,
+        py
+      );
+
+      py += scenarioLineH;
+    });
+}
   
 // ENTRYライン
 if (entry && entry.price != null) {
