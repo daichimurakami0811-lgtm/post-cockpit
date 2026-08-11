@@ -2163,133 +2163,263 @@ function drawAvatarLoaded(ctx,img,W,H){
 }
 
 /* 背景 + テロップ を1枚描く。タブ2のスライドとタブ1のバナーで共用 */
-async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34,dim=.5,chart=null,chartOverlay=null,postType='chart_analysis',direction='none',avatarSrc='',tableRows=[]}){
-  const c=document.createElement('canvas'); c.width=W; c.height=H;
-  const ctx=c.getContext('2d');
+async function composeFrame({
+  bgSrc,
+  W,
+  H,
+  hue,
+  lead,
+  body,
+  footer,
+  index,
+  total,
+  tint = .34,
+  dim = .5,
+  chart = null,
+  chartOverlay = null,
+  postType = 'chart_analysis',
+  direction = 'none',
+  avatarSrc = '',
+  tableRows = []
+}) {
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
 
-  if(bgSrc){ const img=await loadImage(bgSrc); drawCover(ctx,img,W,H); }
-  else{ const g=ctx.createLinearGradient(0,0,W,H); g.addColorStop(0,hue); g.addColorStop(1,'#0F172A'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
+  const ctx = c.getContext('2d');
 
-// チャート分析では元チャートの色をそのまま維持する。
-// その他の画像だけブランド色を薄く重ねる。
-if(postType !== 'chart_analysis'){
-  ctx.globalCompositeOperation='soft-light';
-  ctx.globalAlpha=tint;
-  ctx.fillStyle=hue;
-  ctx.fillRect(0,0,W,H);
-}
+  if (bgSrc) {
+    const img = await loadImage(bgSrc);
+    drawCover(ctx, img, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, hue);
+    g.addColorStop(1, '#0F172A');
 
-ctx.globalCompositeOperation='source-over';
-ctx.globalAlpha=1;
-
-  // アカウント固有のチャート・ラインを正確にCanvas描画。AI画像生成には任せない。
-if (
-  postType !== 'table_point' &&
-  postType !== 'table_knowledge' &&
-  chart &&
-  chart.style &&
-  chart.style !== 'none'
-) {
-  const color = chart.color || '#FFFFFF';
-  const density =
-    chart.density === 'light'
-      ? 0.28
-      : chart.density === 'strong'
-        ? 0.58
-        : 0.42;
-
-  ctx.save();
-  ctx.globalAlpha = density;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(2, Math.round(W * .003));
-
-  if (chart.glow) {
-    ctx.shadowColor = color;
-    ctx.shadowBlur = Math.round(W * .012);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
   }
 
-  const ov = chartOverlay?.isChart ? chartOverlay : null;
-
-  // Visionで実際に検出できた水平線だけ描画
-  if (ov?.horizontal?.length) {
-    ov.horizontal.slice(0, 3).forEach(y => {
-      const yy = Math.max(.03, Math.min(.97, Number(y) || 0));
-
-      ctx.beginPath();
-      ctx.moveTo(W * .06, H * yy);
-      ctx.lineTo(W * .94, H * yy);
-      ctx.stroke();
-    });
+  // チャート分析では元チャートの色をそのまま維持する。
+  // その他の画像だけブランド色を薄く重ねる。
+  if (postType !== 'chart_analysis') {
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.globalAlpha = tint;
+    ctx.fillStyle = hue;
+    ctx.fillRect(0, 0, W, H);
   }
 
-  // Visionで実際に検出できたトレンドラインだけ描画
-  if (ov?.trend?.length) {
-    ov.trend.slice(0, 3).forEach(t => {
-      const x1 = Math.max(.02, Math.min(.98, Number(t.x1) || 0));
-      const y1 = Math.max(.02, Math.min(.98, Number(t.y1) || 0));
-      const x2 = Math.max(.02, Math.min(.98, Number(t.x2) || 0));
-      const y2 = Math.max(.02, Math.min(.98, Number(t.y2) || 0));
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
 
-      ctx.beginPath();
-      ctx.moveTo(W * x1, H * y1);
-      ctx.lineTo(W * x2, H * y2);
-      ctx.stroke();
-    });
-  }
+  // Visionで確認できたラインと方向矢印だけをCanvasで追加する。
+  if (
+    postType !== 'table_point' &&
+    postType !== 'table_knowledge' &&
+    chart &&
+    chart.style &&
+    chart.style !== 'none'
+  ) {
+    const color = chart.color || '#FFFFFF';
 
-  ctx.restore();
+    const density =
+      chart.density === 'light'
+        ? .28
+        : chart.density === 'strong'
+          ? .58
+          : .42;
 
-  const dir =
-    direction === 'auto'
-      ? (
-          chartOverlay?.direction &&
-          chartOverlay.direction !== 'none'
-            ? chartOverlay.direction
-            : detectDirection(body + ' ' + lead)
-        )
-      : direction;
+    ctx.save();
 
-if (dir !== 'none') {
-  const ar = chartOverlay?.arrow || null;
-
-  const sx = W * (ar?.x1 ?? .56);
-  const sy = H * (ar?.y1 ?? .70);
-  const ex = W * (ar?.x2 ?? .84);
-  const ey = H * (
-    ar?.y2 ??
-    (dir === 'long' ? .38 : .84)
-  );
-
-    drawArrow(
-      ctx,
-      sx,
-      sy,
-      ex,
-      ey,
-      dir === 'long' ? '#22C55E' : '#EF4444',
-      Math.max(5, Math.round(W * .008))
+    ctx.globalAlpha = density;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(
+      2,
+      Math.round(W * .003)
     );
 
-    ctx.font =
-      `900 ${Math.round(W * .026)}px "Zen Kaku Gothic New",sans-serif`;
+    if (chart.glow) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = Math.round(W * .012);
+    }
 
-    ctx.fillStyle =
-      dir === 'long' ? '#22C55E' : '#EF4444';
+    const ov =
+      chartOverlay?.isChart
+        ? chartOverlay
+        : null;
 
-const labelX = Math.max(
-  W * .04,
-  Math.min(W * .88, ex - W * .08)
-);
+    // Visionで検出した水平線だけ
+    if (ov?.horizontal?.length) {
+      ov.horizontal
+        .slice(0, 3)
+        .forEach(y => {
+          const yy = Math.max(
+            .03,
+            Math.min(
+              .97,
+              Number(y) || 0
+            )
+          );
 
-const labelY = dir === 'long'
-  ? Math.max(H * .08, ey - H * .035)
-  : Math.min(H * .92, ey + H * .055);
+          ctx.beginPath();
+          ctx.moveTo(
+            W * .06,
+            H * yy
+          );
 
-ctx.fillText(
-  dir === 'long' ? 'LONG' : 'SHORT',
-  labelX,
-  labelY
-);
+          ctx.lineTo(
+            W * .94,
+            H * yy
+          );
+
+          ctx.stroke();
+        });
+    }
+
+    // Visionで検出したトレンドラインだけ
+    if (ov?.trend?.length) {
+      ov.trend
+        .slice(0, 3)
+        .forEach(t => {
+          const x1 = Math.max(
+            .02,
+            Math.min(
+              .98,
+              Number(t.x1) || 0
+            )
+          );
+
+          const y1 = Math.max(
+            .02,
+            Math.min(
+              .98,
+              Number(t.y1) || 0
+            )
+          );
+
+          const x2 = Math.max(
+            .02,
+            Math.min(
+              .98,
+              Number(t.x2) || 0
+            )
+          );
+
+          const y2 = Math.max(
+            .02,
+            Math.min(
+              .98,
+              Number(t.y2) || 0
+            )
+          );
+
+          ctx.beginPath();
+
+          ctx.moveTo(
+            W * x1,
+            H * y1
+          );
+
+          ctx.lineTo(
+            W * x2,
+            H * y2
+          );
+
+          ctx.stroke();
+        });
+    }
+
+    ctx.restore();
+
+    const dir =
+      direction === 'auto'
+        ? (
+            chartOverlay?.direction &&
+            chartOverlay.direction !== 'none'
+              ? chartOverlay.direction
+              : detectDirection(
+                  body + ' ' + lead
+                )
+          )
+        : direction;
+
+    if (dir !== 'none') {
+      const ar =
+        chartOverlay?.arrow || null;
+
+      const sx =
+        W * (ar?.x1 ?? .56);
+
+      const sy =
+        H * (ar?.y1 ?? .70);
+
+      const ex =
+        W * (ar?.x2 ?? .84);
+
+      const ey =
+        H * (
+          ar?.y2 ??
+          (
+            dir === 'long'
+              ? .38
+              : .84
+          )
+        );
+
+      drawArrow(
+        ctx,
+        sx,
+        sy,
+        ex,
+        ey,
+        dir === 'long'
+          ? '#22C55E'
+          : '#EF4444',
+        Math.max(
+          5,
+          Math.round(W * .008)
+        )
+      );
+
+      ctx.font =
+        `900 ${Math.round(W * .026)}px "Zen Kaku Gothic New",sans-serif`;
+
+      ctx.fillStyle =
+        dir === 'long'
+          ? '#22C55E'
+          : '#EF4444';
+
+      const labelX =
+        Math.max(
+          W * .04,
+          Math.min(
+            W * .88,
+            ex - W * .08
+          )
+        );
+
+      const labelY =
+        dir === 'long'
+          ? Math.max(
+              H * .08,
+              ey - H * .035
+            )
+          : Math.min(
+              H * .92,
+              ey + H * .055
+            );
+
+      ctx.fillText(
+        dir === 'long'
+          ? 'LONG'
+          : 'SHORT',
+        labelX,
+        labelY
+      );
+    }
+  }
+
+  // チャート分析では元チャートを見せるため暗幕をかけない。
 
 // チャート分析では元チャートを見せるため暗幕をかけない。
 // その他の投稿だけ、文字の可読性確保のため暗幕を重ねる。
@@ -2306,63 +2436,137 @@ if(postType !== 'chart_analysis'){
 
   if(avatarSrc){ try{ const av=await loadImage(avatarSrc); drawAvatarLoaded(ctx,av,W,H); }catch(e){} }
 
-  const pad=Math.round(W*.078);
-  const maxW=W-pad*2;
-  const leadSize=Math.round(W*(H>W?.082:.062));
-  const bodySize=Math.round(W*(H>W?.049:.038));
+const pad = Math.round(W * .078);
+const maxW = W - pad * 2;
 
-  // 本文を先に測って全体の高さを出し、縦位置を決める
-  ctx.font=`700 ${bodySize}px "Zen Kaku Gothic New",sans-serif`;
-  const bodyLines=body?wrapText(ctx,body,maxW):[];
-  ctx.font=`900 ${leadSize}px "Zen Kaku Gothic New",sans-serif`;
-  const leadLines=lead?wrapText(ctx,lead,maxW):[];
+const leadSize = Math.round(W * (H > W ? .082 : .062));
+const bodySize = Math.round(W * (H > W ? .049 : .038));
 
-  const leadLH=leadSize*1.28, bodyLH=bodySize*1.62;
-  const blockH=leadLines.length*leadLH+(leadLines.length&&bodyLines.length?bodySize*.9:0)+bodyLines.length*bodyLH;
-  let y=H>W?(H*.52-blockH/2):(H-blockH)/2;
-  y=Math.max(pad+leadSize,y);
+// 本文を先に測って全体の高さを出し、縦位置を決める
+ctx.font = `700 ${bodySize}px "Zen Kaku Gothic New",sans-serif`;
+const bodyLines = body ? wrapText(ctx, body, maxW) : [];
 
-  // 見出し左のアクセントバー
-  if(leadLines.length){
-    ctx.fillStyle=hue;
-    roundRect(ctx,pad-Math.round(W*.026),y-leadSize*.88,Math.round(W*.011),leadLines.length*leadLH-leadLH*.2,999);
-    ctx.fill();
-  }
+ctx.font = `900 ${leadSize}px "Zen Kaku Gothic New",sans-serif`;
+const leadLines = lead ? wrapText(ctx, lead, maxW) : [];
 
-  ctx.textBaseline='alphabetic';
-  ctx.shadowColor='rgba(0,0,0,.55)'; ctx.shadowBlur=Math.round(W*.018); ctx.shadowOffsetY=Math.round(W*.004);
+const leadLH = leadSize * 1.28;
+const bodyLH = bodySize * 1.62;
 
-  ctx.font=`900 ${leadSize}px "Zen Kaku Gothic New",sans-serif`; ctx.fillStyle='#fff';
-  for(const l of leadLines){ ctx.fillText(l,pad,y); y+=leadLH; }
-  if(leadLines.length&&bodyLines.length) y+=bodySize*.9;
+const blockH =
+  leadLines.length * leadLH +
+  (leadLines.length && bodyLines.length ? bodySize * .9 : 0) +
+  bodyLines.length * bodyLH;
 
-  ctx.font=`500 ${bodySize}px "Zen Kaku Gothic New",sans-serif`; ctx.fillStyle='rgba(255,255,255,.94)';
-  for(const l of bodyLines){ ctx.fillText(l,pad,y); y+=bodyLH; }
-  ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+let y = H > W
+  ? (H * .52 - blockH / 2)
+  : (H - blockH) / 2;
 
-  // フッター（アカウント名）
-  if(footer){
-    const fs=Math.round(W*.026);
-    ctx.font=`700 ${fs}px "JetBrains Mono",monospace`; ctx.fillStyle='rgba(255,255,255,.8)';
-    ctx.fillText(footer,pad,H-pad*.72);
-  }
-  // ページャー
-  if(total>1){
-    const r=Math.round(W*.008), gap=r*3.2;
-    const totalW=(total-1)*gap;
-    const sx=W-pad-totalW;
-    for(let i=0;i<total;i++){
-      ctx.beginPath(); ctx.arc(sx+i*gap,H-pad*.72-r,r,0,Math.PI*2);
-      ctx.fillStyle=i===index?hue:'rgba(255,255,255,.4)'; ctx.fill();
-    }
-  }
-  // ブランド枠
-  ctx.strokeStyle=hue; ctx.lineWidth=Math.max(6,Math.round(W*.008));
-  ctx.strokeRect(ctx.lineWidth/2,ctx.lineWidth/2,W-ctx.lineWidth,H-ctx.lineWidth);
+y = Math.max(pad + leadSize, y);
 
-  return c.toDataURL('image/jpeg',.92);
+// 見出し左のアクセントバー
+if (leadLines.length) {
+  ctx.fillStyle = hue;
+
+  roundRect(
+    ctx,
+    pad - Math.round(W * .026),
+    y - leadSize * .88,
+    Math.round(W * .011),
+    leadLines.length * leadLH - leadLH * .2,
+    999
+  );
+
+  ctx.fill();
 }
 
+ctx.textBaseline = 'alphabetic';
+
+ctx.shadowColor = 'rgba(0,0,0,.55)';
+ctx.shadowBlur = Math.round(W * .018);
+ctx.shadowOffsetY = Math.round(W * .004);
+
+ctx.font = `900 ${leadSize}px "Zen Kaku Gothic New",sans-serif`;
+ctx.fillStyle = '#fff';
+
+for (const l of leadLines) {
+  ctx.fillText(l, pad, y);
+  y += leadLH;
+}
+
+if (leadLines.length && bodyLines.length) {
+  y += bodySize * .9;
+}
+
+ctx.font = `500 ${bodySize}px "Zen Kaku Gothic New",sans-serif`;
+ctx.fillStyle = 'rgba(255,255,255,.94)';
+
+for (const l of bodyLines) {
+  ctx.fillText(l, pad, y);
+  y += bodyLH;
+}
+
+ctx.shadowColor = 'transparent';
+ctx.shadowBlur = 0;
+ctx.shadowOffsetY = 0;
+
+// フッター（アカウント名）
+if (footer) {
+  const fs = Math.round(W * .026);
+
+  ctx.font = `700 ${fs}px "JetBrains Mono",monospace`;
+  ctx.fillStyle = 'rgba(255,255,255,.8)';
+
+  ctx.fillText(
+    footer,
+    pad,
+    H - pad * .72
+  );
+}
+
+// ページャー
+if (total > 1) {
+  const r = Math.round(W * .008);
+  const gap = r * 3.2;
+  const totalW = (total - 1) * gap;
+  const sx = W - pad - totalW;
+
+  for (let i = 0; i < total; i++) {
+    ctx.beginPath();
+
+    ctx.arc(
+      sx + i * gap,
+      H - pad * .72 - r,
+      r,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle =
+      i === index
+        ? hue
+        : 'rgba(255,255,255,.4)';
+
+    ctx.fill();
+  }
+}
+
+// ブランド枠
+ctx.strokeStyle = hue;
+ctx.lineWidth = Math.max(
+  6,
+  Math.round(W * .008)
+);
+
+ctx.strokeRect(
+  ctx.lineWidth / 2,
+  ctx.lineWidth / 2,
+  W - ctx.lineWidth,
+  H - ctx.lineWidth
+);
+
+return c.toDataURL('image/jpeg', .92);
+}
+  
 /* スライド群を1本の動画（WebM / 対応環境ならMP4）に書き出す */
 async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
   if(typeof MediaRecorder==='undefined') throw new Error('このブラウザは動画の書き出しに対応していません');
