@@ -2803,8 +2803,11 @@ if (ov?.horizontal?.length) {
     const strategyType =
   chartOverlay?.strategyType || 'none';
     
-    if (dir !== 'none') {
-      const ar = chartOverlay?.arrow || null;
+ if (dir !== 'none') {
+  const arrowStrategyType =
+    chartOverlay?.strategyType || 'none';
+
+  const ar = chartOverlay?.arrow || null;
 
 const entryData = chartOverlay?.entry || null;
 const tpData = chartOverlay?.takeProfit || null;
