@@ -2614,96 +2614,112 @@ if (
   const boxW = Math.round(W * .20);
   const boxX = Math.round(W * .055);
 
-  // エントリー
-  if (entry && entry.price != null) {
-    const entryY = Math.max(
-      H * .08,
-      Math.min(
-        H * .82,
-        H * (Number(entry.y) || .50) - H * .05
-      )
-    );
+// エントリー
+if (entry && entry.price != null) {
+  const entryY = Math.max(
+    H * .08,
+    Math.min(
+      H * .82,
+      H * (Number(entry.y) || .50) - H * .05
+    )
+  );
 
-    drawStrategyBox(
-      ctx,
-      {
-        x: boxX,
-        y: entryY,
-        w: boxW,
-        title: entry.label || 'エントリー',
-        price: entry.price,
-        tone:
-          entry.side === 'short'
-            ? 'short'
-            : 'long'
-      },
-      W,
-      H
-    );
-  }
-  
-ctx.save();
-ctx.strokeStyle = '#16A34A';
-ctx.lineWidth = Math.max(2, Math.round(W * .0025));
-ctx.setLineDash([10, 8]);
+  drawStrategyBox(
+    ctx,
+    {
+      x: boxX,
+      y: entryY,
+      w: boxW,
+      title: entry.label || 'エントリー',
+      price: entry.price,
+      tone:
+        entry.side === 'short'
+          ? 'short'
+          : 'long'
+    },
+    W,
+    H
+  );
 
-ctx.beginPath();
-ctx.moveTo(
-  boxX + boxW,
-  entryY + H * .052
-);
+  // エントリーBOX → チャート価格位置への接続線
+  ctx.save();
 
-ctx.lineTo(
-  W * .52,
-  H * (Number(entry.y) || .50)
-);
+  ctx.strokeStyle =
+    entry.side === 'short'
+      ? '#DC2626'
+      : '#16A34A';
 
-ctx.stroke();
-ctx.restore();
+  ctx.lineWidth = Math.max(
+    2,
+    Math.round(W * .0025)
+  );
 
-  // 利確目標
-  if (tp && tp.price != null) {
-    const tpY = Math.max(
-      H * .08,
-      Math.min(
-        H * .82,
-        H * (Number(tp.y) || .25) - H * .05
-      )
-    );
+  ctx.setLineDash([10, 8]);
 
-    drawStrategyBox(
-      ctx,
-      {
-        x: W - boxW - W * .055,
-        y: tpY,
-        w: boxW,
-        title: tp.label || '利確目標',
-        price: tp.price,
-        tone: 'long'
-      },
-      W,
-      H
-    );
-  }
+  ctx.beginPath();
 
-ctx.save();
-ctx.strokeStyle = '#16A34A';
-ctx.lineWidth = Math.max(2, Math.round(W * .0025));
-ctx.setLineDash([10, 8]);
+  ctx.moveTo(
+    boxX + boxW,
+    entryY + H * .052
+  );
 
-ctx.beginPath();
-ctx.moveTo(
-  W - boxW - W * .055,
-  tpY + H * .052
-);
+  ctx.lineTo(
+    W * .52,
+    H * (Number(entry.y) || .50)
+  );
 
-ctx.lineTo(
-  W * .76,
-  H * (Number(tp.y) || .25)
-);
+  ctx.stroke();
+  ctx.restore();
+}
 
-ctx.stroke();
-ctx.restore();
+// 利確目標
+if (tp && tp.price != null) {
+  const tpY = Math.max(
+    H * .08,
+    Math.min(
+      H * .82,
+      H * (Number(tp.y) || .25) - H * .05
+    )
+  );
+
+  drawStrategyBox(
+    ctx,
+    {
+      x: W - boxW - W * .055,
+      y: tpY,
+      w: boxW,
+      title: tp.label || '利確目標',
+      price: tp.price,
+      tone: 'long'
+    },
+    W,
+    H
+  );
+
+  // 利確BOX → チャート価格位置への接続線
+  ctx.save();
+  ctx.strokeStyle = '#16A34A';
+  ctx.lineWidth = Math.max(
+    2,
+    Math.round(W * .0025)
+  );
+  ctx.setLineDash([10, 8]);
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    W - boxW - W * .055,
+    tpY + H * .052
+  );
+
+  ctx.lineTo(
+    W * .76,
+    H * (Number(tp.y) || .25)
+  );
+
+  ctx.stroke();
+  ctx.restore();
+}
 
 // 損切り
 if (sl && sl.price != null) {
