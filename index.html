@@ -3725,10 +3725,11 @@ if (
   }
 
   // 注意BOXを左下寄りへ
-const warnX = W * .045;
-const warnY = H * .58;
-const warnW = W * .34;
-const warnH = H * .16;
+if (warning) {
+  const warnX = W * .045;
+  const warnY = H * .58;
+  const warnW = W * .34;
+  const warnH = H * .16;
 
     ctx.fillStyle = 'rgba(255,247,237,.96)';
 
