@@ -2377,19 +2377,72 @@ async function composeFrame({
   avatarSrc = '',
   tableRows = []
 }) {
-  const c = document.createElement('canvas');
-  c.width = W;
-  c.height = H;
+const c = document.createElement('canvas');
+c.width = W;
+c.height = H;
 
-  const ctx = c.getContext('2d');
+const ctx = c.getContext('2d');
 
-  if (bgSrc) {
-    const img = await loadImage(bgSrc);
-    drawCover(ctx, img, W, H);
-  } else {
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, hue);
-    g.addColorStop(1, '#0F172A');
+function priceToY(price) {
+  const min = Number(chartOverlay?.priceMin);
+  const max = Number(chartOverlay?.priceMax);
+  const p = Number(price);
+
+  const plotTopRaw = Number(chartOverlay?.plotTop);
+  const plotBottomRaw = Number(chartOverlay?.plotBottom);
+
+  const plotTop =
+    Number.isFinite(plotTopRaw)
+      ? Math.max(0, Math.min(1, plotTopRaw))
+      : .04;
+
+  const plotBottom =
+    Number.isFinite(plotBottomRaw)
+      ? Math.max(0, Math.min(1, plotBottomRaw))
+      : .94;
+
+  if (
+    !Number.isFinite(min) ||
+    !Number.isFinite(max) ||
+    !Number.isFinite(p) ||
+    max <= min ||
+    plotBottom <= plotTop
+  ) {
+    return null;
+  }
+
+  const ratio =
+    (max - p) /
+    (max - min);
+
+  return H * (
+    plotTop +
+    ratio * (plotBottom - plotTop)
+  );
+}
+
+function safePriceY(price, fallbackY = .5) {
+  const direct = priceToY(price);
+
+  if (
+    direct != null &&
+    Number.isFinite(direct) &&
+    direct >= H * .02 &&
+    direct <= H * .98
+  ) {
+    return direct;
+  }
+
+  return H * fallbackY;
+}
+
+if (bgSrc) {
+  const img = await loadImage(bgSrc);
+  drawCover(ctx, img, W, H);
+} else {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, hue);
+  g.addColorStop(1, '#0F172A');
 
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
@@ -2643,58 +2696,6 @@ const boxW = Math.round(W * .20);
 const entryBoxX = Math.round(W * .055);
 const rightBoxX = Math.round(W - boxW - W * .055);
 
-  function priceToY(price) {
-  const min = Number(chartOverlay?.priceMin);
-  const max = Number(chartOverlay?.priceMax);
-  const p = Number(price);
-
-  const plotTopRaw = Number(chartOverlay?.plotTop);
-  const plotBottomRaw = Number(chartOverlay?.plotBottom);
-
-  const plotTop =
-    Number.isFinite(plotTopRaw)
-      ? Math.max(0, Math.min(1, plotTopRaw))
-      : .04;
-
-  const plotBottom =
-    Number.isFinite(plotBottomRaw)
-      ? Math.max(0, Math.min(1, plotBottomRaw))
-      : .94;
-
-  if (
-    !Number.isFinite(min) ||
-    !Number.isFinite(max) ||
-    !Number.isFinite(p) ||
-    max <= min ||
-    plotBottom <= plotTop
-  ) {
-    return null;
-  }
-
-  const ratio =
-    (max - p) /
-    (max - min);
-
-  return H * (
-    plotTop +
-    ratio * (plotBottom - plotTop)
-  );
-}
-
-  function safePriceY(price, fallbackY = .5) {
-  const direct = priceToY(price);
-
-  if (
-    direct != null &&
-    Number.isFinite(direct) &&
-    direct >= H * .02 &&
-    direct <= H * .98
-  ) {
-    return direct;
-  }
-
-  return H * fallbackY;
-}
 
 // BOXの縦位置を保持
 let entryBoxY = null;
