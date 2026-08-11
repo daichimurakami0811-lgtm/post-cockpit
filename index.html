@@ -1938,7 +1938,7 @@ async function generateTelop(base,acc,slides){
 }
 
 /* ---------- Vision ---------- */
-async function analyzeImage(media){
+async function analyzeImage(media, strategyText = ""){
   const m = media.src.match(/^data:(.*?);base64,(.*)$/);
 
   if (!m) {
@@ -1947,10 +1947,16 @@ async function analyzeImage(media){
 
   const [, mediaType, b64] = m;
 
-const prompt = [
-  "この画像はX投稿に使うチャート画像です。",
-  "画像そのものは加工・再生成しません。",
-  "Canvasでラインと方向矢印を重ねるために必要な情報だけ解析してください。",
+  const prompt = [
+    "この画像はX投稿に使うチャート画像です。",
+    "画像そのものは加工・再生成しません。",
+    "Canvasでラインと方向矢印を重ねるために必要な情報だけ解析してください。",
+    "",
+    "以下はこのチャートと一緒に投稿する戦略文章です。",
+    "画像だけで価格を推測せず、文章に明記されているエントリー・利確・損切り・方向を最優先してください。",
+    "--- strategy text ---",
+    String(strategyText || "").slice(0, 2000),
+    "--- end strategy text ---",
   "",
   "必ず次のJSONオブジェクトだけを返してください。",
   "説明文、Markdown、コードフェンスは禁止です。",
@@ -1958,21 +1964,47 @@ const prompt = [
   "{",
   '  "subject": "画像内容を30文字以内で",',
   '  "headline": "画像に載せる短い見出し。12文字以内",',
-  '  "chart": {',
-  '    "isChart": true,',
-  '    "horizontal": [0.0],',
-  '    "trend": [',
-  '      {"x1":0.0,"y1":0.0,"x2":1.0,"y2":1.0}',
-  "    ],",
-  '    "direction": "long",',
-  '    "arrow": {',
-  '      "x1": 0.55,',
-  '      "y1": 0.70,',
-  '      "x2": 0.82,',
-  '      "y2": 0.38',
-  "    }",
-  "  }",
-  "}",
+'  "chart": {',
+'    "isChart": true,',
+'    "direction": "long",',
+'    "priceMin": 3970.0,',
+'    "priceMax": 4550.0,',
+'    "currentPrice": 4397.0,',
+'    "horizontal": [',
+'      {"price": 4361.0, "y": 0.44, "type": "support"},',
+'      {"price": 4429.0, "y": 0.25, "type": "resistance"}',
+"    ],",
+'    "trend": [',
+'      {"x1":0.20,"y1":0.75,"x2":0.65,"y2":0.42,"type":"support"}',
+"    ],",
+'    "entry": {',
+'      "price": 4361.0,',
+'      "y": 0.44,',
+'      "side": "long",',
+'      "label": "押し目ロング候補"',
+"    },",
+'    "takeProfit": {',
+'      "price": 4429.0,',
+'      "y": 0.25,',
+'      "label": "利確目標"',
+"    },",
+'    "stopLoss": {',
+'      "price": 4327.0,',
+'      "y": 0.55,',
+'      "label": "損切り候補"',
+"    },",
+'    "arrow": {',
+'      "x1": 0.62,',
+'      "y1": 0.48,',
+'      "x2": 0.82,',
+'      "y2": 0.27',
+"    },",
+'    "scenario": {',
+'      "main": "押し目から再上昇",',
+'      "alternative": "サポート割れなら一段安",',
+'      "reason": "上昇トレンド継続中"',
+"    }",
+"  }",
   "",
     "ルール:",
     "- horizontal は画像上で重要な水平線だけ。最大3本。",
@@ -2163,6 +2195,163 @@ function drawAvatarLoaded(ctx,img,W,H){
 }
 
 /* 背景 + テロップ を1枚描く。タブ2のスライドとタブ1のバナーで共用 */
+function drawStrategyBox(
+  ctx,
+  {
+    x,
+    y,
+    w,
+    title,
+    price,
+    tone = 'long'
+  },
+  W,
+  H
+){
+  const isLong = tone === 'long';
+  const isShort = tone === 'short';
+
+  const borderColor =
+    isLong ? '#15803D'
+    : isShort ? '#DC2626'
+    : '#334155';
+
+  const bgColor = 'rgba(255,255,255,.96)';
+
+  const titleColor =
+    isLong ? '#166534'
+    : isShort ? '#B91C1C'
+    : '#334155';
+
+  const h = Math.round(H * .105);
+  const r = Math.round(W * .012);
+
+  ctx.save();
+
+  ctx.shadowColor = 'rgba(15,23,42,.18)';
+  ctx.shadowBlur = Math.round(W * .01);
+  ctx.shadowOffsetY = Math.round(H * .006);
+
+  ctx.fillStyle = bgColor;
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = Math.max(
+    2,
+    Math.round(W * .0025)
+  );
+
+  roundRect(ctx, x, y, w, h, r);
+  ctx.stroke();
+
+  ctx.font =
+    `800 ${Math.round(W * .018)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = titleColor;
+
+  ctx.fillText(
+    String(title || ''),
+    x + w * .06,
+    y + h * .38
+  );
+
+  ctx.font =
+    `900 ${Math.round(W * .028)}px "JetBrains Mono",monospace`;
+
+  ctx.fillStyle = borderColor;
+
+  ctx.fillText(
+    String(price ?? ''),
+    x + w * .06,
+    y + h * .76
+  );
+
+  ctx.restore();
+}
+
+  function drawScenarioBox(
+  ctx,
+  {
+    x,
+    y,
+    w,
+    title,
+    text,
+    tone = 'neutral'
+  },
+  W,
+  H
+){
+  const borderColor =
+    tone === 'long'
+      ? '#16A34A'
+      : tone === 'short'
+        ? '#DC2626'
+        : '#475569';
+
+  const titleColor = borderColor;
+  const h = Math.round(H * .12);
+  const r = Math.round(W * .012);
+
+  ctx.save();
+
+  ctx.shadowColor = 'rgba(15,23,42,.15)';
+  ctx.shadowBlur = Math.round(W * .009);
+  ctx.shadowOffsetY = Math.round(H * .005);
+
+  ctx.fillStyle = 'rgba(255,255,255,.94)';
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = Math.max(
+    2,
+    Math.round(W * .002)
+  );
+
+  roundRect(ctx, x, y, w, h, r);
+  ctx.stroke();
+
+  ctx.font =
+    `800 ${Math.round(W * .017)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = titleColor;
+
+  ctx.fillText(
+    String(title || ''),
+    x + w * .05,
+    y + h * .32
+  );
+
+  ctx.font =
+    `700 ${Math.round(W * .015)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#0F172A';
+
+  const lines = wrapText(
+    ctx,
+    String(text || ''),
+    w * .9
+  );
+
+  lines
+    .slice(0, 2)
+    .forEach((line, i) => {
+      ctx.fillText(
+        line,
+        x + w * .05,
+        y + h * (.62 + i * .22)
+      );
+    });
+
+  ctx.restore();
+}
+  
 async function composeFrame({
   bgSrc,
   W,
@@ -2409,17 +2598,196 @@ async function composeFrame({
               ey + H * .055
             );
 
-      ctx.fillText(
-        dir === 'long'
-          ? 'LONG'
-          : 'SHORT',
-        labelX,
-        labelY
-      );
+      
     }
   }
 
-  // チャート分析では元チャートを見せるため暗幕をかけない。
+// チャート分析用の戦略BOX
+if (
+  postType === 'chart_analysis' &&
+  chartOverlay?.isChart
+) {
+  const entry = chartOverlay.entry;
+  const tp = chartOverlay.takeProfit;
+  const sl = chartOverlay.stopLoss;
+
+  const boxW = Math.round(W * .20);
+  const boxX = Math.round(W * .055);
+
+  // エントリー
+  if (entry && entry.price != null) {
+    const entryY = Math.max(
+      H * .08,
+      Math.min(
+        H * .82,
+        H * (Number(entry.y) || .50) - H * .05
+      )
+    );
+
+    drawStrategyBox(
+      ctx,
+      {
+        x: boxX,
+        y: entryY,
+        w: boxW,
+        title: entry.label || 'エントリー',
+        price: entry.price,
+        tone:
+          entry.side === 'short'
+            ? 'short'
+            : 'long'
+      },
+      W,
+      H
+    );
+  }
+  
+ctx.save();
+ctx.strokeStyle = '#16A34A';
+ctx.lineWidth = Math.max(2, Math.round(W * .0025));
+ctx.setLineDash([10, 8]);
+
+ctx.beginPath();
+ctx.moveTo(
+  boxX + boxW,
+  entryY + H * .052
+);
+
+ctx.lineTo(
+  W * .52,
+  H * (Number(entry.y) || .50)
+);
+
+ctx.stroke();
+ctx.restore();
+
+  // 利確目標
+  if (tp && tp.price != null) {
+    const tpY = Math.max(
+      H * .08,
+      Math.min(
+        H * .82,
+        H * (Number(tp.y) || .25) - H * .05
+      )
+    );
+
+    drawStrategyBox(
+      ctx,
+      {
+        x: W - boxW - W * .055,
+        y: tpY,
+        w: boxW,
+        title: tp.label || '利確目標',
+        price: tp.price,
+        tone: 'long'
+      },
+      W,
+      H
+    );
+  }
+
+ctx.save();
+ctx.strokeStyle = '#16A34A';
+ctx.lineWidth = Math.max(2, Math.round(W * .0025));
+ctx.setLineDash([10, 8]);
+
+ctx.beginPath();
+ctx.moveTo(
+  W - boxW - W * .055,
+  tpY + H * .052
+);
+
+ctx.lineTo(
+  W * .76,
+  H * (Number(tp.y) || .25)
+);
+
+ctx.stroke();
+ctx.restore();
+
+// 損切り
+if (sl && sl.price != null) {
+  const slY = Math.max(
+    H * .08,
+    Math.min(
+      H * .82,
+      H * (Number(sl.y) || .75) - H * .05
+    )
+  );
+
+  drawStrategyBox(
+    ctx,
+    {
+      x: W - boxW - W * .055,
+      y: slY,
+      w: boxW,
+      title: sl.label || '損切り',
+      price: sl.price,
+      tone: 'short'
+    },
+    W,
+    H
+  );
+
+  ctx.save();
+  ctx.strokeStyle = '#DC2626';
+  ctx.lineWidth = Math.max(2, Math.round(W * .0025));
+  ctx.setLineDash([10, 8]);
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    W - boxW - W * .055,
+    slY + H * .052
+  );
+
+  ctx.lineTo(
+    W * .76,
+    H * (Number(sl.y) || .75)
+  );
+
+  ctx.stroke();
+  ctx.restore();
+}
+
+const scenario = chartOverlay.scenario;
+
+if (scenario?.main) {
+  drawScenarioBox(
+    ctx,
+    {
+      x: W * .055,
+      y: H * .76,
+      w: W * .36,
+      title: 'メインシナリオ',
+      text: scenario.main,
+      tone:
+        chartOverlay.direction === 'short'
+          ? 'short'
+          : 'long'
+    },
+    W,
+    H
+  );
+}
+
+if (scenario?.alternative) {
+  drawScenarioBox(
+    ctx,
+    {
+      x: W * .59,
+      y: H * .76,
+      w: W * .355,
+      title: '代替シナリオ',
+      text: scenario.alternative,
+      tone: 'neutral'
+    },
+    W,
+    H
+  );
+}
+  
+}
 
 // チャート分析では元チャートを見せるため暗幕をかけない。
 // その他の投稿だけ、文字の可読性確保のため暗幕を重ねる。
@@ -2431,7 +2799,7 @@ if(postType !== 'chart_analysis'){
   ctx.fillStyle=g2;
   ctx.fillRect(0,0,W,H);
 }
-
+  
   if(postType==='table_point'||postType==='table_knowledge') drawTable(ctx,tableRows,W,H,hue);
 
   if(avatarSrc){ try{ const av=await loadImage(avatarSrc); drawAvatarLoaded(ctx,av,W,H); }catch(e){} }
@@ -2550,19 +2918,21 @@ if (total > 1) {
   }
 }
 
-// ブランド枠
-ctx.strokeStyle = hue;
-ctx.lineWidth = Math.max(
-  6,
-  Math.round(W * .008)
-);
+// チャート分析では元チャートを優先し、外周ブランド枠は付けない。
+if (postType !== 'chart_analysis') {
+  ctx.strokeStyle = hue;
+  ctx.lineWidth = Math.max(
+    6,
+    Math.round(W * .008)
+  );
 
-ctx.strokeRect(
-  ctx.lineWidth / 2,
-  ctx.lineWidth / 2,
-  W - ctx.lineWidth,
-  H - ctx.lineWidth
-);
+  ctx.strokeRect(
+    ctx.lineWidth / 2,
+    ctx.lineWidth / 2,
+    W - ctx.lineWidth,
+    H - ctx.lineWidth
+  );
+}
 
 return c.toDataURL('image/jpeg', .92);
 }
@@ -3600,7 +3970,15 @@ async function runVision(){
   const box=$('#visionBox'); box.classList.remove('hidden');
   box.innerHTML=`<div class="glass-sub p-4"><div class="shimmer h-3 w-48 mb-2.5"></div><div class="shimmer h-3 w-full"></div></div>`;
   try{
-    state.vision=await analyzeImage(img);
+    const strategyText =
+  $('#baseText')?.value?.trim() ||
+  $('#vBaseText')?.value?.trim() ||
+  '';
+
+state.vision = await analyzeImage(
+  img,
+  strategyText
+);
     const v=state.vision;
     box.innerHTML=`<div class="rise glass-sub p-4">
       <div class="eyebrow mb-2">画像の解析結果</div>
@@ -4010,7 +4388,7 @@ async function buildCardImage(i){
     includeAvatar: d.includeAvatar !== false
   })
 );
-    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:(pt==='chart_analysis'||pt==='table_point'||pt==='table_knowledge')?'':d.text,chart:d.acc.chart,postType:pt,direction:dir,chartOverlay:state.vision?.chart,avatarSrc:d.includeAvatar===false?'':d.acc.avatar,tableRows:d.tableRows||state.tableRows||[],
+    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead: pt === 'chart_analysis' ? '' : lead,body:(pt==='chart_analysis'||pt==='table_point'||pt==='table_knowledge')?'':d.text,chart:d.acc.chart,postType:pt,direction:dir,chartOverlay:state.vision?.chart,avatarSrc:d.includeAvatar===false?'':d.acc.avatar,tableRows:d.tableRows||state.tableRows||[],
       footer:d.acc.handle,index:0,total:1,tint:.28,dim:.42});
     state.backgrounds.push({name:`${d.acc.name} 合成`,src:d.image,from:`${d.acc.name}用`});
     state.accountBg[d.acc.id]=d.image;   // タブ②の背景として引き継ぐ
