@@ -2533,28 +2533,35 @@ async function composeFrame({
         : direction;
 
     if (dir !== 'none') {
-      const ar =
-        chartOverlay?.arrow || null;
+      const ar = chartOverlay?.arrow || null;
 
-      const sx =
-        W * (ar?.x1 ?? .56);
+const entryData = chartOverlay?.entry || null;
+const tpData = chartOverlay?.takeProfit || null;
+const slData = chartOverlay?.stopLoss || null;
 
-      const sy =
-        H * (ar?.y1 ?? .70);
+const sx =
+  W * .72;
 
-      const ex =
-        W * (ar?.x2 ?? .84);
+const sy =
+  entryData?.y != null
+    ? H * Number(entryData.y)
+    : H * (ar?.y1 ?? .55);
 
-      const ey =
-        H * (
-          ar?.y2 ??
-          (
-            dir === 'long'
-              ? .38
-              : .84
-          )
-        );
+const ex =
+  W * .88;
 
+const ey =
+  dir === 'long'
+    ? (
+        tpData?.y != null
+          ? H * Number(tpData.y)
+          : H * (ar?.y2 ?? .28)
+      )
+    : (
+        slData?.y != null
+          ? H * Number(slData.y)
+          : H * (ar?.y2 ?? .78)
+      );
       drawArrow(
         ctx,
         sx,
@@ -2684,15 +2691,18 @@ const entryY = entryBoxY;
 
   ctx.beginPath();
 
-  ctx.moveTo(
-    entryBoxX + boxW,
-    entryY + H * .052
-  );
+const entryPriceY =
+  H * (Number(entry.y) || .50);
 
-  ctx.lineTo(
-    W * .52,
-    H * (Number(entry.y) || .50)
-  );
+ctx.moveTo(
+  entryBoxX + boxW,
+  entryPriceY
+);
+
+ctx.lineTo(
+  W * .94,
+  entryPriceY
+);
 
   ctx.stroke();
   ctx.restore();
@@ -2735,15 +2745,18 @@ const tpY = tpBoxY;
 
   ctx.beginPath();
 
-  ctx.moveTo(
-    rightBoxX,
-    tpY + H * .052
-  );
+const tpPriceY =
+  H * (Number(tp.y) || .25);
 
-  ctx.lineTo(
-    W * .76,
-    H * (Number(tp.y) || .25)
-  );
+ctx.moveTo(
+  W * .56,
+  tpPriceY
+);
+
+ctx.lineTo(
+  rightBoxX,
+  tpPriceY
+);
 
   ctx.stroke();
   ctx.restore();
@@ -2782,15 +2795,18 @@ const slY = slBoxY;
 
   ctx.beginPath();
 
-  ctx.moveTo(
-    W - boxW - W * .055,
-    slY + H * .052
-  );
+const slPriceY =
+  H * (Number(sl.y) || .75);
 
-  ctx.lineTo(
-    W * .76,
-    H * (Number(sl.y) || .75)
-  );
+ctx.moveTo(
+  W * .56,
+  slPriceY
+);
+
+ctx.lineTo(
+  rightBoxX,
+  slPriceY
+);
 
   ctx.stroke();
   ctx.restore();
