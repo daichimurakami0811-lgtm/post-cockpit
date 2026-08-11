@@ -1967,63 +1967,55 @@ async function analyzeImage(media, strategyText = ""){
 '  "chart": {',
 '    "isChart": true,',
 '    "direction": "long",',
-'    "priceMin": 3970.0,',
-'    "priceMax": 4550.0,',
-'    "plotTop": 0.04,',
-'    "plotBottom": 0.94,',
-'    "currentPrice": 4397.0,',
+'    "priceMin": "number",',
+'    "priceMax": "number",',
+'    "plotTop": "number_0_to_1",',
+'    "plotBottom": "number_0_to_1",',
+'    "currentPrice": "number",',
 '    "horizontal": [',
-'      {"price": 4361.0, "y": 0.44, "type": "support"},',
-'      {"price": 4429.0, "y": 0.25, "type": "resistance"}',
-"    ],",
+'      {"price": "number", "y": "number_0_to_1", "type": "support_or_resistance"}',
+'    ],',
 '    "trend": [',
 '      {"x1":0.20,"y1":0.75,"x2":0.65,"y2":0.42,"type":"support"}',
 "    ],",
 '    "entry": {',
-'      "price": 4361.0,',
-'      "y": 0.44,',
-'      "side": "long",',
-'      "label": "押し目ロング候補"',
+'      "price": "number",',
+'      "y": "number_0_to_1",',
+'      "side": "long_or_short",',
+'      "label": "string"',
 "    },",
 '    "takeProfit": {',
-'      "price": 4429.0,',
-'      "y": 0.25,',
-'      "label": "利確目標"',
+'      "price": "number",',
+'      "y": "number_0_to_1",',
+'      "label": "string"',
 "    },",
 '    "stopLoss": {',
-'      "price": 4327.0,',
-'      "y": 0.55,',
-'      "label": "損切り候補"',
+'      "price": "number",',
+'      "y": "number_0_to_1",',
+'      "label": "string"',
 "    },",
 '    "arrow": {',
-'      "x1": 0.62,',
-'      "y1": 0.48,',
-'      "x2": 0.82,',
-'      "y2": 0.27',
+'      "x1": "number_0_to_1",',
+'      "y1": "number_0_to_1",',
+'      "x2": "number_0_to_1",',
+'      "y2": "number_0_to_1"',
 "    },",
 '    "scenario": {',
-'      "main": "押し目から再上昇",',
-'      "alternative": "サポート割れなら一段安",',
-'      "reason": "上昇トレンド継続中"',
+'      "main": "string",',
+'      "alternative": "string",',
+'      "reason": "string"',
 "    }",
 "  }",
   "",
-    "ルール:",
-    "- horizontal は画像上で重要な水平線だけ。最大3本。",
-    "- 座標は左上(0,0)、右下(1,1)。",
-    "- trend は実際に確認できるラインだけ。最大2本。",
-    "- 上昇狙いなら direction=long。",
-    "- 下落狙いなら direction=short。",
-    "- 判断できなければ direction=none。",
-  　"- arrow は想定する値動きの方向を示す矢印の始点と終点。",
-　　"- arrow の座標も左上(0,0)、右下(1,1)で指定する。",
-　　"- 実際のローソク足や重要ラインを極力隠さない位置に置く。",
-    "- 存在しないラインを推測で追加しない。",
-    "- JSONを必ず最後の } まで完全に出力する。",
-    "- priceMin / priceMax は右側価格軸で確認できる下限・上限。",
-　　"- plotTop は実際のチャート価格描画領域の上端を0〜1で指定。",
-　　"- plotBottom は実際のチャート価格描画領域の下端を0〜1で指定。",
-　　"- 上部の銘柄情報欄や下部の日付欄は価格描画領域に含めない。",
+"- 数値例や過去のチャート価格を流用しない。",
+"- priceMin / priceMax / currentPrice は、今回アップロードされたチャート画像から毎回読み取る。",
+"- horizontal の price と y は、今回の画像上で実際に確認できる水平線から毎回取得する。",
+"- entry / takeProfit / stopLoss は今回与えられた戦略文章を最優先し、記載価格がある場合はその価格を使用する。",
+"- 戦略文章に価格指定がない場合のみ、今回のチャート構造から合理的な候補を判断する。",
+"- entry / takeProfit / stopLoss の y は、それぞれの price と今回の右側価格軸の位置関係に整合させる。",
+"- XAUUSD、USDJPY、BTCUSDなど銘柄ごとの価格桁数を維持する。",
+"- 前回解析した画像の価格・座標・シナリオを次回へ引き継がない。",
+"- JSONテンプレート内の number / string 等は型の説明であり、その文字列をそのまま出力しない。実際の解析結果を出力する。",
   ].join("\n");
 
   const run = async (retry = false) => {
@@ -2384,12 +2376,80 @@ c.height = H;
 const ctx = c.getContext('2d');
 
 function priceToY(price) {
-  const min = Number(chartOverlay?.priceMin);
-  const max = Number(chartOverlay?.priceMax);
   const p = Number(price);
 
-  const plotTopRaw = Number(chartOverlay?.plotTop);
-  const plotBottomRaw = Number(chartOverlay?.plotBottom);
+  if (!Number.isFinite(p)) {
+    return null;
+  }
+
+  // 今回の画像からVisionが検出した
+  // 「実価格 + 実際のY座標」を取得
+  const anchors = Array.isArray(chartOverlay?.horizontal)
+    ? chartOverlay.horizontal
+        .map(item => ({
+          price: Number(item?.price),
+          y: Number(item?.y)
+        }))
+        .filter(item =>
+          Number.isFinite(item.price) &&
+          Number.isFinite(item.y) &&
+          item.y >= 0 &&
+          item.y <= 1
+        )
+        .sort((a, b) => a.price - b.price)
+    : [];
+
+  // 価格付き水平線が2本以上ある場合は
+  // 実画像上の位置から価格座標を計算
+  if (anchors.length >= 2) {
+    let low = anchors[0];
+    let high = anchors[anchors.length - 1];
+
+    // 求めたい価格を挟んでいる2本があれば、
+    // その2本を優先して使用
+    for (let i = 0; i < anchors.length - 1; i++) {
+      if (
+        p >= anchors[i].price &&
+        p <= anchors[i + 1].price
+      ) {
+        low = anchors[i];
+        high = anchors[i + 1];
+        break;
+      }
+    }
+
+    const priceRange =
+      high.price - low.price;
+
+    if (priceRange !== 0) {
+      const ratio =
+        (p - low.price) /
+        priceRange;
+
+      const normalizedY =
+        low.y +
+        ratio * (high.y - low.y);
+
+      if (
+        Number.isFinite(normalizedY) &&
+        normalizedY >= -.15 &&
+        normalizedY <= 1.15
+      ) {
+        return H * normalizedY;
+      }
+    }
+  }
+
+  // 水平線が2本取れなかった場合だけ
+  // 今回の画像から取得した価格軸レンジを使用
+  const min = Number(chartOverlay?.priceMin);
+  const max = Number(chartOverlay?.priceMax);
+
+  const plotTopRaw =
+    Number(chartOverlay?.plotTop);
+
+  const plotBottomRaw =
+    Number(chartOverlay?.plotBottom);
 
   const plotTop =
     Number.isFinite(plotTopRaw)
@@ -2404,7 +2464,6 @@ function priceToY(price) {
   if (
     !Number.isFinite(min) ||
     !Number.isFinite(max) ||
-    !Number.isFinite(p) ||
     max <= min ||
     plotBottom <= plotTop
   ) {
@@ -2496,33 +2555,61 @@ if (bgSrc) {
         ? chartOverlay
         : null;
 
-    // Visionで検出した水平線だけ
-    if (ov?.horizontal?.length) {
-      ov.horizontal
-        .slice(0, 3)
-        .forEach(y => {
-          const yy = Math.max(
-            .03,
-            Math.min(
-              .97,
-              Number(y) || 0
-            )
-          );
+// Visionで検出した水平線だけ
+if (ov?.horizontal?.length) {
+  ov.horizontal
+    .slice(0, 3)
+    .forEach(item => {
 
-          ctx.beginPath();
-          ctx.moveTo(
-            W * .06,
-            H * yy
-          );
+      const price = Number(item?.price);
+      const visionY = Number(item?.y);
 
-          ctx.lineTo(
-            W * .94,
-            H * yy
-          );
+      // price が取得できている場合は
+      // 共通の価格→Y変換を優先
+      let lineY = Number.isFinite(price)
+        ? priceToY(price)
+        : null;
 
-          ctx.stroke();
-        });
-    }
+      // priceToY が使えない場合のみ
+      // Visionが直接検出したY座標を使用
+      if (
+        lineY == null ||
+        !Number.isFinite(lineY)
+      ) {
+        lineY =
+          Number.isFinite(visionY)
+            ? H * visionY
+            : null;
+      }
+
+      if (lineY == null) {
+        return;
+      }
+
+      // Canvas外への描画を防止
+      lineY = Math.max(
+        H * .03,
+        Math.min(
+          H * .97,
+          lineY
+        )
+      );
+
+      ctx.beginPath();
+
+      ctx.moveTo(
+        W * .06,
+        lineY
+      );
+
+      ctx.lineTo(
+        W * .94,
+        lineY
+      );
+
+      ctx.stroke();
+    });
+}
 
     // Visionで検出したトレンドラインだけ
     if (ov?.trend?.length) {
