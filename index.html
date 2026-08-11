@@ -2804,8 +2804,6 @@ if (ov?.horizontal?.length) {
   chartOverlay?.strategyType || 'none';
     
  if (dir !== 'none') {
-  const arrowStrategyType =
-    chartOverlay?.strategyType || 'none';
 
   const ar = chartOverlay?.arrow || null;
 
@@ -2875,7 +2873,7 @@ let mid1Y;
 let mid2Y;
 
 // strategyType に応じて矢印形状を変更
-switch (arrowStrategyType) {
+switch (chartOverlay?.strategyType || 'none') {
 
   // ① 押し目買い
   // 少し下げる → 反発 → 上昇
