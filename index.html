@@ -1969,6 +1969,8 @@ async function analyzeImage(media, strategyText = ""){
 '    "direction": "long",',
 '    "priceMin": 3970.0,',
 '    "priceMax": 4550.0,',
+'    "plotTop": 0.04,',
+'    "plotBottom": 0.94,',
 '    "currentPrice": 4397.0,',
 '    "horizontal": [',
 '      {"price": 4361.0, "y": 0.44, "type": "support"},',
@@ -2018,6 +2020,10 @@ async function analyzeImage(media, strategyText = ""){
 　　"- 実際のローソク足や重要ラインを極力隠さない位置に置く。",
     "- 存在しないラインを推測で追加しない。",
     "- JSONを必ず最後の } まで完全に出力する。"
+    "- priceMin / priceMax は右側価格軸で確認できる下限・上限。",
+　　"- plotTop は実際のチャート価格描画領域の上端を0〜1で指定。",
+　　"- plotBottom は実際のチャート価格描画領域の下端を0〜1で指定。",
+　　"- 上部の銘柄情報欄や下部の日付欄は価格描画領域に含めない。",
   ].join("\n");
 
   const run = async (retry = false) => {
@@ -2543,23 +2549,31 @@ const sx =
   W * .73;
 
 const sy =
-  entryData?.y != null
-    ? H * Number(entryData.y)
+  entryData?.price != null
+    ? safePriceY(
+        entryData.price,
+        Number(entryData.y) || .55
+      )
     : H * (ar?.y1 ?? .55);
 
-const ex =
-  W * .84;
+const ex = W * .84;
 
 const ey =
   dir === 'long'
     ? (
-        tpData?.y != null
-          ? H * Number(tpData.y)
+        tpData?.price != null
+          ? safePriceY(
+              tpData.price,
+              Number(tpData.y) || .28
+            )
           : H * (ar?.y2 ?? .28)
       )
     : (
-        slData?.y != null
-          ? H * Number(slData.y)
+        slData?.price != null
+          ? safePriceY(
+              slData.price,
+              Number(slData.y) || .78
+            )
           : H * (ar?.y2 ?? .78)
       );
 
@@ -2629,6 +2643,59 @@ const boxW = Math.round(W * .20);
 const entryBoxX = Math.round(W * .055);
 const rightBoxX = Math.round(W - boxW - W * .055);
 
+  function priceToY(price) {
+  const min = Number(chartOverlay?.priceMin);
+  const max = Number(chartOverlay?.priceMax);
+  const p = Number(price);
+
+  const plotTopRaw = Number(chartOverlay?.plotTop);
+  const plotBottomRaw = Number(chartOverlay?.plotBottom);
+
+  const plotTop =
+    Number.isFinite(plotTopRaw)
+      ? Math.max(0, Math.min(1, plotTopRaw))
+      : .04;
+
+  const plotBottom =
+    Number.isFinite(plotBottomRaw)
+      ? Math.max(0, Math.min(1, plotBottomRaw))
+      : .94;
+
+  if (
+    !Number.isFinite(min) ||
+    !Number.isFinite(max) ||
+    !Number.isFinite(p) ||
+    max <= min ||
+    plotBottom <= plotTop
+  ) {
+    return null;
+  }
+
+  const ratio =
+    (max - p) /
+    (max - min);
+
+  return H * (
+    plotTop +
+    ratio * (plotBottom - plotTop)
+  );
+}
+
+  function safePriceY(price, fallbackY = .5) {
+  const direct = priceToY(price);
+
+  if (
+    direct != null &&
+    Number.isFinite(direct) &&
+    direct >= H * .02 &&
+    direct <= H * .98
+  ) {
+    return direct;
+  }
+
+  return H * fallbackY;
+}
+
 // BOXの縦位置を保持
 let entryBoxY = null;
 let tpBoxY = null;
@@ -2657,8 +2724,14 @@ function separateY(y, others = []) {
 
 // エントリー
 if (entry && entry.price != null) {
+const entryPriceY =
+  safePriceY(
+    entry.price,
+    Number(entry.y) || .50
+  );
+
 const entryBaseY =
-  H * (Number(entry.y) || .50) - H * .05;
+  entryPriceY - H * .05;
 
 entryBoxY = separateY(entryBaseY);
 const entryY = entryBoxY;
@@ -2698,7 +2771,7 @@ const entryY = entryBoxY;
   ctx.beginPath();
 
 const entryPriceY =
-  H * (Number(entry.y) || .50);
+  H * (Number(entryPriceY) || .50);
 
 ctx.moveTo(
   entryBoxX + boxW,
@@ -2716,8 +2789,14 @@ ctx.lineTo(
 
 // 利確目標
 if (tp && tp.price != null) {
+const tpPriceY =
+  safePriceY(
+    tp.price,
+    Number(tp.y) || .25
+  );
+
 const tpBaseY =
-  H * (Number(tp.y) || .25) - H * .05;
+  tpPriceY - H * .05;
 
 tpBoxY = separateY(
   tpBaseY,
@@ -2752,7 +2831,7 @@ const tpY = tpBoxY;
   ctx.beginPath();
 
 const tpPriceY =
-  H * (Number(tp.y) || .25);
+  H * (Number(tpPriceY) || .25);
 
 ctx.moveTo(
   W * .56,
@@ -2770,8 +2849,14 @@ ctx.lineTo(
 
 // 損切り
 if (sl && sl.price != null) {
+const slPriceY =
+  safePriceY(
+    sl.price,
+    Number(sl.y) || .75
+  );
+
 const slBaseY =
-  H * (Number(sl.y) || .75) - H * .05;
+  slPriceY - H * .05;
 
 slBoxY = separateY(
   slBaseY,
@@ -2802,7 +2887,7 @@ const slY = slBoxY;
   ctx.beginPath();
 
 const slPriceY =
-  H * (Number(sl.y) || .75);
+  H * (Number(slPriceY) || .75);
 
 ctx.moveTo(
   W * .56,
