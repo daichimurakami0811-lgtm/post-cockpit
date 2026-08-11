@@ -2070,9 +2070,17 @@ async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34
   if(bgSrc){ const img=await loadImage(bgSrc); drawCover(ctx,img,W,H); }
   else{ const g=ctx.createLinearGradient(0,0,W,H); g.addColorStop(0,hue); g.addColorStop(1,'#0F172A'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
 
-  // ブランド色を薄く重ねる
-  ctx.globalCompositeOperation='soft-light'; ctx.globalAlpha=tint; ctx.fillStyle=hue; ctx.fillRect(0,0,W,H);
-  ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+// チャート分析では元チャートの色をそのまま維持する。
+// その他の画像だけブランド色を薄く重ねる。
+if(postType !== 'chart_analysis'){
+  ctx.globalCompositeOperation='soft-light';
+  ctx.globalAlpha=tint;
+  ctx.fillStyle=hue;
+  ctx.fillRect(0,0,W,H);
+}
+
+ctx.globalCompositeOperation='source-over';
+ctx.globalAlpha=1;
 
   // アカウント固有のチャート・ラインを正確にCanvas描画。AI画像生成には任せない。
   if(postType!=='table_point'&&postType!=='table_knowledge'&&chart && chart.style && chart.style!=='none'){
@@ -2102,10 +2110,16 @@ async function composeFrame({bgSrc,W,H,hue,lead,body,footer,index,total,tint=.34
     }
   }
 
-  // 文字を読ませるための暗幕
+// チャート分析では元チャートを見せるため暗幕をかけない。
+// その他の投稿だけ、文字の可読性確保のため暗幕を重ねる。
+if(postType !== 'chart_analysis'){
   const g2=ctx.createLinearGradient(0,0,0,H);
-  g2.addColorStop(0,`rgba(6,10,22,${dim*.75})`); g2.addColorStop(.45,`rgba(6,10,22,${dim*.35})`); g2.addColorStop(1,`rgba(6,10,22,${dim*1.05})`);
-  ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+  g2.addColorStop(0,`rgba(6,10,22,${dim*.75})`);
+  g2.addColorStop(.45,`rgba(6,10,22,${dim*.35})`);
+  g2.addColorStop(1,`rgba(6,10,22,${dim*1.05})`);
+  ctx.fillStyle=g2;
+  ctx.fillRect(0,0,W,H);
+}
 
   if(postType==='table_point'||postType==='table_knowledge') drawTable(ctx,tableRows,W,H,hue);
 
@@ -3602,7 +3616,7 @@ async function buildCardImage(i){
     const first=d.text.split('\n').map(s=>s.trim()).filter(Boolean)[0]||d.acc.name;
     const lead=(state.vision?.headline||first).replace(/[#＃]\S+/g,'').replace(/^[📌📊🌍⚠️🔀🧮■▼]\s*/,'').slice(0,20);
     const pt=d.postType||state.postType||selectedPostType(); const dir=d.direction||state.postDirection||selectedDirection();
-    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:(pt==='table_point'||pt==='table_knowledge')?'':d.text,chart:d.acc.chart,postType:pt,direction:dir,chartOverlay:state.vision?.chart,avatarSrc:d.includeAvatar===false?'':d.acc.avatar,tableRows:d.tableRows||state.tableRows||[],
+    d.image=await composeFrame({bgSrc:src,W:1200,H:675,hue:d.acc.hue,lead,body:(pt==='chart_analysis'||pt==='table_point'||pt==='table_knowledge')?'':d.text,chart:d.acc.chart,postType:pt,direction:dir,chartOverlay:state.vision?.chart,avatarSrc:d.includeAvatar===false?'':d.acc.avatar,tableRows:d.tableRows||state.tableRows||[],
       footer:d.acc.handle,index:0,total:1,tint:.28,dim:.42});
     state.backgrounds.push({name:`${d.acc.name} 合成`,src:d.image,from:`${d.acc.name}用`});
     state.accountBg[d.acc.id]=d.image;   // タブ②の背景として引き継ぐ
