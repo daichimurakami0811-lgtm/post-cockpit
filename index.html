@@ -545,17 +545,45 @@ tailwind.config={theme:{extend:{
           <label class="flex items-center gap-2 mt-3 text-[12px] text-ink-700"><input id="fDisclosure" type="checkbox" class="w-3.5 h-3.5" checked>引用・紹介文にはPR／紹介であることを明示する</label>
           <div class="text-[10.5px] text-ink-dim mt-2 leading-relaxed">実在しない利益体験・第三者の推薦・「みんなが勝った」などの架空レビューは生成しません。数字はアクション数の配分比率として使用します。</div>
         </div>
-        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">独自プロンプト設定</div>
-          <textarea id="fActionPrompt" rows="4" class="inp resize-y" placeholder="例：投稿内容のうち実際に書かれているポイントへの感想を短く添える。架空の利益体験・第三者の推薦・「みんなが勝った」等は作らない。"></textarea></label>
+        <div class="hidden">
+  <textarea id="fActionPrompt"></textarea>
+</div>
       </div>
-      <div class="grid sm:grid-cols-2 gap-4">
-        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">声のトーン</div><select id="fVoice" class="inp"></select></label>
-        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">ニュアンス</div><select id="fStance" class="inp"></select></label>
+      <div id="mainOnlyWritingSettings">
+
+  <div class="grid sm:grid-cols-2 gap-4">
+    <label class="block">
+      <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+        声のトーン
       </div>
-      <div class="grid sm:grid-cols-2 gap-4">
-        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">投稿の長さ</div><select id="fLength" class="inp"></select></label>
-        <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">組み方</div><select id="fLayout" class="inp"></select></label>
+      <select id="fVoice" class="inp"></select>
+    </label>
+
+    <label class="block">
+      <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+        ニュアンス
       </div>
+      <select id="fStance" class="inp"></select>
+    </label>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-4 mt-4">
+    <label class="block">
+      <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+        投稿の長さ
+      </div>
+      <select id="fLength" class="inp"></select>
+    </label>
+
+    <label class="block">
+      <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+        組み方
+      </div>
+      <select id="fLayout" class="inp"></select>
+    </label>
+  </div>
+
+</div>
 
       <div class="pt-4 mt-1 border-t border-hair">
         <div class="eyebrow mb-1">チャート・画像スタイル</div>
@@ -1220,7 +1248,137 @@ function renderGrowth(){
   $('#growthThemes').innerHTML=GROWTH_THEMES.map(([id,label])=>`<label class="glass-sub p-2.5 flex items-center gap-2 text-[11.5px] cursor-pointer"><input type="checkbox" data-growth-theme="${id}" ${plan.themes.includes(id)?'checked':''} class="w-3.5 h-3.5">${label}</label>`).join('');$('#growthDailyCount').value=String(plan.dailyCount);$('#growthTime').value=plan.time;renderGrowthSchedule();
 }
 function growthThemeLabels(ids){return ids.map(id=>GROWTH_THEMES.find(x=>x[0]===id)?.[1]||id)}
-function growthPrompt(acc,theme,count){const p=acc.persona||{};const recent=state.growth.schedules.filter(x=>x.accountId===acc.id&&x.text).slice(-10).map(x=>x.text).join('\n---\n');return `あなたはSNS投稿の編集者です。以下のアカウント本人として、独立した日常・学習・仕事・趣味などの投稿案を作成してください。特定の第三者を装った体験談、架空の実績・利益、虚偽の推薦、他アカウントのエンゲージメントを誘導する文面は作らないでください。\n\n【アカウント】\n名前:${acc.name}\nハンドル:${acc.handle}\n一人称:${p.firstPerson||'私'}\n人物像:${p.speaker||''}\n口調:${p.tone||''}\n読者:${p.reader||''}\n避ける表現:${p.ng||''}\nプロフィール:${p.bio||''}\n独自プロンプト:${acc.actionPrompt||''}\n\n【今日のテーマ】${theme}\n【投稿数】${count}\n【希望】自然な日本語、1投稿140〜240字程度、同じ言い回しを繰り返さない。\n【直近投稿】\n${recent||'なし'}\n\nJSON配列だけを返してください。形式：["投稿本文1","投稿本文2","投稿本文3"]`}
+function growthPrompt(
+  acc,
+  theme,
+  count
+) {
+
+  const p =
+    acc.persona || {};
+
+  const recent =
+    state.growth.schedules
+      .filter(
+        x =>
+          x.accountId === acc.id &&
+          x.text
+      )
+      .slice(-10)
+      .map(x => x.text)
+      .join('\n---\n');
+
+  const emojiRule =
+    p.emoji === '使わない'
+      ? '絵文字は一切使わない。'
+      : p.emoji === '多め'
+        ? '絵文字を自然に2〜4個程度使う。'
+        : '絵文字は使っても最大1個まで。';
+
+  return `
+あなたはX投稿の編集者です。
+
+以下のアカウント本人として、
+その人物の口調・考え方・背景を必ず反映した投稿を作成してください。
+
+【最重要】
+下記のペルソナ設定は参考情報ではありません。
+必ず文章表現に反映してください。
+
+特に、
+・一人称
+・口調と語尾
+・話し手の人物像
+・読者像
+・使わない表現
+・背景や普段書いている内容
+・絵文字ルール
+
+を厳守してください。
+
+────────────────
+
+【アカウント】
+
+名前：
+${acc.name}
+
+ハンドル：
+${acc.handle}
+
+一人称：
+${p.firstPerson || '私'}
+
+話し手の設定：
+${p.speaker || '特になし'}
+
+口調・語尾：
+${p.tone || '自然な日本語'}
+
+読者像：
+${p.reader || '一般のXユーザー'}
+
+使わない表現：
+${p.ng || '特になし'}
+
+背景・普段書いている内容：
+${p.bio || '特になし'}
+
+絵文字：
+${emojiRule}
+
+────────────────
+
+【今日のテーマ】
+
+${theme}
+
+【投稿数】
+
+${count}
+
+────────────────
+
+【文章ルール】
+
+・必ず設定された一人称を使う
+・設定された口調と語尾を優先する
+・話し手の人物像と矛盾する発言をしない
+・読者像に合わせて言葉を選ぶ
+・「使わない表現」に含まれる表現は禁止
+・背景・普段書いている内容から自然に話題を作る
+・毎回同じ書き出しにしない
+・自己紹介から始めない
+・「こんにちは」「〇〇です」は原則使わない
+・不自然に説明しすぎない
+・Xの普通の個人投稿として自然に見える文章にする
+・1投稿140〜240字程度
+・3投稿それぞれ内容と切り口を変える
+・架空の利益実績や存在しない体験を作らない
+・第三者から推薦されたような虚偽表現を作らない
+・他アカウントへのエンゲージメント誘導は行わない
+
+────────────────
+
+【直近の投稿】
+
+${recent || 'なし'}
+
+直近投稿と文章・テーマ・書き出しが重複しすぎないようにしてください。
+
+────────────────
+
+JSON配列のみ返してください。
+
+形式：
+
+[
+  "投稿本文1",
+  "投稿本文2",
+  "投稿本文3"
+]
+`;
+}
 async function generateGrowthCandidates(){const id=$('#growthAccount').value,acc=getAcc(id);if(!acc)return;const plan=growthPlan(acc);const themes=growthThemeLabels(plan.themes);if(!apiReady()){toast('先に文章生成APIを設定してください','warn');openSettings();return}$('#growthGenerate').disabled=true;$('#growthGenerate').textContent='生成中…';try{const theme=themes[Math.floor(Math.random()*themes.length)]||'日常';const r=await callAnthropicAPI(growthPrompt(acc,theme,3),acc.persona,{max_tokens:1200,temperature:.9});const arr=parseLooseJSON(r.text);state.growth.candidates[id]=Array.isArray(arr)?arr.slice(0,3).map(x=>String(x)):[];saveGrowth();renderGrowthCandidates();log(`${acc.name}の育成投稿候補を生成`,'act')}catch(e){toast('育成投稿の生成に失敗：'+e.message,'err')}finally{$('#growthGenerate').disabled=false;$('#growthGenerate').textContent='AIで3案生成'}}
 function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.growth.candidates[id]||[];$('#growthCandidates').innerHTML=arr.length?arr.map((text,i)=>`<div class="glass-sub p-4"><textarea data-growth-text="${i}" class="inp w-full min-h-[110px] resize-y text-[12.5px] leading-relaxed">${esc(text)}</textarea><div class="flex flex-wrap gap-2 mt-3"><button data-growth-schedule="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">今日の予定に追加</button><button data-growth-post="${i}" class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg">確認してXへ投稿</button></div></div>`).join(''):'<div class="glass-sub p-5 text-[12px] text-ink-dim">まだ候補がありません。</div>'}
 function growthEditedText(i){const el=document.querySelector(`[data-growth-text="${i}"]`);return el?el.value.trim():''}
@@ -6871,6 +7029,8 @@ function openModal(id,parentId=null){
   $('#fName').value=a?a.name:''; $('#fHandle').value=a?a.handle:'';
   $('#fTeam').value=a?a.team:''; $('#fHue').value=a?a.hue:'#2563EB';
   const currentParent=a?.parentId||parentId||'';
+  const isChildMode =
+  Boolean(currentParent);
   const parentOptions=state.accounts.filter(x=>isMainAccount(x)&&x.id!==id);
   $('#fParentId').innerHTML=`<option value="">メインアカウント（親）</option>`+parentOptions.map(x=>{const n=childrenOf(x.id).length;return `<option value="${esc(x.id)}" ${currentParent===x.id?'selected':''} ${n>=10&&currentParent!==x.id?'disabled':''}>${esc(x.name)}（${esc(x.handle)}）${n>=10?' — 上限10件':''}</option>`}).join('');
   const distributionOwner=currentParent?getAcc(currentParent):(a&&isMainAccount(a)?a:null);
@@ -6881,12 +7041,84 @@ function openModal(id,parentId=null){
   $('#fReplyStyle').value=policy.replyStyle; $('#fQuoteStyle').value=policy.quoteStyle; $('#fDisclosure').checked=policy.disclosureRequired!==false;
   $('#fActionPrompt').value=a?(a.actionPrompt||''):''; $('#fChartStyle').value=a?.chart?.style||'both'; $('#fChartDensity').value=a?.chart?.density||'standard'; $('#fChartColor').value=a?.chart?.color||'#FFFFFF'; $('#fChartGlow').checked=a?.chart?.glow!==false;
   $('#childSettings').classList.toggle('hidden',!distributionOwner);
-  $('#fParentId').onchange=()=>{const owner=$('#fParentId').value?getAcc($('#fParentId').value):(state.editingId&&isMainAccount(getAcc(state.editingId))?getAcc(state.editingId):null); const p=parentActionDistribution(owner); $$('#actionPolicyFields [data-action-policy]').forEach(cb=>cb.checked=p.allowedActions.includes(cb.dataset.actionPolicy)); $$('#actionPolicyFields [data-action-weight]').forEach(x=>x.value=p.weights[x.dataset.actionWeight]); $('#fActionRandom').checked=p.randomize; $('#fReplyStyle').value=p.replyStyle; $('#fQuoteStyle').value=p.quoteStyle; $('#fDisclosure').checked=p.disclosureRequired!==false; $('#childSettings').classList.toggle('hidden',!owner)};
+  $('#fParentId').onchange = () => {
+
+  const owner =
+    $('#fParentId').value
+      ? getAcc($('#fParentId').value)
+      : (
+          state.editingId &&
+          isMainAccount(
+            getAcc(state.editingId)
+          )
+            ? getAcc(state.editingId)
+            : null
+        );
+
+  const p =
+    parentActionDistribution(owner);
+
+  $$('#actionPolicyFields [data-action-policy]')
+    .forEach(cb => {
+      cb.checked =
+        p.allowedActions.includes(
+          cb.dataset.actionPolicy
+        );
+    });
+
+  $$('#actionPolicyFields [data-action-weight]')
+    .forEach(x => {
+      x.value =
+        p.weights[
+          x.dataset.actionWeight
+        ];
+    });
+
+  $('#fActionRandom').checked =
+    p.randomize;
+
+  $('#fReplyStyle').value =
+    p.replyStyle;
+
+  $('#fQuoteStyle').value =
+    p.quoteStyle;
+
+  $('#fDisclosure').checked =
+    p.disclosureRequired !== false;
+
+  $('#childSettings')
+    .classList.toggle(
+      'hidden',
+      !owner
+    );
+
+
+  // =========================
+  // メイン / 子 の表示切替
+  // =========================
+
+  const isChildNow =
+    Boolean(
+      $('#fParentId').value
+    );
+
+  $('#mainOnlyWritingSettings')
+    .classList.toggle(
+      'hidden',
+      isChildNow
+    );
+
+};
   $('#fNote').value=a?(a.note||''):''; $('#fActive').checked=a?a.active:true;
   $('#fVoice').innerHTML=VOICES.map(v=>`<option ${a&&a.voice===v?'selected':''}>${esc(v)}</option>`).join('');
   $('#fStance').innerHTML=STANCES.map(v=>`<option ${a&&a.stance===v?'selected':''}>${esc(v)}</option>`).join('');
   $('#fLength').innerHTML=Object.entries(LENGTHS).map(([k,l])=>`<option value="${esc(k)}" ${a&&a.length===k?'selected':''}>${esc(l.label)}</option>`).join('');
   $('#fLayout').innerHTML=Object.keys(LAYOUTS).map(k=>`<option ${a&&a.layout===k?'selected':''}>${esc(k)}</option>`).join('');
+  $('#mainOnlyWritingSettings')
+  .classList.toggle(
+    'hidden',
+    isChildMode
+  );
   $('#pEmoji').innerHTML=EMOJI_MODES.map(v=>`<option ${a&&a.persona?.emoji===v?'selected':''}>${esc(v)}</option>`).join('');
   $('#archetypeBtns').innerHTML=Object.keys(ARCHETYPES).map(k=>
     `<button data-arch="${esc(k)}" class="chip px-3 py-1.5 text-[12px] font-medium">${esc(k)}</button>`).join('');
