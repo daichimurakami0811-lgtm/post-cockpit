@@ -6049,6 +6049,64 @@ async function xFetch(path,options={}){
   if(!r.ok){ const x=j.x||{}; const detail=x.detail||j.error||j.detail||`Xバックエンド HTTP ${r.status}`; const errs=Array.isArray(x.errors)?' / '+x.errors.map(e=>e.message||e.detail||JSON.stringify(e)).join(' / '):''; throw new Error(`${detail}${errs}`); }
   return j;
 }
+  async function xVideoFetch(
+  path,
+  formData
+) {
+  const base =
+    xBackendUrl();
+
+  if (!base) {
+    throw new Error(
+      'X APIバックエンドURLが未設定です'
+    );
+  }
+
+  const headers = {};
+
+  // アプリトークンだけ付ける
+  if (state.api.appToken) {
+    headers['x-app-token'] =
+      state.api.appToken;
+  }
+
+  // 重要：
+  // Content-Type は自分で設定しない
+  // FormDataの場合はブラウザが
+  // multipart/form-data + boundary を自動設定する
+  const r =
+    await fetch(
+      base + path,
+      {
+        method: 'POST',
+        headers,
+        body: formData
+      }
+    );
+
+  const j =
+    await r
+      .json()
+      .catch(() => ({}));
+
+  if (!r.ok) {
+    const e =
+      new Error(
+        j.error ||
+        `Xバックエンド HTTP ${r.status}`
+      );
+
+    e.status =
+      r.status;
+
+    e.x =
+      j.x || null;
+
+    throw e;
+  }
+
+  return j;
+}
 async function refreshXStatus(){
   const el=document.querySelector('#xStatus'); if(!el)return;
   if(!xBackendUrl()){el.textContent='バックエンドURL未設定';return;}
@@ -6139,8 +6197,7 @@ async function executeXAction(d,act,opts={}){
     return;
   }
 
-
-  // 動画を書き出していない場合
+  // 投稿用動画がまだ生成されていない
   if (!s.videoBlob) {
     toast(
       '先に「投稿用動画を生成」を押してください',
@@ -6150,46 +6207,48 @@ async function executeXAction(d,act,opts={}){
     return;
   }
 
-     const quote =
-  parseTweetUrl(
-    s.quoteUrl || ''
-  );
-
-const quoteTweetId =
-  quote.ok
-    ? quote.id
-    : null;
-
+  // すでに投稿済み
   if (s.status === 'sent') {
-    const quote =
-  parseTweetUrl(
-    s.quoteUrl || ''
-  );
+    toast(
+      'この動画はすでに投稿済みです',
+      'warn'
+    );
 
-const confirmText =
-  [
+    return;
+  }
+
+  // -----------------------------
+  // 引用Tweet
+  // -----------------------------
+  const quote =
+    parseTweetUrl(
+      s.quoteUrl || ''
+    );
+
+  const quoteTweetId =
+    quote.ok
+      ? quote.id
+      : null;
+
+  // -----------------------------
+  // 投稿前確認
+  // -----------------------------
+  const confirmText = [
     `${s.acc.name}（${s.acc.handle}）から動画を投稿します。`,
     '',
     text,
     '',
-    quote.ok
+    quoteTweetId
       ? '引用投稿：あり'
       : '引用投稿：なし',
     '',
     '投稿してよろしいですか？'
   ].join('\n');
 
-if (
-  state.api.xRequireConfirm !== false &&
-  !confirm(confirmText)
-) {
-  return;
-}
-    toast(
-      'この動画はすでに投稿済みです',
-      'warn'
-    );
-
+  if (
+    state.api.xRequireConfirm !== false &&
+    !confirm(confirmText)
+  ) {
     return;
   }
 
@@ -6206,12 +6265,48 @@ if (
   try {
 
     // -----------------------------
-    // 動画Blob → DataURL
+    // FormDataを作る
+    // base64化しない
     // -----------------------------
-    const mediaDataUrl =
-      await blobToDataUrl(
-        s.videoBlob
+    const form =
+      new FormData();
+
+    const ext =
+      s.videoExt ||
+      (
+        String(s.videoMime || '')
+          .includes('webm')
+          ? 'webm'
+          : 'mp4'
       );
+
+    form.append(
+      'video',
+      s.videoBlob,
+      `post-cockpit.${ext}`
+    );
+
+    form.append(
+      'accountId',
+      String(s.acc.id || '')
+    );
+
+    form.append(
+      'accountHandle',
+      String(s.acc.handle || '')
+    );
+
+    form.append(
+      'text',
+      text
+    );
+
+    if (quoteTweetId) {
+      form.append(
+        'quoteTweetId',
+        String(quoteTweetId)
+      );
+    }
 
     console.log(
       '[VIDEO X POST]',
@@ -6219,42 +6314,21 @@ if (
         accountId: s.acc.id,
         handle: s.acc.handle,
         textLength: text.length,
-        hasVideo: !!mediaDataUrl,
+        hasVideo: !!s.videoBlob,
+        videoBytes: s.videoBlob.size,
         mime: s.videoMime,
+        ext,
         quoteTweetId
       }
     );
 
     // -----------------------------
-    // Xバックエンドへ送信
+    // 動画専用APIへ送信
     // -----------------------------
     const j =
-      await xFetch(
-        '/api/x/post',
-        {
-          method: 'POST',
-
-          body: JSON.stringify({
-            accountId:
-              s.acc.id,
-
-            accountHandle:
-              s.acc.handle,
-
-            text,
-
-            quoteTweetId,
-
-            mediaDataUrl,
-
-            mediaMime:
-              s.videoMime ||
-              'video/mp4',
-
-            mediaType:
-              'video'
-          })
-        }
+      await xVideoFetch(
+        '/api/x/video',
+        form
       );
 
     const tid =
@@ -6267,18 +6341,22 @@ if (
       );
     }
 
-    s.status =
-      'sent';
+    // -----------------------------
+    // 成功
+    // -----------------------------
+    s.status = 'sent';
 
     s.xTweetId =
       String(tid);
 
+    s.recordedTweetId =
+      String(tid);
+
     s.recordedUrl =
       `https://x.com/${String(
-        s.acc.handle
+        s.acc.handle || ''
       ).replace('@','')}/status/${tid}`;
 
-    // 履歴にも記録
     recordPost({
       accountId:
         s.acc.id,
@@ -6316,6 +6394,14 @@ if (
           e?.message ||
           String(e),
 
+        status:
+          e?.status ||
+          null,
+
+        x:
+          e?.x ||
+          null,
+
         stack:
           e?.stack ||
           null
@@ -6339,7 +6425,6 @@ if (
       );
 
     if (currentBtn) {
-
       currentBtn.disabled =
         s.status === 'sent';
 
@@ -6348,6 +6433,7 @@ if (
           ? '投稿済み'
           : 'Xへ投稿';
     }
+
   }
 }
 
