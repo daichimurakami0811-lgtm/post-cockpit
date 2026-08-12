@@ -187,7 +187,20 @@ tailwind.config={theme:{extend:{
             <label class="cursor-pointer"><input type="radio" name="postType" value="chart_analysis" checked class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">📈 チャート分析</b><div class="tag text-ink-dim mt-1">元チャート＋ライン＋方向矢印</div></div></label>
             <label class="cursor-pointer"><input type="radio" name="postType" value="chart_point" class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">💡 チャート＋ワンポイント</b><div class="tag text-ink-dim mt-1">チャートを主役に短い解説</div></div></label>
             <label class="cursor-pointer"><input type="radio" name="postType" value="table_point" class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">📋 ワンポイント（表）</b><div class="tag text-ink-dim mt-1">項目を整理した表形式</div></div></label>
-            <label class="cursor-pointer"><input type="radio" name="postType" value="table_knowledge" class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">🧠 ノウハウ（表）</b><div class="tag text-ink-dim mt-1">知識・注意点を表形式</div></div></label>
+            <label class="cursor-pointer">
+  <input
+    type="radio"
+    name="postType"
+    value="market_progress"
+    class="peer sr-only"
+  >
+  <div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl">
+    <b class="text-[12px]">📍 相場進捗</b>
+    <div class="tag text-ink-dim mt-1">
+      元チャート＋現在地＋方向矢印
+    </div>
+  </div>
+</label>
           </div>
           <div class="grid sm:grid-cols-2 gap-3 mt-3">
             <div id="directionSettings">
@@ -6210,7 +6223,14 @@ $('#reshuffleBtn').onclick=()=>{
   renderLane(); log('公開時刻を組み直した','act');
 };
 
-function postTypeLabel(v){ return ({chart_analysis:'チャート分析',chart_point:'チャート＋ワンポイント',table_point:'ワンポイント（表）',table_knowledge:'ノウハウ（表）'})[v]||'チャート分析'; }
+function postTypeLabel(v){
+  return ({
+    chart_analysis:'チャート分析',
+    chart_point:'チャート＋ワンポイント',
+    table_point:'ワンポイント（表）',
+    market_progress:'相場進捗'
+  })[v]||'チャート分析';
+}
 
 function renderLane(){
   $('#laneMeta').textContent=state.drafts.length?`${state.drafts.length} アカウント / 最終 ${fmtTime(state.drafts[state.drafts.length-1].at)}`:'';
