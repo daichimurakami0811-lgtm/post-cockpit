@@ -2609,6 +2609,87 @@ function drawKeyLevelLabel(
 
   ctx.restore();
 }
+
+async function analyzeTablePoint(generatedText = "") {
+  const prompt = [
+    "以下はX投稿用に実際に生成された文章です。",
+    "この文章を、資金管理・メンタル管理・トレード習慣を学ぶ",
+    "1枚の教材型インフォグラフィック用データへ整理してください。",
+    "",
+    "--- generated post ---",
+    String(generatedText || "").slice(0, 2600),
+    "--- end generated post ---",
+    "",
+    "元文章の内容を最優先してください。",
+    "毎回同じ定型文を使わず、今回の文章に応じて内容を変えてください。",
+    "元文章にない数字・ルール・体験談を勝手に追加しないでください。",
+    "",
+    "必ずJSONだけを返してください。",
+    "",
+    "{",
+    '  "title": "画像上部の強いタイトル",',
+    '  "subTitle": "タイトルを補足する短い一文",',
+    '  "problemTitle": "よくある失敗・問題点の見出し",',
+    '  "problems": ["問題1","問題2","問題3"],',
+    '  "lessonTitle": "今回最も重要な考え方の見出し",',
+    '  "lesson": "今回の本質を1〜2文",',
+    '  "steps": [',
+    '    {"title":"STEP1","text":"内容"},',
+    '    {"title":"STEP2","text":"内容"},',
+    '    {"title":"STEP3","text":"内容"}',
+    "  ],",
+    '  "tableTitle": "具体例や比較表の見出し。不要なら空文字",',
+    '  "tableHeaders": ["項目1","項目2","項目3","項目4"],',
+    '  "tableRows": [',
+    '    ["値1","値2","値3","値4"]',
+    "  ],",
+    '  "actionPoints": ["実践項目1","実践項目2","実践項目3"],',
+    '  "summary": "最後に最も覚えてほしい結論"',
+    "}",
+    "",
+    "ルール:",
+    "- title は今回の投稿文章に沿った強い結論にする。",
+    "- problems は元文章にある失敗例・悩みだけを最大3個。",
+    "- lesson は今回の文章の中心思想を短く整理する。",
+    "- steps は手順化できる場合のみ2〜3個。できなければ空配列。",
+    "- tableRows は数値例・比較・ルール一覧が元文章に存在する場合だけ作る。",
+    "- 数値が元文章にない場合は絶対に捏造しない。",
+    "- actionPoints は読者が今日から実践できる内容を2〜4個。",
+    "- summary は1〜2文。",
+    "- 文章量は画像内に収まるよう短くする。",
+    "- JSONを最後の } まで完全に返す。"
+  ].join("\n");
+
+  const raw = await callClaude({
+    temperature: 0,
+    max_tokens: 2200,
+
+    system:
+      "あなたはFX・投資教育コンテンツを読みやすい教材型インフォグラフィックへ整理する編集者です。必ず完全なJSONだけを返してください。",
+
+    messages: [{
+      role: "user",
+      content: [{
+        type: "text",
+        text: prompt
+      }]
+    }]
+  });
+
+  if (!raw.text || !String(raw.text).trim()) {
+    throw new Error(
+      "ワンポイント（表）の解析結果が返ってきませんでした"
+    );
+  }
+
+  if (raw.stopReason === "max_tokens") {
+    throw new Error(
+      "ワンポイント（表）の解析が途中終了しました"
+    );
+  }
+
+  return parseLooseJSON(raw.text);
+}
   
 async function composeFrame({
   bgSrc,
@@ -2625,6 +2706,7 @@ async function composeFrame({
   chart = null,
   chartOverlay = null,
 chartPointData = null,
+  tablePointData = null,
 postType = 'chart_analysis',
   direction = 'none',
   avatarSrc = '',
@@ -5644,12 +5726,30 @@ if (pt === 'chart_point') {
     d.text
   );
 }
+
+    let tablePointData = null;
+
+if (pt === 'table_point') {
+  tablePointData = await analyzeTablePoint(
+    d.text
+  );
+}
+    
     console.log(
   '[CHART POINT DATA]',
   {
     pt,
     hasData: !!chartPointData,
     data: chartPointData
+  }
+);
+
+console.log(
+  '[TABLE POINT DATA]',
+  {
+    pt,
+    hasData: !!tablePointData,
+    data: tablePointData
   }
 );
     
@@ -5688,6 +5788,7 @@ if (pt === 'chart_point') {
   direction:dir,
   chartOverlay:state.vision?.chart,
   chartPointData:chartPointData,
+  tablePointData: tablePointData,
   avatarSrc:d.includeAvatar===false?'':d.acc.avatar,
   tableRows:d.tableRows||state.tableRows||[],
   footer:d.acc.handle,
