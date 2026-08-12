@@ -4116,7 +4116,753 @@ annotations.forEach(a => {
 
 ctx.restore();
 
-} // ← chart_point 全体を閉じる
+} 
+
+  // ======================================================
+// ワンポイント（表）専用：教材型インフォグラフィック
+// ======================================================
+if (
+  postType === 'table_point' &&
+  tablePointData
+) {
+  const tpTitle =
+    String(tablePointData.title || '').trim();
+
+  const tpSubTitle =
+    String(tablePointData.subTitle || '').trim();
+
+  const problemTitle =
+    String(tablePointData.problemTitle || 'よくある失敗').trim();
+
+  const problems =
+    Array.isArray(tablePointData.problems)
+      ? tablePointData.problems
+          .map(v => String(v || '').trim())
+          .filter(Boolean)
+          .slice(0, 3)
+      : [];
+
+  const lessonTitle =
+    String(tablePointData.lessonTitle || '重要ポイント').trim();
+
+  const lesson =
+    String(tablePointData.lesson || '').trim();
+
+  const steps =
+    Array.isArray(tablePointData.steps)
+      ? tablePointData.steps
+          .filter(Boolean)
+          .slice(0, 3)
+      : [];
+
+  const tableTitle =
+    String(tablePointData.tableTitle || '').trim();
+
+  const tableHeaders =
+    Array.isArray(tablePointData.tableHeaders)
+      ? tablePointData.tableHeaders
+          .map(v => String(v || '').trim())
+          .filter(Boolean)
+          .slice(0, 4)
+      : [];
+
+  const dataRows =
+    Array.isArray(tablePointData.tableRows)
+      ? tablePointData.tableRows
+          .filter(Array.isArray)
+          .slice(0, 4)
+      : [];
+
+  const actionPoints =
+    Array.isArray(tablePointData.actionPoints)
+      ? tablePointData.actionPoints
+          .map(v => String(v || '').trim())
+          .filter(Boolean)
+          .slice(0, 4)
+      : [];
+
+  const summary =
+    String(tablePointData.summary || '').trim();
+
+  ctx.save();
+
+  // ------------------------------------------
+  // 背景
+  // チャート画像が渡されていても完全に覆う
+  // ------------------------------------------
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fillRect(0, 0, W, H);
+
+  // 上部に薄いブランドカラー
+  const topGrad =
+    ctx.createLinearGradient(
+      0,
+      0,
+      W,
+      0
+    );
+
+  topGrad.addColorStop(
+    0,
+    'rgba(15,23,42,.04)'
+  );
+
+  topGrad.addColorStop(
+    1,
+    hue + '18'
+  );
+
+  ctx.fillStyle = topGrad;
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H * .22
+  );
+
+  const padX = W * .055;
+
+
+  // ==========================================
+  // ① 上部タイトル
+  // ==========================================
+  ctx.font =
+    `900 ${Math.round(W * .035)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#0F172A';
+
+  const titleLines =
+    wrapText(
+      ctx,
+      tpTitle || '今日のワンポイント',
+      W * .78
+    );
+
+  let titleY = H * .085;
+
+  titleLines
+    .slice(0, 2)
+    .forEach(line => {
+      ctx.fillText(
+        line,
+        padX,
+        titleY
+      );
+
+      titleY += H * .065;
+    });
+
+  // タイトル強調ライン
+  ctx.fillStyle = hue;
+
+  roundRect(
+    ctx,
+    padX,
+    titleY + H * .008,
+    W * .15,
+    H * .008,
+    W * .004
+  );
+
+  ctx.fill();
+
+  // サブタイトル
+  if (tpSubTitle) {
+    ctx.font =
+      `700 ${Math.round(W * .015)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#475569';
+
+    const subLines =
+      wrapText(
+        ctx,
+        tpSubTitle,
+        W * .76
+      );
+
+    subLines
+      .slice(0, 2)
+      .forEach((line, i) => {
+        ctx.fillText(
+          line,
+          padX,
+          titleY + H * (.045 + i * .032)
+        );
+      });
+  }
+
+
+  // ==========================================
+  // ② 中央左：よくある失敗
+  // ==========================================
+  const leftX = W * .055;
+  const topY = H * .31;
+
+  const leftW = W * .34;
+  const topH = H * .27;
+
+  ctx.fillStyle = 'rgba(255,255,255,.98)';
+
+  ctx.shadowColor =
+    'rgba(15,23,42,.10)';
+
+  ctx.shadowBlur =
+    Math.round(W * .008);
+
+  ctx.shadowOffsetY =
+    Math.round(H * .004);
+
+  roundRect(
+    ctx,
+    leftX,
+    topY,
+    leftW,
+    topH,
+    W * .012
+  );
+
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+
+  ctx.strokeStyle = '#E2E8F0';
+
+  ctx.lineWidth =
+    Math.max(
+      2,
+      Math.round(W * .0015)
+    );
+
+  roundRect(
+    ctx,
+    leftX,
+    topY,
+    leftW,
+    topH,
+    W * .012
+  );
+
+  ctx.stroke();
+
+  ctx.font =
+    `900 ${Math.round(W * .016)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#DC2626';
+
+  ctx.fillText(
+    '⚠ ' + problemTitle,
+    leftX + W * .022,
+    topY + H * .055
+  );
+
+  ctx.font =
+    `700 ${Math.round(W * .0135)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#334155';
+
+  let problemY =
+    topY + H * .105;
+
+  problems.forEach(problem => {
+    const lines =
+      wrapText(
+        ctx,
+        '× ' + problem,
+        leftW - W * .045
+      );
+
+    lines
+      .slice(0, 2)
+      .forEach(line => {
+        if (
+          problemY >
+          topY + topH - H * .025
+        ) {
+          return;
+        }
+
+        ctx.fillText(
+          line,
+          leftX + W * .022,
+          problemY
+        );
+
+        problemY += H * .035;
+      });
+
+    problemY += H * .008;
+  });
+
+
+  // ==========================================
+  // ③ 中央右：重要な考え方
+  // ==========================================
+  const rightX = W * .425;
+  const rightW = W * .52;
+
+  ctx.fillStyle = 'rgba(240,253,244,.98)';
+
+  roundRect(
+    ctx,
+    rightX,
+    topY,
+    rightW,
+    topH,
+    W * .012
+  );
+
+  ctx.fill();
+
+  ctx.strokeStyle = '#22C55E';
+
+  ctx.lineWidth =
+    Math.max(
+      2,
+      Math.round(W * .002)
+    );
+
+  roundRect(
+    ctx,
+    rightX,
+    topY,
+    rightW,
+    topH,
+    W * .012
+  );
+
+  ctx.stroke();
+
+  ctx.font =
+    `900 ${Math.round(W * .016)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#15803D';
+
+  ctx.fillText(
+    '✓ ' + lessonTitle,
+    rightX + W * .025,
+    topY + H * .055
+  );
+
+  ctx.font =
+    `700 ${Math.round(W * .0135)}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#14532D';
+
+  let lessonY =
+    topY + H * .105;
+
+  const lessonLines =
+    wrapText(
+      ctx,
+      lesson,
+      rightW - W * .05
+    );
+
+  lessonLines
+    .slice(0, 3)
+    .forEach(line => {
+      ctx.fillText(
+        line,
+        rightX + W * .025,
+        lessonY
+      );
+
+      lessonY += H * .034;
+    });
+
+  // STEPがある場合
+  if (steps.length) {
+    let stepX =
+      rightX + W * .025;
+
+    const stepGap =
+      W * .012;
+
+    const stepW =
+      (
+        rightW -
+        W * .05 -
+        stepGap * (steps.length - 1)
+      ) / steps.length;
+
+    const stepY =
+      topY + H * .185;
+
+    steps.forEach((step, i) => {
+      const x =
+        stepX +
+        i * (stepW + stepGap);
+
+      ctx.fillStyle =
+        'rgba(255,255,255,.86)';
+
+      roundRect(
+        ctx,
+        x,
+        stepY,
+        stepW,
+        H * .065,
+        W * .008
+      );
+
+      ctx.fill();
+
+      ctx.font =
+        `900 ${Math.round(W * .0105)}px "Zen Kaku Gothic New",sans-serif`;
+
+      ctx.fillStyle = '#15803D';
+
+      ctx.fillText(
+        String(
+          step?.title ||
+          `STEP${i + 1}`
+        ),
+        x + W * .009,
+        stepY + H * .026
+      );
+
+      ctx.font =
+        `700 ${Math.round(W * .0095)}px "Zen Kaku Gothic New",sans-serif`;
+
+      ctx.fillStyle = '#334155';
+
+      const stepLines =
+        wrapText(
+          ctx,
+          String(step?.text || ''),
+          stepW - W * .018
+        );
+
+      if (stepLines[0]) {
+        ctx.fillText(
+          stepLines[0],
+          x + W * .009,
+          stepY + H * .052
+        );
+      }
+    });
+  }
+
+
+  // ==========================================
+  // ④ 下段：数値表があれば表を表示
+  // ==========================================
+  const bottomY = H * .62;
+  const bottomH = H * .21;
+
+  if (
+    tableHeaders.length >= 2 &&
+    dataRows.length
+  ) {
+    const tableX = W * .055;
+    const tableW = W * .89;
+
+    ctx.fillStyle =
+      'rgba(255,255,255,.98)';
+
+    roundRect(
+      ctx,
+      tableX,
+      bottomY,
+      tableW,
+      bottomH,
+      W * .012
+    );
+
+    ctx.fill();
+
+    ctx.strokeStyle = '#CBD5E1';
+
+    ctx.lineWidth =
+      Math.max(
+        1,
+        Math.round(W * .0015)
+      );
+
+    roundRect(
+      ctx,
+      tableX,
+      bottomY,
+      tableW,
+      bottomH,
+      W * .012
+    );
+
+    ctx.stroke();
+
+    if (tableTitle) {
+      ctx.font =
+        `900 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
+
+      ctx.fillStyle = '#0F172A';
+
+      ctx.fillText(
+        tableTitle,
+        tableX + W * .018,
+        bottomY + H * .038
+      );
+    }
+
+    const tableTop =
+      bottomY + H * .055;
+
+    const tableAreaH =
+      bottomH - H * .07;
+
+    const cols =
+      tableHeaders.length;
+
+    const colW =
+      tableW / cols;
+
+    const rowH =
+      tableAreaH /
+      (dataRows.length + 1);
+
+    // ヘッダー背景
+    ctx.fillStyle =
+      'rgba(15,23,42,.06)';
+
+    ctx.fillRect(
+      tableX,
+      tableTop,
+      tableW,
+      rowH
+    );
+
+    // 縦罫線
+    for (
+      let c = 1;
+      c < cols;
+      c++
+    ) {
+      ctx.beginPath();
+
+      ctx.moveTo(
+        tableX + colW * c,
+        tableTop
+      );
+
+      ctx.lineTo(
+        tableX + colW * c,
+        tableTop + tableAreaH
+      );
+
+      ctx.strokeStyle = '#E2E8F0';
+
+      ctx.stroke();
+    }
+
+    // 横罫線
+    for (
+      let r = 1;
+      r <= dataRows.length;
+      r++
+    ) {
+      ctx.beginPath();
+
+      ctx.moveTo(
+        tableX,
+        tableTop + rowH * r
+      );
+
+      ctx.lineTo(
+        tableX + tableW,
+        tableTop + rowH * r
+      );
+
+      ctx.strokeStyle = '#E2E8F0';
+
+      ctx.stroke();
+    }
+
+    // ヘッダー文字
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.font =
+      `900 ${Math.round(W * .0105)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#334155';
+
+    tableHeaders.forEach(
+      (header, c) => {
+        ctx.fillText(
+          header,
+          tableX +
+            colW * c +
+            colW / 2,
+          tableTop +
+            rowH / 2
+        );
+      }
+    );
+
+    // データ
+    ctx.font =
+      `700 ${Math.round(W * .011)}px "Zen Kaku Gothic New",sans-serif`;
+
+    dataRows.forEach(
+      (row, r) => {
+        for (
+          let c = 0;
+          c < cols;
+          c++
+        ) {
+          const value =
+            String(row?.[c] ?? '');
+
+          ctx.fillStyle =
+            c === 0
+              ? '#0F172A'
+              : '#334155';
+
+          ctx.fillText(
+            value,
+            tableX +
+              colW * c +
+              colW / 2,
+            tableTop +
+              rowH * (r + 1) +
+              rowH / 2
+          );
+        }
+      }
+    );
+
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+
+  } else {
+
+    // ========================================
+    // 表がない場合 → 実践ポイントを表示
+    // ========================================
+    const actionX = W * .055;
+    const actionW = W * .89;
+
+    ctx.fillStyle =
+      'rgba(239,246,255,.98)';
+
+    roundRect(
+      ctx,
+      actionX,
+      bottomY,
+      actionW,
+      bottomH,
+      W * .012
+    );
+
+    ctx.fill();
+
+    ctx.strokeStyle = '#3B82F6';
+
+    ctx.lineWidth =
+      Math.max(
+        2,
+        Math.round(W * .0018)
+      );
+
+    roundRect(
+      ctx,
+      actionX,
+      bottomY,
+      actionW,
+      bottomH,
+      W * .012
+    );
+
+    ctx.stroke();
+
+    ctx.font =
+      `900 ${Math.round(W * .015)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#1D4ED8';
+
+    ctx.fillText(
+      '今日から実践すること',
+      actionX + W * .025,
+      bottomY + H * .055
+    );
+
+    ctx.font =
+      `700 ${Math.round(W * .013)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#1E3A8A';
+
+    let actionY =
+      bottomY + H * .105;
+
+    actionPoints.forEach(
+      point => {
+        const lines =
+          wrapText(
+            ctx,
+            '✓ ' + point,
+            actionW - W * .05
+          );
+
+        lines
+          .slice(0, 1)
+          .forEach(line => {
+            ctx.fillText(
+              line,
+              actionX + W * .025,
+              actionY
+            );
+
+            actionY += H * .038;
+          });
+      }
+    );
+  }
+
+
+  // ==========================================
+  // ⑤ 最下部：結論
+  // ==========================================
+  if (summary) {
+    const sumY = H * .88;
+
+    ctx.font =
+      `900 ${Math.round(W * .016)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = hue;
+
+    ctx.fillText(
+      'POINT',
+      padX,
+      sumY
+    );
+
+    ctx.font =
+      `900 ${Math.round(W * .018)}px "Zen Kaku Gothic New",sans-serif`;
+
+    ctx.fillStyle = '#0F172A';
+
+    const sumLines =
+      wrapText(
+        ctx,
+        summary,
+        W * .73
+      );
+
+    sumLines
+      .slice(0, 2)
+      .forEach((line, i) => {
+        ctx.fillText(
+          line,
+          padX + W * .085,
+          sumY + H * (.002 + i * .036)
+        );
+      });
+  }
+
+  ctx.restore();
+}
 
 
 // チャート分析・チャート＋ワンポイントでは
@@ -4127,6 +4873,7 @@ ctx.restore();
 if(
   postType !== 'chart_analysis' &&
   postType !== 'chart_point'
+  postType !== 'table_point'
 ){
   const g2=ctx.createLinearGradient(0,0,0,H);
   g2.addColorStop(0,`rgba(6,10,22,${dim*.75})`);
@@ -4136,11 +4883,18 @@ if(
   ctx.fillRect(0,0,W,H);
 }
   
-  if(postType==='table_point'||postType==='table_knowledge') drawTable(ctx,tableRows,W,H,hue);
+  if(
+  postType === 'table_knowledge'
+) {
+  drawTable(ctx, tableRows, W, H, hue);
+}
 
   if(avatarSrc){ try{ const av=await loadImage(avatarSrc); drawAvatarLoaded(ctx,av,W,H); }catch(e){} }
 
-  if (postType !== 'chart_point') {
+  if (
+  postType !== 'chart_point' &&
+  postType !== 'table_point'
+) {
 const pad = Math.round(W * .078);
 const maxW = W - pad * 2;
 
