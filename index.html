@@ -6113,10 +6113,82 @@ async function refreshXStatus(){
   try{const j=await xFetch('/api/x/accounts'); el.textContent=`接続済み ${j.accounts?.filter(a=>a.connected).length||0}件 / 登録 ${j.accounts?.length||0}件`;}
   catch(e){el.textContent='接続確認失敗';}
 }
-function connectXAccount(accountId){
-  const base=xBackendUrl(); if(!base){openSettings();toast('先にX APIバックエンドURLを設定してください','warn');return;}
-  const url=base+'/api/x/connect?accountId='+encodeURIComponent(accountId)+'&returnTo='+encodeURIComponent(location.href.split('#')[0]);
-  window.location.href=url;
+function connectXAccount(accountId) {
+
+  const base =
+    xBackendUrl();
+
+  if (!base) {
+    openSettings();
+
+    toast(
+      '先にX APIバックエンドURLを設定してください',
+      'warn'
+    );
+
+    return;
+  }
+
+  const acc =
+    getAcc(accountId);
+
+  if (!acc) {
+    toast(
+      '接続するアカウントが見つかりません',
+      'err'
+    );
+
+    return;
+  }
+
+  // Post Cockpit上の親子関係から判定
+  const parentAccountId =
+    String(
+      acc.parentId ||
+      acc.parentAccountId ||
+      ''
+    ).trim();
+
+  const role =
+    parentAccountId
+      ? 'child'
+      : 'main';
+
+  const params =
+    new URLSearchParams({
+      accountId:
+        String(acc.id),
+
+      role,
+
+      parentAccountId,
+
+      returnTo:
+        location.href.split('#')[0]
+    });
+
+  const url =
+    base +
+    '/api/x/oauth/start?' +
+    params.toString();
+
+  console.log(
+    '[X CONNECT START]',
+    {
+      accountId:
+        acc.id,
+
+      handle:
+        acc.handle,
+
+      role,
+
+      parentAccountId
+    }
+  );
+
+  window.location.href =
+    url;
 }
 async function executeXAction(d,act,opts={}){
   const c=getAcc(act.accountId); if(!c)return;
