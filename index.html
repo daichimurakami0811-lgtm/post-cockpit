@@ -5965,6 +5965,266 @@ async function executeXAction(d,act,opts={}){
   }
 }
 
+    function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+
+    reader.onerror = () => {
+      reject(
+        new Error(
+          '動画データの変換に失敗しました'
+        )
+      );
+    };
+
+    reader.readAsDataURL(blob);
+  });
+}
+
+  async function publishVideoSet(si) {
+
+  const s = state.vSets[si];
+
+  if (!s) return;
+
+  if (!xBackendUrl()) {
+    openSettings();
+
+    toast(
+      '先にX APIバックエンドURLを設定してください',
+      'warn'
+    );
+
+    return;
+  }
+
+  const text =
+    String(
+      s.postText || ''
+    ).trim();
+
+  if (!text) {
+    toast(
+      '投稿文章が空です',
+      'warn'
+    );
+
+    return;
+  }
+
+  // 動画を書き出していない場合
+  if (!s.videoBlob) {
+    toast(
+      '先に「動画で書き出す」を押してください',
+      'warn'
+    );
+
+    return;
+  }
+
+  if (s.status === 'sent') {
+    const quote =
+  parseTweetUrl(
+    s.quoteUrl || ''
+  );
+
+const confirmText =
+  [
+    `${s.acc.name}（${s.acc.handle}）から動画を投稿します。`,
+    '',
+    text,
+    '',
+    quote.ok
+      ? '引用投稿：あり'
+      : '引用投稿：なし',
+    '',
+    '投稿してよろしいですか？'
+  ].join('\n');
+
+if (
+  state.api.xRequireConfirm !== false &&
+  !confirm(confirmText)
+) {
+  return;
+}
+    toast(
+      'この動画はすでに投稿済みです',
+      'warn'
+    );
+
+    return;
+  }
+
+  const btn =
+    document.querySelector(
+      `[data-vpublish="${si}"]`
+    );
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '投稿中…';
+  }
+
+  try {
+
+    // -----------------------------
+    // 動画Blob → DataURL
+    // -----------------------------
+    const mediaDataUrl =
+      await blobToDataUrl(
+        s.videoBlob
+      );
+
+    // -----------------------------
+    // 引用Tweet
+    // -----------------------------
+  const quoteTweetId =
+      quote.ok
+        ? quote.id
+        : null;
+
+    console.log(
+      '[VIDEO X POST]',
+      {
+        accountId: s.acc.id,
+        handle: s.acc.handle,
+        textLength: text.length,
+        hasVideo: !!mediaDataUrl,
+        mime: s.videoMime,
+        quoteTweetId
+      }
+    );
+
+    // -----------------------------
+    // Xバックエンドへ送信
+    // -----------------------------
+    const j =
+      await xFetch(
+        '/api/x/post',
+        {
+          method: 'POST',
+
+          body: JSON.stringify({
+            accountId:
+              s.acc.id,
+
+            accountHandle:
+              s.acc.handle,
+
+            text,
+
+            quoteTweetId,
+
+            mediaDataUrl,
+
+            mediaMime:
+              s.videoMime ||
+              'video/mp4',
+
+            mediaType:
+              'video'
+          })
+        }
+      );
+
+    const tid =
+      j?.result?.data?.id ||
+      j?.data?.id;
+
+    if (!tid) {
+      throw new Error(
+        'XからPost IDを取得できませんでした'
+      );
+    }
+
+    s.status =
+      'sent';
+
+    s.xTweetId =
+      String(tid);
+
+    s.recordedUrl =
+      `https://x.com/${String(
+        s.acc.handle
+      ).replace('@','')}/status/${tid}`;
+
+    // 履歴にも記録
+    recordPost({
+      accountId:
+        s.acc.id,
+
+      handle:
+        s.acc.handle,
+
+      tweetId:
+        String(tid),
+
+      text,
+
+      source:
+        'video_api'
+    });
+
+    renderVCards();
+
+    toast(
+      `${s.acc.name} の動画をXへ投稿しました`,
+      'ok'
+    );
+
+    log(
+      `${s.acc.name} の動画をX APIで公開：${tid}`,
+      'ok'
+    );
+
+  } catch (e) {
+
+    console.error(
+      '[VIDEO X POST ERROR]',
+      {
+        message:
+          e?.message ||
+          String(e),
+
+        stack:
+          e?.stack ||
+          null
+      }
+    );
+
+    toast(
+      '動画投稿に失敗：' +
+      (
+        e?.message ||
+        String(e)
+      ),
+      'err'
+    );
+
+  } finally {
+
+    const currentBtn =
+      document.querySelector(
+        `[data-vpublish="${si}"]`
+      );
+
+    if (currentBtn) {
+
+      currentBtn.disabled =
+        s.status === 'sent';
+
+      currentBtn.textContent =
+        s.status === 'sent'
+          ? '投稿済み'
+          : 'Xへ投稿';
+    }
+  }
+}
+
 async function publishDraft(d){
   if(!d)return;
   if(!xBackendUrl()){openSettings();toast('先にX APIバックエンドURLを設定してください','warn');return;}
@@ -7768,6 +8028,19 @@ function renderVCards(){
     s.frames.forEach((f,i)=>setTimeout(()=>download(f,`${s.acc.handle.replace('@','')}_slide${i+1}.jpg`),i*260));
     toast(`${s.frames.length} 枚を保存します`);
   });
+  $$('#vCards [data-vpublish]').forEach(b => {
+
+  b.onclick = async () => {
+
+    const si =
+      +b.dataset.vpublish;
+
+    await publishVideoSet(
+      si
+    );
+  };
+
+});
   $$('#vCards [data-vmp4]').forEach(b=>b.onclick=async()=>{
     const s=state.vSets[+b.dataset.vmp4];
     b.disabled=true; b.textContent='書き出し中…';
