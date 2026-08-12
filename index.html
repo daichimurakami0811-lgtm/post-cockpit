@@ -1226,7 +1226,111 @@ function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.g
 function growthEditedText(i){const el=document.querySelector(`[data-growth-text="${i}"]`);return el?el.value.trim():''}
 function addGrowthSchedule(text){const id=$('#growthAccount').value,acc=getAcc(id),plan=growthPlan(acc);if(!text)return;const now=new Date(),[hh,mm]=plan.time.split(':').map(Number);const at=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm);if(at<now)at.setDate(at.getDate()+1);state.growth.schedules.unshift({id:'g'+Date.now().toString(36),accountId:id,handle:acc.handle,text,scheduledAt:at.toISOString(),status:'scheduled'});saveGrowth();renderGrowthSchedule();toast('育成スケジュールに追加しました')}
 function renderGrowthSchedule(){const list=state.growth.schedules.slice().sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));$('#growthScheduleCount').textContent=`${list.length}件`;$('#growthSchedule').innerHTML=list.length?list.slice(0,30).map(x=>{const a=getAcc(x.accountId);return `<div class="glass-sub p-3 flex flex-wrap gap-3 items-start"><div class="min-w-0 flex-1"><div class="flex gap-2 items-center"><b class="text-[12px]">${esc(a?.name||x.handle)}</b><span class="tag text-ink-dim">${x.status==='posted'?'投稿済み':'予約'}</span><span class="tag text-ink-dim">${new Date(x.scheduledAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div><div class="text-[12px] leading-relaxed mt-1">${esc(x.text)}</div></div>${x.status!=='posted'?`<div class="flex gap-1.5"><button data-growth-schedule-post="${x.id}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">投稿</button><button data-growth-schedule-open="${x.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">開く</button></div>`:''}</div>`}).join(''):'<div class="text-[12px] text-ink-dim">予約はまだありません。</div>'}
-async function growthPost(accountId,text,scheduleId){const acc=getAcc(accountId);if(!acc||!text)return;if(!state.api.xBackendUrl){growthOpen(text);return}if(state.api.xRequireConfirm!==false&&!confirm(`${acc.name}（${acc.handle}）からXへ投稿します。\n\n${text}\n\n投稿してよろしいですか？`))return;try{await xFetch('/api/x/action',{method:'POST',body:JSON.stringify({accountId:acc.id,action:'post',text})});if(scheduleId){const x=state.growth.schedules.find(x=>x.id===scheduleId);if(x)x.status='posted'}saveGrowth();renderGrowthSchedule();toast('Xへの投稿が完了しました');log(`${acc.name}の育成投稿をXへ送信`,'ok')}catch(e){toast('X投稿に失敗：'+e.message,'err');log(`${acc.name}の育成投稿失敗：${e.message}`,'err')}}
+async function growthPost(
+  accountId,
+  text,
+  scheduleId
+) {
+
+  const acc =
+    getAcc(accountId);
+
+  if (!acc || !text) {
+    return;
+  }
+
+  if (!xBackendUrl()) {
+    growthOpen(text);
+    return;
+  }
+
+  if (
+    state.api.xRequireConfirm !== false &&
+    !confirm(
+      `${acc.name}（${acc.handle}）からXへ投稿します。\n\n${text}\n\n投稿してよろしいですか？`
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    const j =
+      await xFetch(
+        '/api/x/post',
+        {
+          method: 'POST',
+
+          body:
+            JSON.stringify({
+              accountId:
+                acc.id,
+
+              accountHandle:
+                acc.handle,
+
+              text
+            })
+        }
+      );
+
+    const tid =
+      j?.result?.data?.id ||
+      j?.data?.id ||
+      null;
+
+    if (scheduleId) {
+
+      const x =
+        state.growth.schedules.find(
+          x =>
+            x.id === scheduleId
+        );
+
+      if (x) {
+        x.status =
+          'posted';
+
+        if (tid) {
+          x.tweetId =
+            String(tid);
+        }
+      }
+    }
+
+    saveGrowth();
+
+    renderGrowthSchedule();
+
+    toast(
+      'Xへの投稿が完了しました',
+      'ok'
+    );
+
+    log(
+      `${acc.name}の育成投稿をXへ送信`,
+      'ok'
+    );
+
+  } catch (e) {
+
+    console.error(
+      '[GROWTH X POST ERROR]',
+      e
+    );
+
+    toast(
+      'X投稿に失敗：' +
+      e.message,
+      'err'
+    );
+
+    log(
+      `${acc.name}の育成投稿失敗：${e.message}`,
+      'err'
+    );
+  }
+}
 function growthOpen(text){const u='https://x.com/intent/post?text='+encodeURIComponent(text);window.open(u,'_blank','noopener');copyText(text)}
 $('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCandidates()});$('#growthGenerate').onclick=generateGrowthCandidates;
 $('#growthSavePlan').onclick=()=>{const id=$('#growthAccount').value;if(!id)return;const themes=$$('#growthThemes [data-growth-theme]:checked').map(x=>x.dataset.growthTheme);state.growth.plans[id]={themes:themes.length?themes:['daily'],dailyCount:+$('#growthDailyCount').value,time:$('#growthTime').value};saveGrowth();renderGrowth();toast('育成設定を保存しました');log('育成設定を更新','act')};
