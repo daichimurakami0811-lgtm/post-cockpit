@@ -6401,6 +6401,7 @@ function openQuotePicker(i){
   renderQuoteList();
   $('#quoteModal').classList.remove('hidden');
 }
+  
 function closeQuotePicker(){ $('#quoteModal').classList.add('hidden'); qmTarget=null; }
 function renderQuoteList(){
   if(qmTarget===null) return;
@@ -6435,6 +6436,158 @@ $('#qmManualUse').onclick=()=>{
   if(!r.ok){ msg.textContent=r.reason||'URLを入れてください'; msg.style.color='#B91C1C'; return; }
   applyQuote(r.url);
 };
+
+  let videoQuoteTargetIndex = null;
+
+function openVideoQuotePicker(si) {
+
+  const s = state.vSets[si];
+
+  if (!s) return;
+
+  videoQuoteTargetIndex = si;
+
+  const history =
+    historyFor(s.acc.id);
+
+  if (!history.length) {
+    toast(
+      'このアカウントには引用できる投稿履歴がありません',
+      'warn'
+    );
+    return;
+  }
+
+  // 既存の引用ピッカーを動画でも使えるよう
+  // 一時的なdraft形式を作る
+  const tempDraft = {
+    acc: s.acc,
+    quoteUrl: s.quoteUrl || ''
+  };
+
+  // 通常投稿用pickerを直接流用できないため
+  // 動画専用の簡易選択UIを作る
+  const items = history
+    .slice()
+    .reverse()
+    .slice(0, 30);
+
+  const html = items.map((h, i) => {
+
+    const url =
+      h.url ||
+      (
+        h.tweetId
+          ? `https://x.com/${String(s.acc.handle || '').replace('@','')}/status/${h.tweetId}`
+          : ''
+      );
+
+    return `
+      <button
+        data-vqpick="${i}"
+        data-vqurl="${esc(url)}"
+        class="w-full text-left glass-sub p-3 rounded-xl mb-2 hover:opacity-80"
+      >
+        <div class="text-[11px] font-mono text-ink-dim">
+          ${esc(url)}
+        </div>
+
+        <div class="text-[12.5px] mt-1 leading-relaxed">
+          ${esc(String(h.text || '').slice(0, 160))}
+        </div>
+      </button>
+    `;
+  }).join('');
+
+  const wrap =
+    document.createElement('div');
+
+  wrap.id =
+    'videoQuotePickerOverlay';
+
+  wrap.className =
+    'fixed inset-0 z-[9999] bg-black/40 grid place-items-center p-4';
+
+  wrap.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-auto p-5">
+
+      <div class="flex items-center gap-3 mb-4">
+
+        <div class="font-bold text-[14px]">
+          引用する過去投稿を選択
+        </div>
+
+        <button
+          data-vqclose
+          class="btn-ghost ml-auto px-3 py-1.5 rounded-lg text-[12px]"
+        >
+          閉じる
+        </button>
+
+      </div>
+
+      ${items.length
+        ? items.map((h, i) => {
+
+            const url =
+              h.url ||
+              (
+                h.tweetId
+                  ? `https://x.com/${String(s.acc.handle || '').replace('@','')}/status/${h.tweetId}`
+                  : ''
+              );
+
+            return `
+              <button
+                data-vqpick="${i}"
+                data-vqurl="${esc(url)}"
+                class="w-full text-left glass-sub p-3 rounded-xl mb-2"
+              >
+                <div class="text-[11px] font-mono text-ink-dim">
+                  ${esc(url)}
+                </div>
+
+                <div class="text-[12.5px] mt-1 leading-relaxed">
+                  ${esc(String(h.text || '').slice(0,160))}
+                </div>
+
+              </button>
+            `;
+          }).join('')
+        : '<div class="tag">履歴がありません</div>'}
+
+    </div>
+  `;
+
+  document.body.appendChild(wrap);
+
+  wrap
+    .querySelector('[data-vqclose]')
+    .onclick = () => {
+      wrap.remove();
+    };
+
+  wrap
+    .querySelectorAll('[data-vqpick]')
+    .forEach(b => {
+
+      b.onclick = () => {
+
+        s.quoteUrl =
+          b.dataset.vqurl || '';
+
+        wrap.remove();
+
+        renderVCards();
+
+        toast(
+          '引用する投稿を設定しました'
+        );
+      };
+
+    });
+
+}
 
 /* ============================================================
    10. アカウント選択（タブ1 / タブ2）
@@ -7402,6 +7555,8 @@ const frames=[];
   ownBg: !!state.accountBg[acc.id],
 
   postText,
+  quoteUrl: '',
+
   videoBlob: null,
   videoMime: '',
   videoExt: '',
@@ -7518,19 +7673,64 @@ function renderVCards(){
   </div>
 
   <textarea
-    data-vposttext="${si}"
-    class="inp w-full min-h-[150px] resize-y text-[12.5px] leading-relaxed"
-    placeholder="動画投稿用の文章"
-  >${esc(s.postText || '')}</textarea>
+  data-vposttext="${si}"
+  class="inp w-full min-h-[150px] resize-y text-[12.5px] leading-relaxed"
+  placeholder="動画投稿用の文章"
+>${esc(s.postText || '')}</textarea>
 
-  <div class="flex flex-wrap gap-2 mt-3">
+<details class="mt-4 pt-4 border-t border-hair" ${s.quoteUrl ? 'open' : ''}>
 
-    <button
-      data-vpublish="${si}"
-      class="btn-primary px-4 py-2 rounded-lg text-[12px] font-bold"
-    >
-      Xへ投稿
-    </button>
+  <summary class="cursor-pointer select-none text-[12.5px] font-bold text-ink-700 flex items-center gap-2">
+
+    自分の過去投稿を引用
+
+    <span class="tag px-2 py-0.5 rounded-full glass-sub text-ink-dim">
+      このアカウントの履歴 ${historyFor(s.acc.id).length} 件
+    </span>
+
+  </summary>
+
+  <div class="mt-3">
+
+    <div class="flex items-center gap-2">
+
+      <button
+        data-vqopen="${si}"
+        class="btn-ghost text-[11px] px-2.5 py-1 rounded-lg"
+      >
+        履歴から選ぶ
+      </button>
+
+      ${s.quoteUrl ? `
+        <button
+          data-vqclear="${si}"
+          class="btn-ghost text-[11px] px-2.5 py-1 rounded-lg"
+        >
+          引用を外す
+        </button>
+      ` : ''}
+
+    </div>
+
+    ${s.quoteUrl ? `
+      <div class="tag mt-2 text-ink-dim">
+        引用設定済み
+      </div>
+    ` : ''}
+
+  </div>
+
+</details>
+
+
+<div class="flex flex-wrap gap-2 mt-3">
+
+  <button
+    data-vpublish="${si}"
+    class="btn-primary px-4 py-2 rounded-lg text-[12px] font-bold"
+  >
+    Xへ投稿
+  </button>
 
     <span class="tag text-ink-dim">
       動画＋投稿文章
@@ -7654,6 +7854,39 @@ toast(
         '投稿文を作り直す';
     }
   };
+});
+  $$('#vCards [data-vqopen]').forEach(b => {
+
+  b.onclick = () => {
+    openVideoQuotePicker(
+      +b.dataset.vqopen
+    );
+  };
+
+});
+
+
+$$('#vCards [data-vqclear]').forEach(b => {
+
+  b.onclick = () => {
+
+    const si =
+      +b.dataset.vqclear;
+
+    const s =
+      state.vSets[si];
+
+    if (!s) return;
+
+    s.quoteUrl = '';
+
+    renderVCards();
+
+    toast(
+      '引用を外しました'
+    );
+  };
+
 });
   $$('#vCards [data-tapply]').forEach(b => b.onclick = async () => {
 
