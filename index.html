@@ -6214,28 +6214,73 @@ function renderLane(){
         <input type="time" data-time="${i}" value="${fmtTime(d.at)}" ${sent?'disabled':''} class="ml-auto bg-white border border-hair rounded-lg px-2 py-1 font-mono text-[12px]">
       </div>
 
-      ${showImageArea?`
+      ${showImageArea ? `
 <div class="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-hair">
-        ${d.image?`<img src="${d.image}" class="w-28 h-16 object-cover rounded-lg border border-hair">
-          <div class="min-w-0"><div class="text-[12px] font-bold">ブランド版の画像</div>
-            <div class="tag text-ink-dim">元画像に識別色と見出しを合成</div></div>
-          <div class="ml-auto flex gap-2 shrink-0">
-            <button data-imgdl="${i}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">保存</button>
-            <button data-img="${i}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">作り直す</button></div>`
-        :${`<span class="tag text-ink-dim">
+
   ${
-    d.postType === 'table_point'
-      ? '文章から教材画像を生成'
-      : state.media.length
-        ? '元画像あり'
-        : '背景あり（タブ②の選択中の背景を使用）'
+    d.image
+      ? `
+        <img
+          src="${d.image}"
+          class="w-28 h-16 object-cover rounded-lg border border-hair"
+        >
+
+        <div class="min-w-0">
+          <div class="text-[12px] font-bold">
+            ブランド版の画像
+          </div>
+
+          <div class="tag text-ink-dim">
+            ${
+              d.postType === 'table_point'
+                ? '文章から生成した教材画像'
+                : d.postType === 'market_progress'
+                  ? '相場進捗画像'
+                  : '元画像に識別色と見出しを合成'
+            }
+          </div>
+        </div>
+
+        <div class="ml-auto flex gap-2 shrink-0">
+          <button
+            data-imgdl="${i}"
+            class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg"
+          >
+            保存
+          </button>
+
+          <button
+            data-img="${i}"
+            class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg"
+          >
+            作り直す
+          </button>
+        </div>
+      `
+      : `
+        <span class="tag text-ink-dim">
+          ${
+            d.postType === 'table_point'
+              ? '文章から教材画像を生成'
+              : d.postType === 'market_progress'
+                ? '元チャートから相場進捗画像を生成'
+                : state.media.length
+                  ? '元画像あり'
+                  : '背景あり（タブ②の選択中の背景を使用）'
+          }
+        </span>
+
+        <button
+          data-img="${i}"
+          class="btn-ghost ml-auto text-[11.5px] px-3 py-1.5 rounded-lg"
+        >
+          この垢用の画像を合成
+        </button>
+      `
   }
-</span>
-<button data-img="${i}" class="btn-ghost ml-auto text-[11.5px] px-3 py-1.5 rounded-lg">
-  この垢用の画像を合成
-</button>`}
-          <button data-img="${i}" class="btn-ghost ml-auto text-[11.5px] px-3 py-1.5 rounded-lg">この垢用の画像を合成</button>`}
-      </div>`:''}
+
+</div>
+` : ''}
 
       <details class="mt-4 pt-4 border-t border-hair" ${linkState(d).count?'open':''}>
         <summary class="cursor-pointer select-none text-[12.5px] font-bold text-ink-700 flex items-center gap-2">自分の過去投稿を引用
