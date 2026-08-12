@@ -6531,7 +6531,10 @@ console.log(
   })
 );
     d.image=await composeFrame({
-  bgSrc:src,
+  bgSrc:
+  pt === 'table_point'
+    ? null
+    : src,
   W:1200,
   H:675,
   hue:d.acc.hue,
