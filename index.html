@@ -5554,16 +5554,17 @@ async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
     { type: mime }
   );
 
-const url =
-  URL.createObjectURL(blob);
+const blob =
+  new Blob(
+    chunks,
+    { type: mime }
+  );
 
-download(
-  url,
-  `${filename}.${ext}`
-);
-
-setTimeout(
-  () => URL.revokeObjectURL(url),
+return {
+  ext,
+  mime,
+  blob
+}; => URL.revokeObjectURL(url),
   4000
 );
 
@@ -6016,15 +6017,26 @@ async function executeXAction(d,act,opts={}){
     return;
   }
 
+
   // 動画を書き出していない場合
   if (!s.videoBlob) {
     toast(
-      '先に「動画で書き出す」を押してください',
+      '先に「投稿用動画を生成」を押してください',
       'warn'
     );
 
     return;
   }
+
+     const quote =
+  parseTweetUrl(
+    s.quoteUrl || ''
+  );
+
+const quoteTweetId =
+  quote.ok
+    ? quote.id
+    : null;
 
   if (s.status === 'sent') {
     const quote =
@@ -6078,14 +6090,6 @@ if (
       await blobToDataUrl(
         s.videoBlob
       );
-
-    // -----------------------------
-    // 引用Tweet
-    // -----------------------------
-  const quoteTweetId =
-      quote.ok
-        ? quote.id
-        : null;
 
     console.log(
       '[VIDEO X POST]',
@@ -7910,7 +7914,7 @@ function renderVCards(){
             : ''}
           <button data-vjson="${si}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">JSONをコピー</button>
           <button data-vpng="${si}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">PNGで保存</button>
-          <button data-vmp4="${si}" class="btn-primary text-[11.5px] px-3.5 py-1.5 rounded-lg font-bold">動画で書き出す</button></div>
+          <button data-vmp4="${si}" class="btn-primary text-[11.5px] px-3.5 py-1.5 rounded-lg font-bold">投稿用動画を生成</button></div>
       </div>
       <div class="flex gap-3 overflow-x-auto pb-2">
         ${s.frames.map((f,fi)=>`<div class="shrink-0" style="width:${s.H>s.W?'132px':'236px'}">
@@ -8065,7 +8069,7 @@ toast(
   'ok'
 );
     }catch(e){ toast('動画の書き出しに失敗：'+e.message,'err'); }
-    b.disabled=false; b.textContent='動画で書き出す';
+    b.disabled=false; b.textContent='投稿用動画を生成';
   });
   $$('#vCards [data-vposttext]').forEach(el => {
   el.oninput = () => {
