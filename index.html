@@ -585,18 +585,107 @@ tailwind.config={theme:{extend:{
 
 </div>
 
-      <div class="pt-4 mt-1 border-t border-hair">
-        <div class="eyebrow mb-1">チャート・画像スタイル</div>
-        <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">アカウントごとに、水平線・トレンドラインなどの描画スタイルを固定できます。市場価格の正確な分析線ではなく、投稿画像のビジュアルテンプレートとして使用します。</p>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">チャート要素</div><select id="fChartStyle" class="inp"><option value="none">なし</option><option value="horizontal">水平線中心</option><option value="trend">トレンドライン中心</option><option value="both">水平線＋トレンドライン</option></select></label>
-          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">ライン密度</div><select id="fChartDensity" class="inp"><option value="light">控えめ</option><option value="standard">標準</option><option value="strong">強め</option></select></label>
+      <div id="mainOnlyChartSettings">
+
+  <div class="pt-4 mt-1 border-t border-hair">
+    <div class="eyebrow mb-1">
+      チャート・画像スタイル
+    </div>
+
+    <p class="text-[11.5px] text-ink-dim leading-relaxed mb-4">
+      アカウントごとに、水平線・トレンドラインなどの描画スタイルを固定できます。市場価格の正確な分析線ではなく、投稿画像のビジュアルテンプレートとして使用します。
+    </p>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+
+      <label class="block">
+        <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+          チャート要素
         </div>
-        <div class="grid sm:grid-cols-2 gap-4 mt-3">
-          <label class="block"><div class="text-[12px] font-bold text-ink-700 mb-1.5">ライン色</div><input id="fChartColor" type="color" value="#FFFFFF" class="w-16 h-10 rounded-lg border border-hair bg-white cursor-pointer"></label>
-          <label class="flex items-center gap-2 text-[12px] text-ink-700 mt-6"><input id="fChartGlow" type="checkbox" class="w-3.5 h-3.5" checked>ラインに軽い発光を付ける</label>
+
+        <select
+          id="fChartStyle"
+          class="inp"
+        >
+          <option value="none">
+            なし
+          </option>
+
+          <option value="horizontal">
+            水平線中心
+          </option>
+
+          <option value="trend">
+            トレンドライン中心
+          </option>
+
+          <option value="both">
+            水平線＋トレンドライン
+          </option>
+        </select>
+      </label>
+
+
+      <label class="block">
+        <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+          ライン密度
         </div>
-      </div>
+
+        <select
+          id="fChartDensity"
+          class="inp"
+        >
+          <option value="light">
+            控えめ
+          </option>
+
+          <option value="standard">
+            標準
+          </option>
+
+          <option value="strong">
+            強め
+          </option>
+        </select>
+      </label>
+
+    </div>
+
+
+    <div class="grid sm:grid-cols-2 gap-4 mt-3">
+
+      <label class="block">
+        <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+          ライン色
+        </div>
+
+        <input
+          id="fChartColor"
+          type="color"
+          value="#FFFFFF"
+          class="w-16 h-10 rounded-lg border border-hair bg-white cursor-pointer"
+        >
+      </label>
+
+
+      <label class="flex items-center gap-2 text-[12px] text-ink-700 mt-6">
+
+        <input
+          id="fChartGlow"
+          type="checkbox"
+          class="w-3.5 h-3.5"
+          checked
+        >
+
+        ラインに軽い発光を付ける
+
+      </label>
+
+    </div>
+
+  </div>
+
+</div>
 
       <div class="pt-4 mt-1 border-t border-hair">
         <div class="eyebrow mb-1">ペルソナ設定</div>
@@ -7107,6 +7196,11 @@ function openModal(id,parentId=null){
       'hidden',
       isChildNow
     );
+    $('#mainOnlyChartSettings')
+  .classList.toggle(
+    'hidden',
+    isChildNow
+  );
 
 };
   $('#fNote').value=a?(a.note||''):''; $('#fActive').checked=a?a.active:true;
