@@ -6182,6 +6182,11 @@ function renderLane(){
   $('#laneMeta').textContent=state.drafts.length?`${state.drafts.length} アカウント / 最終 ${fmtTime(state.drafts[state.drafts.length-1].at)}`:'';
   $('#lane').innerHTML=state.drafts.map((d,i)=>{
     const a=d.acc,flags=riskFlags(d.text),sent=d.status==='sent';
+    const showImageArea =
+  d.postType === 'table_point' ||
+  d.postType === 'market_progress' ||
+  state.media.length > 0 ||
+  state.backgrounds.length > 0;
     const L=LENGTHS[a.length]||LENGTHS['標準'];
     const rows=L.max>900?20:(L.max>300?14:6);
     return `<article class="rise glass p-5">
@@ -6209,11 +6214,7 @@ function renderLane(){
         <input type="time" data-time="${i}" value="${fmtTime(d.at)}" ${sent?'disabled':''} class="ml-auto bg-white border border-hair rounded-lg px-2 py-1 font-mono text-[12px]">
       </div>
 
-      ${(
-  d.postType === 'table_point' ||
-  state.media.length ||
-  state.backgrounds.length
-)?`
+      ${showImageArea?`
 <div class="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-hair">
         ${d.image?`<img src="${d.image}" class="w-28 h-16 object-cover rounded-lg border border-hair">
           <div class="min-w-0"><div class="text-[12px] font-bold">ブランド版の画像</div>
