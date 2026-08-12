@@ -6113,7 +6113,7 @@ async function refreshXStatus(){
   try{const j=await xFetch('/api/x/accounts'); el.textContent=`接続済み ${j.accounts?.filter(a=>a.connected).length||0}件 / 登録 ${j.accounts?.length||0}件`;}
   catch(e){el.textContent='接続確認失敗';}
 }
-function connectXAccount(accountId) {
+async function connectXAccount(accountId) {
 
   const base =
     xBackendUrl();
@@ -6141,7 +6141,6 @@ function connectXAccount(accountId) {
     return;
   }
 
-  // Post Cockpit上の親子関係から判定
   const parentAccountId =
     String(
       acc.parentId ||
@@ -6161,34 +6160,85 @@ function connectXAccount(accountId) {
 
       role,
 
-      parentAccountId,
-
-      returnTo:
-        location.href.split('#')[0]
+      parentAccountId
     });
 
-  const url =
-    base +
-    '/api/x/oauth/start?' +
-    params.toString();
+  try {
 
-  console.log(
-    '[X CONNECT START]',
-    {
-      accountId:
-        acc.id,
+    const r =
+      await fetch(
+        base +
+        '/api/x/oauth/create-link?' +
+        params.toString()
+      );
 
-      handle:
-        acc.handle,
+    const j =
+      await r.json();
 
-      role,
-
-      parentAccountId
+    if (!r.ok || !j.authUrl) {
+      throw new Error(
+        j.error ||
+        'X認証URLの発行に失敗しました'
+      );
     }
-  );
 
-  window.location.href =
-    url;
+    const authUrl =
+      j.authUrl;
+
+    console.log(
+      '[X AUTH LINK]',
+      {
+        accountId:
+          acc.id,
+
+        handle:
+          acc.handle,
+
+        role,
+
+        parentAccountId
+      }
+    );
+
+    // クリップボードへコピー
+    await navigator.clipboard.writeText(
+      authUrl
+    );
+
+    // 確認用ダイアログ
+    alert(
+      [
+        'X認証URLをコピーしました。',
+        '',
+        `対象：${acc.handle || acc.name}`,
+        `種別：${role === 'child' ? '子アカウント' : 'メインアカウント'}`,
+        '',
+        'このアカウントを運用している',
+        'GoLoginプロファイルを開き、',
+        'コピーしたURLをアドレスバーに貼り付けて認証してください。'
+      ].join('\n')
+    );
+
+    toast(
+      'X認証URLをコピーしました'
+    );
+
+  } catch (e) {
+
+    console.error(
+      '[X AUTH LINK ERROR]',
+      e
+    );
+
+    toast(
+      'X認証URLの発行に失敗：' +
+      (
+        e?.message ||
+        String(e)
+      ),
+      'err'
+    );
+  }
 }
 async function executeXAction(d,act,opts={}){
   const c=getAcc(act.accountId); if(!c)return;
@@ -6646,7 +6696,7 @@ function renderAccounts(){
   data-xconnect="${a.id}"
   class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg"
 >
-  X接続
+  X認証URLを発行
 </button>
         <button data-addchild="${a.id}" ${allChildren.length>=10?'disabled':''} class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg font-bold">子を追加</button>
         <button data-x-connect="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">X連携</button>
