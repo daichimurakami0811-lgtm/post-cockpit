@@ -190,7 +190,20 @@ tailwind.config={theme:{extend:{
             <label class="cursor-pointer"><input type="radio" name="postType" value="table_knowledge" class="peer sr-only"><div class="glass-sub p-3 border border-transparent peer-checked:border-[color:var(--ac)] peer-checked:bg-[color:var(--ac)]/5 rounded-xl"><b class="text-[12px]">🧠 ノウハウ（表）</b><div class="tag text-ink-dim mt-1">知識・注意点を表形式</div></div></label>
           </div>
           <div class="grid sm:grid-cols-2 gap-3 mt-3">
-            <label class="block"><div class="text-[11.5px] font-bold text-ink-700 mb-1.5">方向矢印</div><select id="postDirection" class="inp"><option value="auto">本文から自動判定</option><option value="long">ロング（上方向）</option><option value="short">ショート（下方向）</option><option value="none">入れない</option></select></label>
+            <div id="directionSettings">
+  <label class="block">
+    <div class="text-[11.5px] font-bold text-ink-700 mb-1.5">
+      方向矢印
+    </div>
+
+    <select id="postDirection" class="inp">
+      <option value="auto">本文から自動判定</option>
+      <option value="long">ロング（上方向）</option>
+      <option value="short">ショート（下方向）</option>
+      <option value="none">入れない</option>
+    </select>
+  </label>
+</div>
             <label class="flex items-center gap-2 text-[11.5px] text-ink-700 mt-6"><input id="postAvatar" type="checkbox" checked class="w-3.5 h-3.5">プロフィール画像を画像内に表示する</label>
           </div>
           <p class="text-[10.5px] text-ink-dim mt-2">元チャートのローソク足や文字はAIに描き直させず、そのまま使います。ライン・矢印・プロフィール画像・文字だけを後から合成します。</p>
@@ -2286,6 +2299,27 @@ function drawArrow(ctx,x1,y1,x2,y2,color,width){
   ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
   ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6),y2-head*Math.sin(ang-Math.PI/6));ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6),y2-head*Math.sin(ang+Math.PI/6));ctx.closePath();ctx.fill();ctx.restore();
 }
+function syncPostTypeUI() {
+  const pt = selectedPostType();
+
+  const directionSettings =
+    document.getElementById('directionSettings');
+
+  if (!directionSettings) return;
+
+  // 方向矢印は「チャート分析」のときだけ表示
+  directionSettings.style.display =
+    pt === 'chart_analysis'
+      ? ''
+      : 'none';
+}
+  $$('input[name="postType"]').forEach(el => {
+  el.addEventListener('change', () => {
+    syncPostTypeUI();
+  });
+});
+
+  syncPostTypeUI();
 function drawAvatar(ctx,src,W,H){ if(!src)return; const img=new Image(); }
 function drawAvatarLoaded(ctx,img,W,H){
   const size=Math.round(Math.min(W,H)*.14);
