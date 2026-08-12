@@ -1981,6 +1981,75 @@ async function generateTelop(base,acc,slides){
   });
 }
 
+  async function generateVideoPostText(base, acc) {
+  const m = MARKETS[state.market];
+
+  const system = [
+    'あなたはX向けのFX・相場動画投稿を編集するSNSマーケターです。',
+    '',
+    '目的は、動画を見たくなる投稿文章を作ることです。',
+    '構成は「危機感 → 今見るべきポイント → 動画誘導」の3段構成にしてください。',
+    '',
+    '■ 冒頭',
+    '- 1〜2行で今回もっとも重要な相場判断を強く提示する。',
+    '- スクロールを止める強さは出す。',
+    '- 「かもしれない」の連発など弱すぎる表現は避ける。',
+    '- ただし「絶対」「確実」「100%」「必ず暴落」など過度な断定はしない。',
+    '',
+    '■ 中盤',
+    '- 現在の逆方向ポジションを検討している人が注意すべき理由を示す。',
+    '- 元文章にある価格、サポート、レジスタンス、テクニカル、ファンダメンタルだけを使う。',
+    '- 存在しない価格や材料を作らない。',
+    '- 「今すぐ損切りしろ」「絶対ショートしろ」など売買を強制しない。',
+    '- 代わりに「今は○○を確認」「ロングを急がず○○を見る」など具体的な確認行動を示す。',
+    '',
+    '■ 終盤',
+    '- 動画を見ることで何が分かるのかを明確にする。',
+    '- 「動画を見てください」だけで終わらない。',
+    '- 「次に見る価格帯を動画で解説」「今後のシナリオを整理」など価値を示す。',
+    '',
+    '■ 文体',
+    '- X向け。',
+    '- 適度な緊急感。',
+    '- 短い改行で読みやすくする。',
+    '- 自己紹介をしない。',
+    '- 「こんにちは」「○○です」「私は〜」から始めない。',
+    '- 絵文字は0〜2個。',
+    '- ハッシュタグは最後に2〜4個。',
+    '- 同じ定型文を毎回使わない。',
+    '- 利益保証をしない。',
+    '',
+    '投稿本文だけを返してください。'
+  ].join('\n');
+
+  const user = [
+    `【対象マーケット】${m.label}（${m.sym}）`,
+    '',
+    '【動画の元文章】',
+    base,
+    '',
+    '【アカウント】',
+    personaLines(acc).map(s => '- ' + s).join('\n'),
+    '',
+    `【推奨ハッシュタグ】${(m.tags || []).join(' ')}`
+  ].join('\n');
+
+  const { text } = await callClaude({
+    system,
+    messages: [{
+      role: 'user',
+      content: user
+    }],
+    max_tokens: 1000,
+    temperature: .7
+  });
+
+  return String(text || '')
+    .replace(/^```[a-z]*\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+}
+
 /* ---------- Vision ---------- */
 async function analyzeImage(media, strategyText = ""){
   const m = media.src.match(/^data:(.*?);base64,(.*)$/);
@@ -5435,11 +5504,30 @@ async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
     if(onProgress) onProgress(i+1,imgs.length);
   }
   rec.stop(); await doneP;
-  const blob=new Blob(chunks,{type:mime});
-  const url=URL.createObjectURL(blob);
-  download(url,`${filename}.${ext}`);
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
-  return ext;
+  const blob =
+  new Blob(
+    chunks,
+    { type: mime }
+  );
+
+const url =
+  URL.createObjectURL(blob);
+
+download(
+  url,
+  `${filename}.${ext}`
+);
+
+setTimeout(
+  () => URL.revokeObjectURL(url),
+  4000
+);
+
+return {
+  ext,
+  mime,
+  blob
+};
 }
 
 /* ============================================================
@@ -7232,8 +7320,20 @@ async function vGenerate(){
   for(const acc of accounts){
     try{
       const bgSrc=bgFor(acc);
-      const telop=await generateTelop(base,acc,slides);
-      const frames=[];
+      const telop =
+  await generateTelop(
+    base,
+    acc,
+    slides
+  );
+
+const postText =
+  await generateVideoPostText(
+    base,
+    acc
+  );
+
+const frames=[];
       for(let i=0;i<telop.length;i++){
   frames.push(
     await composeVideoTelopFrame({
@@ -7249,7 +7349,20 @@ async function vGenerate(){
     })
   );
 }
-      sets.push({acc,telop,frames,W,H,ownBg:!!state.accountBg[acc.id]});
+      sets.push({
+  acc,
+  telop,
+  frames,
+  W,
+  H,
+  ownBg: !!state.accountBg[acc.id],
+
+  postText,
+  videoBlob: null,
+  videoMime: '',
+  videoExt: '',
+  status: 'draft'
+});
       log(`${acc.name} のテロップ ${telop.length} 枚を合成`,'ok');
     }catch(e){ log(`${acc.name} のテロップ生成に失敗：${e.message}`,'err'); toast(`${acc.name}：${e.message}`,'err'); }
   }
@@ -7345,6 +7458,43 @@ function renderVCards(){
           <img src="${f}" class="w-full rounded-xl border border-hair shadow-sm">
           <div class="tag text-ink-dim mt-1.5 text-center">${fi+1} / ${s.frames.length}</div></div>`).join('')}
       </div>
+      <div class="mt-5 pt-4 border-t border-hair">
+
+  <div class="flex items-center gap-2 mb-2">
+    <div class="text-[12.5px] font-bold text-ink-700">
+      X投稿文章
+    </div>
+
+    <button
+      data-vpostregen="${si}"
+      class="btn-ghost ml-auto text-[11px] px-2.5 py-1 rounded-lg"
+    >
+      投稿文を作り直す
+    </button>
+  </div>
+
+  <textarea
+    data-vposttext="${si}"
+    class="inp w-full min-h-[150px] resize-y text-[12.5px] leading-relaxed"
+    placeholder="動画投稿用の文章"
+  >${esc(s.postText || '')}</textarea>
+
+  <div class="flex flex-wrap gap-2 mt-3">
+
+    <button
+      data-vpublish="${si}"
+      class="btn-primary px-4 py-2 rounded-lg text-[12px] font-bold"
+    >
+      Xへ投稿
+    </button>
+
+    <span class="tag text-ink-dim">
+      動画＋投稿文章
+    </span>
+
+  </div>
+
+</div>
       <details class="mt-4 pt-4 border-t border-hair">
         <summary class="cursor-pointer text-[12.5px] font-bold text-ink-700">テロップの文言を確認・修正</summary>
         <div class="mt-3 space-y-2.5">
@@ -7378,13 +7528,89 @@ function renderVCards(){
     const s=state.vSets[+b.dataset.vmp4];
     b.disabled=true; b.textContent='書き出し中…';
     try{
-      const ext=await exportVideo(s.frames,+$('#vSec').value/10,s.W,s.H,
+      const result =
+  await exportVideo(s.frames,+$('#vSec').value/10,s.W,s.H,
         `${s.acc.handle.replace('@','')}_${Date.now()}`,(d,t)=>{b.textContent=`書き出し中 ${d}/${t}`});
-      toast(`${ext.toUpperCase()} で書き出しました`);
-      log(`${s.acc.name} の動画を書き出し（${ext}）`,'ok');
+      s.videoBlob =
+  result.blob;
+
+s.videoMime =
+  result.mime;
+
+s.videoExt =
+  result.ext;
+
+toast(
+  `${result.ext.toUpperCase()} で書き出しました`
+);
+      log(
+  `${s.acc.name} の動画を書き出し（${result.ext}）`,
+  'ok'
+);
     }catch(e){ toast('動画の書き出しに失敗：'+e.message,'err'); }
     b.disabled=false; b.textContent='動画で書き出す';
   });
+  $$('#vCards [data-vposttext]').forEach(el => {
+  el.oninput = () => {
+    const si =
+      +el.dataset.vposttext;
+
+    const s =
+      state.vSets[si];
+
+    if (!s) return;
+
+    s.postText =
+      el.value;
+  };
+});
+  $$('#vCards [data-vpostregen]').forEach(b => {
+  b.onclick = async () => {
+    const si =
+      +b.dataset.vpostregen;
+
+    const s =
+      state.vSets[si];
+
+    if (!s) return;
+
+    b.disabled = true;
+    b.textContent = '生成中…';
+
+    try {
+
+      const base =
+        $('#vBaseText').value.trim() ||
+        $('#baseText').value.trim();
+
+      s.postText =
+        await generateVideoPostText(
+          base,
+          s.acc
+        );
+
+      renderVCards();
+
+      toast(
+        '動画投稿文を作り直しました'
+      );
+
+    } catch (e) {
+
+      toast(
+        '投稿文の生成に失敗：' +
+        (e?.message || String(e)),
+        'err'
+      );
+
+    } finally {
+
+      b.disabled = false;
+      b.textContent =
+        '投稿文を作り直す';
+    }
+  };
+});
   $$('#vCards [data-tapply]').forEach(b => b.onclick = async () => {
 
   const si = +b.dataset.tapply;
