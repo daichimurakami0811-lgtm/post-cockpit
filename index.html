@@ -423,6 +423,57 @@ tailwind.config={theme:{extend:{
         <div class="glass p-5 sm:p-6">
           <div class="eyebrow mb-2">account</div><select id="growthAccount" class="inp w-full"></select>
           <div id="growthAccountMeta" class="glass-sub p-3 mt-3 text-[11.5px] leading-relaxed text-ink-mute"></div>
+          <div class="mt-5 pt-5 border-t border-hair">
+
+  <div class="eyebrow mb-2">
+    X ACTION TEST
+  </div>
+
+  <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+    対象Post URL
+  </div>
+
+  <input
+    id="growthActionUrl"
+    class="inp w-full font-mono text-[11.5px]"
+    placeholder="https://x.com/xxxxx/status/123456789..."
+  >
+
+  <p class="text-[10.5px] text-ink-dim mt-1.5 leading-relaxed">
+    上で選択中の子アカウントから、このPostへアクションを実行します。
+  </p>
+
+  <div class="grid grid-cols-3 gap-2 mt-3">
+
+    <button
+      id="growthLikeBtn"
+      class="btn-ghost px-2 py-2 rounded-lg text-[11.5px] font-bold"
+    >
+      いいね
+    </button>
+
+    <button
+      id="growthRepostBtn"
+      class="btn-ghost px-2 py-2 rounded-lg text-[11.5px] font-bold"
+    >
+      リポスト
+    </button>
+
+    <button
+      id="growthBookmarkBtn"
+      class="btn-ghost px-2 py-2 rounded-lg text-[11.5px] font-bold"
+    >
+      保存
+    </button>
+
+  </div>
+
+  <div
+    id="growthActionResult"
+    class="tag text-ink-dim mt-3 hidden"
+  ></div>
+
+</div>
           <div class="eyebrow mt-5 mb-2">投稿テーマ</div><div id="growthThemes" class="grid grid-cols-2 gap-2"></div>
           <div class="flex items-center justify-between mt-4"><label class="text-[12px] text-ink-mute">1日の投稿数</label><select id="growthDailyCount" class="inp !w-24"><option value="1">1件</option><option value="2">2件</option><option value="3">3件</option></select></div>
           <div class="flex items-center justify-between mt-3"><label class="text-[12px] text-ink-mute">投稿時刻</label><input id="growthTime" type="time" value="20:00" class="inp !w-28"></div>
@@ -1584,6 +1635,186 @@ $('#growthSavePlan').onclick=()=>{const id=$('#growthAccount').value;if(!id)retu
 $('#growthExport').onclick=()=>downloadJSON(state.growth,`post-cockpit-growth-${new Date().toISOString().slice(0,10)}.json`);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-growth-schedule]');if(b){addGrowthSchedule(growthEditedText(+b.dataset.growthSchedule));return}const p=e.target.closest('[data-growth-post]');if(p){growthPost($('#growthAccount').value,growthEditedText(+p.dataset.growthPost));return}const o=e.target.closest('[data-growth-open]');if(o){growthOpen(growthEditedText(+o.dataset.growthOpen));return}const sp=e.target.closest('[data-growth-schedule-post]');if(sp){const x=state.growth.schedules.find(x=>x.id===sp.dataset.growthSchedulePost);if(x)growthPost(x.accountId,x.text,x.id);return}const so=e.target.closest('[data-growth-schedule-open]');if(so){const x=state.growth.schedules.find(x=>x.id===so.dataset.growthScheduleOpen);if(x)growthOpen(x.text)}});
 
+  async function growthRunAction(
+  action
+) {
+
+  const accountId =
+    $('#growthAccount').value;
+
+  const acc =
+    getAcc(accountId);
+
+  if (!acc) {
+    toast(
+      '子アカウントを選択してください',
+      'warn'
+    );
+    return;
+  }
+
+  const url =
+    String(
+      $('#growthActionUrl').value || ''
+    ).trim();
+
+  if (!url) {
+    toast(
+      '対象Post URLを入力してください',
+      'warn'
+    );
+    return;
+  }
+
+  const parsed =
+    parseTweetUrl(url);
+
+  if (!parsed.ok) {
+    toast(
+      '正しいXのPost URLを入力してください',
+      'warn'
+    );
+    return;
+  }
+
+  const labels = {
+    like: 'いいね',
+    repost: 'リポスト',
+    bookmark: '保存'
+  };
+
+  const label =
+    labels[action] || action;
+
+  if (
+    state.api.xRequireConfirm !== false &&
+    !confirm(
+      [
+        `${acc.name}（${acc.handle}）から`,
+        `「${label}」を実行します。`,
+        '',
+        url,
+        '',
+        '実行してよろしいですか？'
+      ].join('\n')
+    )
+  ) {
+    return;
+  }
+
+  const resultEl =
+    $('#growthActionResult');
+
+  if (resultEl) {
+    resultEl.classList.remove(
+      'hidden'
+    );
+
+    resultEl.textContent =
+      `${label} 実行中…`;
+  }
+
+  try {
+
+    console.log(
+      '[GROWTH ACTION]',
+      {
+        accountId:
+          acc.id,
+
+        handle:
+          acc.handle,
+
+        action,
+
+        tweetId:
+          parsed.id
+      }
+    );
+
+    const j =
+      await xFetch(
+        '/api/x/action',
+        {
+          method: 'POST',
+
+          body:
+            JSON.stringify({
+              accountId:
+                acc.id,
+
+              accountHandle:
+                acc.handle,
+
+              action,
+
+              tweetId:
+                parsed.id
+            })
+        }
+      );
+
+    if (resultEl) {
+      resultEl.textContent =
+        `✓ ${label} 完了`;
+    }
+
+    toast(
+      `${acc.name}から${label}しました`,
+      'ok'
+    );
+
+    log(
+      `${acc.name}：${label}を実行`,
+      'ok'
+    );
+
+    return j;
+
+  } catch (e) {
+
+    console.error(
+      '[GROWTH ACTION ERROR]',
+      {
+        action,
+        message:
+          e?.message ||
+          String(e),
+
+        stack:
+          e?.stack ||
+          null
+      }
+    );
+
+    if (resultEl) {
+      resultEl.textContent =
+        `失敗：${e.message}`;
+    }
+
+    toast(
+      `${label}に失敗：${e.message}`,
+      'err'
+    );
+  }
+}
+  $('#growthLikeBtn').onclick =
+  () =>
+    growthRunAction(
+      'like'
+    );
+
+$('#growthRepostBtn').onclick =
+  () =>
+    growthRunAction(
+      'repost'
+    );
+
+$('#growthBookmarkBtn').onclick =
+  () =>
+    growthRunAction(
+      'bookmark'
+    );
 
 const state={
   view:'main', tab:'image', market:'usdjpy',
