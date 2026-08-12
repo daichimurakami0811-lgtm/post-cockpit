@@ -5515,64 +5515,186 @@ async function composeVideoTelopFrame({
 }
   
 /* スライド群を1本の動画（WebM / 対応環境ならMP4）に書き出す */
-async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
-  if(typeof MediaRecorder==='undefined') throw new Error('このブラウザは動画の書き出しに対応していません');
-  const imgs=await Promise.all(frames.map(loadImage));
-  const c=document.createElement('canvas'); c.width=W; c.height=H;
-  const ctx=c.getContext('2d');
-  const stream=c.captureStream(30);
+async function exportVideo(
+  frames,
+  secPerSlide,
+  W,
+  H,
+  filename,
+  onProgress
+) {
+  if (typeof MediaRecorder === 'undefined') {
+    throw new Error(
+      'このブラウザは動画の書き出しに対応していません'
+    );
+  }
 
-  const types=['video/mp4;codecs=avc1.42E01E','video/webm;codecs=vp9','video/webm'];
-  const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
-  if(!mime) throw new Error('対応する動画形式が見つかりません');
-  const ext=mime.startsWith('video/mp4')?'mp4':'webm';
+  const imgs =
+    await Promise.all(
+      frames.map(loadImage)
+    );
 
-  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6_000_000});
-  const chunks=[];
-  rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
-  const doneP=new Promise(res=>{ rec.onstop=res; });
+  const c =
+    document.createElement('canvas');
+
+  c.width = W;
+  c.height = H;
+
+  const ctx =
+    c.getContext('2d');
+
+  const stream =
+    c.captureStream(30);
+
+  const types = [
+    'video/mp4;codecs=avc1.42E01E',
+    'video/webm;codecs=vp9',
+    'video/webm'
+  ];
+
+  const mime =
+    types.find(
+      t => MediaRecorder.isTypeSupported(t)
+    ) || '';
+
+  if (!mime) {
+    throw new Error(
+      '対応する動画形式が見つかりません'
+    );
+  }
+
+  const ext =
+    mime.startsWith('video/mp4')
+      ? 'mp4'
+      : 'webm';
+
+  const rec =
+    new MediaRecorder(
+      stream,
+      {
+        mimeType: mime,
+        videoBitsPerSecond: 6_000_000
+      }
+    );
+
+  const chunks = [];
+
+  rec.ondataavailable = e => {
+    if (e.data.size) {
+      chunks.push(e.data);
+    }
+  };
+
+  const doneP =
+    new Promise(res => {
+      rec.onstop = res;
+    });
+
   rec.start();
 
-  const FPS=30, fadeF=Math.round(FPS*.35);
-  const per=Math.round(FPS*secPerSlide);
-  for(let i=0;i<imgs.length;i++){
-    for(let f=0;f<per;f++){
-      ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  const FPS = 30;
+  const fadeF =
+    Math.round(FPS * .35);
+
+  const per =
+    Math.round(
+      FPS * secPerSlide
+    );
+
+  for (
+    let i = 0;
+    i < imgs.length;
+    i++
+  ) {
+
+    for (
+      let f = 0;
+      f < per;
+      f++
+    ) {
+
+      ctx.fillStyle = '#000';
+
+      ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+      );
+
       // ゆっくり寄る動き
-      const t=f/per, scale=1+t*0.04;
-      const w=W*scale,h=H*scale;
-      ctx.drawImage(imgs[i],(W-w)/2,(H-h)/2,w,h);
-      if(i>0&&f<fadeF){ ctx.globalAlpha=1-f/fadeF; ctx.drawImage(imgs[i-1],0,0,W,H); ctx.globalAlpha=1; }
-      await new Promise(r=>setTimeout(r,1000/FPS));
+      const t =
+        f / per;
+
+      const scale =
+        1 + t * 0.04;
+
+      const w =
+        W * scale;
+
+      const h =
+        H * scale;
+
+      ctx.drawImage(
+        imgs[i],
+        (W - w) / 2,
+        (H - h) / 2,
+        w,
+        h
+      );
+
+      if (
+        i > 0 &&
+        f < fadeF
+      ) {
+        ctx.globalAlpha =
+          1 - f / fadeF;
+
+        ctx.drawImage(
+          imgs[i - 1],
+          0,
+          0,
+          W,
+          H
+        );
+
+        ctx.globalAlpha = 1;
+      }
+
+      await new Promise(
+        r =>
+          setTimeout(
+            r,
+            1000 / FPS
+          )
+      );
     }
-    if(onProgress) onProgress(i+1,imgs.length);
+
+    if (onProgress) {
+      onProgress(
+        i + 1,
+        imgs.length
+      );
+    }
   }
-  rec.stop(); await doneP;
+
+  rec.stop();
+
+  await doneP;
+
   const blob =
-  new Blob(
-    chunks,
-    { type: mime }
-  );
+    new Blob(
+      chunks,
+      {
+        type: mime
+      }
+    );
 
-const blob =
-  new Blob(
-    chunks,
-    { type: mime }
-  );
-
-return {
-  ext,
-  mime,
-  blob
-}; => URL.revokeObjectURL(url),
-  4000
-);
-
-return {
-  ext,
-  mime,
-  blob
-};
+  return {
+    ext,
+    mime,
+    blob
+  };
 }
 
 /* ============================================================
