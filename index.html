@@ -7213,6 +7213,11 @@ function openModal(id,parentId=null){
     'hidden',
     isChildMode
   );
+  $('#mainOnlyChartSettings')
+  .classList.toggle(
+    'hidden',
+    isChildMode
+  );
   $('#pEmoji').innerHTML=EMOJI_MODES.map(v=>`<option ${a&&a.persona?.emoji===v?'selected':''}>${esc(v)}</option>`).join('');
   $('#archetypeBtns').innerHTML=Object.keys(ARCHETYPES).map(k=>
     `<button data-arch="${esc(k)}" class="chip px-3 py-1.5 text-[12px] font-medium">${esc(k)}</button>`).join('');
