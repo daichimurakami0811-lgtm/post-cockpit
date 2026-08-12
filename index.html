@@ -1928,6 +1928,9 @@ function telopSystemPrompt(){
     '■ キャラクター',
     '- 指定されたペルソナの一人称・口調・語尾を守る。',
     '- 語彙とリズムをそのキャラクターに合わせる。別のアカウントと同じ言い回しにしない。',
+    '- 自己紹介はしない。「〇〇です」「こんにちは、〇〇です」「私は〜」などから始めない。',
+　　'- 1枚目から相場の結論・重要ポイントに直接入る。',
+　　'- キャラクター性は語尾や言葉選びだけに反映し、名前を名乗らない。',
     '',
     '■ 守ること',
     '- 断定・利益保証にあたる語（必ず / 絶対 / 確実 / 保証 / 稼げる / 儲かる / ノーリスク / 100% / 誰でも）は使わない。',
@@ -1959,8 +1962,23 @@ async function generateTelop(base,acc,slides){
   try{ arr=await attempt(''); }
   catch(e){ if(e.message==='NO_KEY')throw e; arr=await attempt('前回の出力は解析できませんでした。JSON配列だけを出力してください。'); }
   if(!Array.isArray(arr)) throw new Error('想定した形式で返ってきませんでした');
-  return arr.filter(o=>o&&(o.lead||o.body)).slice(0,slides)
-    .map(o=>({lead:String(o.lead||'').trim(),body:String(o.body||'').trim()}));
+  return arr
+  .filter(o => o && (o.lead || o.body))
+  .slice(0, slides)
+  .map(o => {
+    let lead = String(o.lead || '').trim();
+    let body = String(o.body || '').trim();
+
+    body = body
+      .replace(/^みなさん[、,]\s*こんにちは[。！!]?\s*/,'')
+      .replace(/^こんにちは[。！!]?\s*/,'')
+      .replace(/^どうも[、,]?\s*/,'')
+      .replace(/^私は[^。]{0,20}です[。！!]?\s*/,'')
+      .replace(/^[^。]{1,20}です[。！!]?\s*/,'')
+      .trim();
+
+    return { lead, body };
+  });
 }
 
 /* ---------- Vision ---------- */
@@ -7367,46 +7385,75 @@ function renderVCards(){
     }catch(e){ toast('動画の書き出しに失敗：'+e.message,'err'); }
     b.disabled=false; b.textContent='動画で書き出す';
   });
-  $$('#vCards [data-tapply]').forEach(b=>b.onclick=async()=>{
-    const si=+b.dataset.tapply,s=state.vSets[si];
-    s.telop=s.telop.map((t,ti)=>({
-      lead:document.querySelector(`[data-tlead="${si}-${ti}"]`).value,
-      body:document.querySelector(`[data-tbody="${si}-${ti}"]`).value }));
-    b.disabled=true; b.textContent='合成中…';
-    const bgSrc=bgFor(s.acc);
-    s.frames=[];
-    for(let i=0;i<s.telop.length;i++){
-      s.frames.push(
-  await composeVideoTelopFrame({
-    bgSrc,
-    W,
-    H,
-    hue:s.acc.hue,
-    lead:s.telop[i].lead,
-    body:s.telop[i].body,
-    footer:s.acc.handle,
-    index:i,
-    total:s.telop.length
-  })
-);
-    }
-    renderVCards(); toast('合成し直しました');
-  });
-}
-$$('#vCards [data-vjson]');
-$('#vExportJson').onclick=()=>{
-  const p=buildDeliveryPayload({includeMedia:$('#expMedia').checked});
-  p.items=p.items.filter(i=>i.type==='video');
-  p.rows=[]; p.counts.posts=0;
-  downloadJSON(p,`delivery-videos-${new Date().toISOString().slice(0,10)}.json`); log('動画JSONを保存','act');
-};
-$('#vExportAll').onclick=()=>{
-  let n=0;
-  state.vSets.forEach(s=>s.frames.forEach((f,i)=>{
-    setTimeout(()=>download(f,`${s.acc.handle.replace('@','')}_slide${i+1}.jpg`),n*260); n++;
+  $$('#vCards [data-tapply]').forEach(b => b.onclick = async () => {
+
+  const si = +b.dataset.tapply;
+  const s = state.vSets[si];
+
+  s.telop = s.telop.map((t, ti) => ({
+    lead: document.querySelector(
+      `[data-tlead="${si}-${ti}"]`
+    ).value,
+
+    body: document.querySelector(
+      `[data-tbody="${si}-${ti}"]`
+    ).value
   }));
-  toast(`${n} 枚を順に保存します`);
-};
+
+  b.disabled = true;
+  b.textContent = '合成中…';
+
+  try {
+
+    const bgSrc = bgFor(s.acc);
+
+    s.frames = [];
+
+    for (let i = 0; i < s.telop.length; i++) {
+
+      s.frames.push(
+        await composeVideoTelopFrame({
+          bgSrc,
+
+          // ここが重要
+          W: s.W,
+          H: s.H,
+
+          hue: s.acc.hue,
+          lead: s.telop[i].lead,
+          body: s.telop[i].body,
+          footer: s.acc.handle,
+          index: i,
+          total: s.telop.length
+        })
+      );
+
+    }
+
+    renderVCards();
+    toast('合成し直しました');
+
+  } catch (e) {
+
+    console.error(
+      '[VIDEO RECOMPOSE ERROR]',
+      e
+    );
+
+    toast(
+      '再合成に失敗しました：' +
+      (e?.message || String(e)),
+      'err'
+    );
+
+  } finally {
+
+    b.disabled = false;
+    b.textContent = '修正を反映して合成し直す';
+
+  }
+
+});
 
 /* ============================================================
    13. 設定の復元と起動
