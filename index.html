@@ -6642,6 +6642,12 @@ function renderAccounts(){
           <div class="tag text-ink-dim mt-0.5">${esc(a.team)} ・ ${esc(a.voice)} ・ ${esc(a.stance)}</div></div>
         <span class="tag ml-auto text-ink-dim">子 ${allChildren.length} / 10</span>
         <label class="flex items-center gap-1.5 text-[11.5px] text-ink-mute cursor-pointer"><input type="checkbox" data-toggle="${a.id}" ${a.active?'checked':''} class="w-3.5 h-3.5">有効</label>
+        <button
+  data-xconnect="${a.id}"
+  class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg"
+>
+  X接続
+</button>
         <button data-addchild="${a.id}" ${allChildren.length>=10?'disabled':''} class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg font-bold">子を追加</button>
         <button data-x-connect="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">X連携</button>
         <button data-dup="${a.id}" class="btn-ghost text-[11.5px] px-2.5 py-1.5 rounded-lg">複製</button>
@@ -6678,6 +6684,13 @@ function renderAccounts(){
     if(!a.active){state.selected.delete(a.id);state.vSelected.delete(a.id)}
     saveAccounts(); renderAccounts(); renderPicker(); renderVPicker();
   });
+  $$('[data-xconnect]').forEach(b => {
+  b.onclick = () => {
+    connectXAccount(
+      b.dataset.xconnect
+    );
+  };
+});
   $$('#accountList [data-dup]').forEach(b=>b.onclick=()=>{
     const src=getAcc(b.dataset.dup); if(!src)return;
     const parent=src.parentId?getAcc(src.parentId):null;
