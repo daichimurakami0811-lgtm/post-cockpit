@@ -5008,7 +5008,8 @@ if (
 if(
   postType !== 'chart_analysis' &&
   postType !== 'chart_point' &&
-  postType !== 'table_point'
+  postType !== 'table_point' &&
+  postType !== 'market_progress'
 ){
   const g2=ctx.createLinearGradient(0,0,0,H);
   g2.addColorStop(0,`rgba(6,10,22,${dim*.75})`);
@@ -5028,7 +5029,8 @@ if(
 
   if (
   postType !== 'chart_point' &&
-  postType !== 'table_point'
+  postType !== 'table_point' &&
+  postType !== 'market_progress'
 ) {
 const pad = Math.round(W * .078);
 const maxW = W - pad * 2;
@@ -5147,7 +5149,9 @@ if (total > 1) {
     }
 
 // チャート分析では元チャートを優先し、外周ブランド枠は付けない。
-if (postType !== 'chart_analysis') {
+if (postType !== 'chart_analysis'&&
+  postType !== 'market_progress'
+   ) {
   ctx.strokeStyle = hue;
   ctx.lineWidth = Math.max(
     6,
