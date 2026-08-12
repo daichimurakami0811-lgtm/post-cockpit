@@ -2737,6 +2737,73 @@ async function analyzeTablePoint(generatedText = "") {
 
   return parseLooseJSON(raw.text);
 }
+
+  async function analyzeMarketProgress(
+  imageSource,
+  generatedText = ""
+) {
+  const prompt = [
+    "添付チャート画像と以下の投稿文をもとに、",
+    "X投稿用の『相場進捗』画像に必要な情報だけを抽出してください。",
+    "",
+    "目的:",
+    "- 元チャートをそのまま使う",
+    "- 現在注目している価格帯に矢印を1本だけ出す",
+    "- 長文BOXは使わない",
+    "- ラベルは短くする",
+    "",
+    "--- generated post ---",
+    String(generatedText || "").slice(0, 1800),
+    "--- end generated post ---",
+    "",
+    "必ずJSONのみ返してください。",
+    "",
+    "{",
+    '  "direction": "long_or_short_or_none",',
+    '  "label": "最大18文字程度の短い進捗コメント",',
+    '  "price": 4380,',
+    '  "y": 0.55',
+    "}",
+    "",
+    "ルール:",
+    "- direction は long / short / none のどれか。",
+    "- 投稿文の方向感とチャートの現在位置を両方見る。",
+    "- ロングなら上向き矢印、ショートなら下向き矢印。",
+    "- label は『押し目形成中』『高値更新を監視』『サポート反発』など短く。",
+    "- price は最も注目すべき現在地価格。取れなければ null。",
+    "- y は0〜1の相対位置。分からなければ0.55。",
+    "- 未来の値動きを予測する折れ線は作らない。",
+    "- JSONを完全に返す。"
+  ].join("\n");
+
+  const raw = await callClaude({
+    temperature: 0,
+    max_tokens: 900,
+    system:
+      "あなたはFXチャートの現在地を簡潔に整理するアナリストです。必ずJSONだけを返してください。",
+    messages: [{
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: await toClaudeImageSource(imageSource)
+        },
+        {
+          type: "text",
+          text: prompt
+        }
+      ]
+    }]
+  });
+
+  if (!raw.text || !String(raw.text).trim()) {
+    throw new Error(
+      "相場進捗の解析結果が返ってきませんでした"
+    );
+  }
+
+  return parseLooseJSON(raw.text);
+}
   
 async function composeFrame({
   bgSrc,
@@ -2754,6 +2821,7 @@ async function composeFrame({
   chartOverlay = null,
 chartPointData = null,
   tablePointData = null,
+  marketProgressData = null,
 postType = 'chart_analysis',
   direction = 'none',
   avatarSrc = '',
@@ -6629,6 +6697,26 @@ if (pt === 'table_point') {
     d.text
   );
 }
+
+let marketProgressData = null;
+
+if (pt === 'market_progress') {
+  marketProgressData =
+    await analyzeMarketProgress(
+      state.media[0] ||
+      state.backgrounds[state.bgIndex],
+      d.text
+    );
+}
+
+console.log(
+  '[MARKET PROGRESS DATA]',
+  {
+    pt,
+    hasData: !!marketProgressData,
+    data: marketProgressData
+  }
+);
     
     console.log(
   '[CHART POINT DATA]',
@@ -6688,6 +6776,7 @@ console.log(
   chartOverlay:state.vision?.chart,
   chartPointData:chartPointData,
   tablePointData: tablePointData,
+  marketProgressData:marketProgressData,
   avatarSrc:d.includeAvatar===false?'':d.acc.avatar,
   tableRows:d.tableRows||state.tableRows||[],
   footer:d.acc.handle,
