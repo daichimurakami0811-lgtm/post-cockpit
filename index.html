@@ -2742,6 +2742,22 @@ async function analyzeTablePoint(generatedText = "") {
   imageSource,
   generatedText = ""
 ) {
+      const src =
+    imageSource?.src ||
+    imageSource ||
+    '';
+
+  const m = String(src).match(
+    /^data:(.*?);base64,(.*)$/
+  );
+
+  if (!m) {
+    throw new Error(
+      '相場進捗用の画像を読み取れませんでした'
+    );
+  }
+
+  const [, mediaType, b64] = m;
   const prompt = [
     "添付チャート画像と以下の投稿文をもとに、",
     "X投稿用の『相場進捗』画像に必要な情報だけを抽出してください。",
@@ -2785,9 +2801,13 @@ async function analyzeTablePoint(generatedText = "") {
       role: "user",
       content: [
         {
-          type: "image",
-          source: await toClaudeImageSource(imageSource)
-        },
+  type: "image",
+  source: {
+    type: "base64",
+    media_type: mediaType,
+    data: b64
+  }
+},
         {
           type: "text",
           text: prompt
