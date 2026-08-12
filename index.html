@@ -6463,15 +6463,41 @@ function bindCard(){
 }
 
 async function buildCardImage(i){
-  const d=state.drafts[i];
-  const src=state.media[0]?.src||state.backgrounds[state.bgIndex]?.src;
-  if(!src){ toast('元画像をアップロードするか、タブ②で背景を作ってください','warn'); return; }
+  const d = state.drafts[i];
+
+  const pt =
+    d.postType ||
+    state.postType ||
+    selectedPostType();
+
+  const src =
+    state.media[0]?.src ||
+    state.backgrounds[state.bgIndex]?.src ||
+    null;
+
+  // チャート系だけ元画像必須
+  if (
+    !src &&
+    (
+      pt === 'chart_analysis' ||
+      pt === 'chart_point'
+    )
+  ) {
+    toast(
+      'チャート分析系では元画像をアップロードしてください',
+      'warn'
+    );
+    return;
+  }
   const btn=document.querySelector(`[data-img="${i}"]`);
   btn.disabled=true; btn.textContent='合成中…';
   try{
     const first=d.text.split('\n').map(s=>s.trim()).filter(Boolean)[0]||d.acc.name;
     const lead=(state.vision?.headline||first).replace(/[#＃]\S+/g,'').replace(/^[📌📊🌍⚠️🔀🧮■▼]\s*/,'').slice(0,20);
-    const pt=d.postType||state.postType||selectedPostType(); const dir=d.direction||state.postDirection||selectedDirection();
+    const dir =
+  d.direction ||
+  state.postDirection ||
+  selectedDirection();
     let chartPointData = null;
 
 if (pt === 'chart_point') {
