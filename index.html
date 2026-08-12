@@ -5168,6 +5168,220 @@ if (postType !== 'chart_analysis'&&
 
 return c.toDataURL('image/jpeg', .92);
 }
+
+  // ======================================================
+// タブ②専用：チャート下部に字幕スペースを作る
+// ======================================================
+async function composeVideoTelopFrame({
+  bgSrc,
+  W,
+  H,
+  hue,
+  lead = '',
+  body = '',
+  footer = '',
+  index = 0,
+  total = 1
+}) {
+  const c = document.createElement('canvas');
+
+  c.width = W;
+  c.height = H;
+
+  const ctx = c.getContext('2d');
+
+  // ------------------------------------------
+  // レイアウト
+  // ------------------------------------------
+  const captionH =
+    Math.round(H * .18);
+
+  const chartH =
+    H - captionH;
+
+  // 全体背景
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+  // ------------------------------------------
+  // 元チャート
+  // ------------------------------------------
+  if (bgSrc) {
+    const img =
+      await loadImage(bgSrc);
+
+    const iw =
+      img.naturalWidth ||
+      img.width;
+
+    const ih =
+      img.naturalHeight ||
+      img.height;
+
+    // チャートを切らずに上側へ収める
+    const scale =
+      Math.min(
+        W / iw,
+        chartH / ih
+      );
+
+    const dw =
+      iw * scale;
+
+    const dh =
+      ih * scale;
+
+    const dx =
+      (W - dw) / 2;
+
+    const dy =
+      (chartH - dh) / 2;
+
+    ctx.drawImage(
+      img,
+      dx,
+      dy,
+      dw,
+      dh
+    );
+  }
+
+  // ------------------------------------------
+  // チャートと字幕の境界線
+  // ------------------------------------------
+  ctx.fillStyle = '#E2E8F0';
+
+  ctx.fillRect(
+    0,
+    chartH,
+    W,
+    Math.max(
+      1,
+      Math.round(H * .002)
+    )
+  );
+
+  // ------------------------------------------
+  // 字幕文章
+  // lead + body を1つの短い文章として扱う
+  // ------------------------------------------
+  let caption =
+    [
+      String(lead || '').trim(),
+      String(body || '').trim()
+    ]
+      .filter(Boolean)
+      .join('　');
+
+  caption =
+    caption
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const padX =
+    Math.round(W * .06);
+
+  const maxTextW =
+    W - padX * 2;
+
+  // ------------------------------------------
+  // 文字サイズを自動調整
+  // ------------------------------------------
+  let fontSize =
+    Math.round(W * .027);
+
+  let lines = [];
+
+  while (
+    fontSize >= Math.round(W * .018)
+  ) {
+    ctx.font =
+      `800 ${fontSize}px "Zen Kaku Gothic New",sans-serif`;
+
+    lines =
+      wrapText(
+        ctx,
+        caption,
+        maxTextW
+      );
+
+    if (lines.length <= 2) {
+      break;
+    }
+
+    fontSize -= 2;
+  }
+
+  // それでも長い場合は2行だけ
+  lines =
+    lines.slice(0, 2);
+
+  const lineH =
+    fontSize * 1.42;
+
+  const totalTextH =
+    lines.length * lineH;
+
+  let textY =
+    chartH +
+    (
+      captionH -
+      totalTextH
+    ) / 2 +
+    fontSize;
+
+  ctx.font =
+    `800 ${fontSize}px "Zen Kaku Gothic New",sans-serif`;
+
+  ctx.fillStyle = '#0F172A';
+
+  ctx.textAlign = 'center';
+
+  ctx.textBaseline =
+    'alphabetic';
+
+  lines.forEach(line => {
+    ctx.fillText(
+      line,
+      W / 2,
+      textY
+    );
+
+    textY += lineH;
+  });
+
+  ctx.textAlign = 'start';
+
+  // ------------------------------------------
+  // ページ番号だけ小さく表示
+  // ------------------------------------------
+  if (total > 1) {
+    ctx.font =
+      `700 ${Math.round(W * .011)}px "JetBrains Mono",monospace`;
+
+    ctx.fillStyle = '#94A3B8';
+
+    ctx.textAlign = 'right';
+
+    ctx.fillText(
+      `${index + 1} / ${total}`,
+      W - W * .025,
+      H - H * .025
+    );
+
+    ctx.textAlign = 'start';
+  }
+
+  return c.toDataURL(
+    'image/jpeg',
+    .94
+  );
+}
   
 /* スライド群を1本の動画（WebM / 対応環境ならMP4）に書き出す */
 async function exportVideo(frames,secPerSlide,W,H,filename,onProgress){
@@ -7003,9 +7217,20 @@ async function vGenerate(){
       const telop=await generateTelop(base,acc,slides);
       const frames=[];
       for(let i=0;i<telop.length;i++){
-        frames.push(await composeFrame({bgSrc,W,H,hue:acc.hue,lead:telop[i].lead,body:telop[i].body,chart:acc.chart,
-          footer:acc.handle,index:i,total:telop.length}));
-      }
+  frames.push(
+    await composeVideoTelopFrame({
+      bgSrc,
+      W,
+      H,
+      hue:acc.hue,
+      lead:telop[i].lead,
+      body:telop[i].body,
+      footer:acc.handle,
+      index:i,
+      total:telop.length
+    })
+  );
+}
       sets.push({acc,telop,frames,W,H,ownBg:!!state.accountBg[acc.id]});
       log(`${acc.name} のテロップ ${telop.length} 枚を合成`,'ok');
     }catch(e){ log(`${acc.name} のテロップ生成に失敗：${e.message}`,'err'); toast(`${acc.name}：${e.message}`,'err'); }
@@ -7029,8 +7254,19 @@ $('#vRecomposeBtn').onclick=async()=>{
     const bgSrc=bgFor(s.acc);
     s.frames=[]; s.W=W; s.H=H; s.ownBg=!!state.accountBg[s.acc.id];
     for(let i=0;i<s.telop.length;i++){
-      s.frames.push(await composeFrame({bgSrc,W,H,hue:s.acc.hue,lead:s.telop[i].lead,body:s.telop[i].body,chart:s.acc.chart,chart:s.acc.chart,
-        footer:s.acc.handle,index:i,total:s.telop.length}));
+      s.frames.push(
+  await composeVideoTelopFrame({
+    bgSrc,
+    W,
+    H,
+    hue:s.acc.hue,
+    lead:s.telop[i].lead,
+    body:s.telop[i].body,
+    footer:s.acc.handle,
+    index:i,
+    total:s.telop.length
+  })
+);
     }
   }
   renderVCards(); btn.disabled=false; btn.textContent='背景だけ差し替える';
@@ -7140,8 +7376,19 @@ function renderVCards(){
     const bgSrc=bgFor(s.acc);
     s.frames=[];
     for(let i=0;i<s.telop.length;i++){
-      s.frames.push(await composeFrame({bgSrc,W:s.W,H:s.H,hue:s.acc.hue,
-        lead:s.telop[i].lead,body:s.telop[i].body,footer:s.acc.handle,index:i,total:s.telop.length}));
+      s.frames.push(
+  await composeVideoTelopFrame({
+    bgSrc,
+    W,
+    H,
+    hue:s.acc.hue,
+    lead:s.telop[i].lead,
+    body:s.telop[i].body,
+    footer:s.acc.handle,
+    index:i,
+    total:s.telop.length
+  })
+);
     }
     renderVCards(); toast('合成し直しました');
   });
