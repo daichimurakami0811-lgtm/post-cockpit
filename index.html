@@ -100,8 +100,7 @@ tailwind.config={theme:{extend:{
         <span class="text-[13px] font-bold">アカウント管理</span><span id="navAccCount" class="tag ml-auto text-ink-dim">0</span></button>
       <button data-view="growth" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
         <span class="w-4 text-center">🌱</span><span class="text-[13px] font-bold">アカウント育成</span><span id="navGrowthCount" class="tag ml-auto text-ink-dim">0</span></button>
-      <button data-view="monitor" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
-        <span class="w-4 text-center">🔔</span><span class="text-[13px] font-bold">新着監視デスク</span><span id="navMonitorCount" class="tag ml-auto text-ink-dim">0</span></button>
+      
       <button data-view="history" class="navitem w-full text-left px-3.5 py-2.5 flex items-center gap-2.5">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
         <span class="text-[13px] font-bold">投稿履歴</span><span id="navHistCount" class="tag ml-auto text-ink-dim">0</span></button>
@@ -623,52 +622,7 @@ tailwind.config={theme:{extend:{
       </section>
     </div>
 
-    <!-- ==================== 新着監視デスク ==================== -->
-    <div id="viewMonitor" class="hidden max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-6">
-      <section class="glass p-6 sm:p-7">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div class="eyebrow mb-1.5">realtime watch desk</div>
-            <h2 class="text-[17px] font-bold">🔔 新着監視デスク</h2>
-            <p class="text-[12.5px] text-ink-mute mt-1 max-w-[760px] leading-relaxed">
-              登録した公開アカウントの新着ポストをバックエンド経由で監視し、検知した投稿を一覧化します。返信文はAIで下書きできます。X APIを接続したアカウントでは、対象を限定して自動返信まで実行できます。
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button id="monitorRefresh" class="btn-ghost text-[12px] px-3 py-2 rounded-lg">今すぐ取得</button>
-            <button id="monitorStart" class="btn-primary text-[12px] px-3.5 py-2 rounded-lg">監視を開始</button>
-          </div>
-        </div>
-        <div class="mt-5 grid lg:grid-cols-[1fr_300px] gap-4">
-          <div class="glass-sub p-4">
-            <div class="flex items-center gap-2 mb-3"><span id="monitorLiveDot" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span><b class="text-[12.5px]">監視状態</b><span id="monitorStatus" class="tag ml-auto text-ink-dim">停止中</span></div>
-            <div class="text-[11.5px] text-ink-dim leading-relaxed">監視はブラウザ側でXへ直接接続せず、設定したX APIバックエンドに新着イベントを問い合わせます。バックエンド側はFiltered Stream等で対象アカウントを監視し、取得した未処理イベントを返す想定です。</div>
-          </div>
-          <div class="glass-sub p-4">
-            <div class="text-[11px] font-bold text-ink-mute mb-2">取得間隔</div>
-            <select id="monitorInterval" class="inp w-full"><option value="5">5秒</option><option value="10" selected>10秒</option><option value="20">20秒</option><option value="30">30秒</option></select>
-            <div class="text-[10.5px] text-ink-dim mt-2">※実際のXストリーム接続はバックエンド側で維持します。</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="grid lg:grid-cols-[360px_1fr] gap-5">
-        <section class="glass p-5 sm:p-6">
-          <div class="flex items-center justify-between mb-3"><div><div class="eyebrow mb-1">watch list</div><h3 class="text-[14px] font-bold">監視対象アカウント</h3></div><span id="monitorTargetCount" class="tag text-ink-dim">0件</span></div>
-          <div class="flex gap-2 mb-3"><input id="monitorHandle" class="inp font-mono flex-1" placeholder="@YahooNewsTopics"><button id="monitorAdd" class="btn-primary text-[11.5px] px-3 rounded-lg">追加</button></div>
-          <div id="monitorTargetList" class="space-y-2"></div>
-          <div class="mt-4 pt-4 border-t border-hair text-[10.5px] text-ink-dim leading-relaxed">
-            初期候補：@YahooNewsTopics / @nhk_news / @news24ntv / @tv_asahi_news / @nhk_shutoken。不要なものは停止・削除できます。
-          </div>
-        </section>
-
-        <section class="glass p-5 sm:p-6">
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-4"><div><div class="eyebrow mb-1">inbox</div><h3 class="text-[14px] font-bold">検知した新着ポスト</h3></div><span id="monitorInboxCount" class="tag text-ink-dim">0件</span></div>
-          <div id="monitorInbox" class="space-y-3"><div class="glass-sub p-6 text-center text-[12px] text-ink-dim">まだ新着ポストはありません。</div></div>
-        </section>
-      </section>
-    </div>
-
+  
     <!-- ==================== 投稿履歴 ==================== -->
     <div id="viewHistory" class="hidden max-w-[1200px] mx-auto px-5 sm:px-8 py-8 space-y-6">
       <section class="glass p-6 sm:p-7">
@@ -2377,9 +2331,38 @@ function startMonitor(){
 }
 function stopMonitor(){state.monitor.running=false;saveMonitor();renderMonitor();clearInterval(monitorTimer);monitorTimer=null;toast('新着監視を停止しました');log('新着監視を停止','act')}
 $('#monitorAdd').onclick=()=>{const h=normalizeWatchHandle($('#monitorHandle').value);if(!h)return;const exists=state.monitor.targets.some(x=>x.handle.toLowerCase()===h.toLowerCase());if(exists){toast('そのアカウントは登録済みです','warn');return}state.monitor.targets.push({id:'mt_'+Date.now().toString(36),handle:h,name:h.replace(/^@/,''),enabled:true});$('#monitorHandle').value='';saveMonitor();renderMonitor();log(`${h}を監視対象に追加`,'act')};
-$('#monitorRefresh').onclick=()=>pollMonitor();
-$('#monitorStart').onclick=()=>state.monitor.running?stopMonitor():startMonitor();
-$('#monitorInterval').onchange=()=>{if(state.monitor.running){startMonitor()}};
+const monitorRefresh =
+  $('#monitorRefresh');
+
+if (monitorRefresh) {
+  monitorRefresh.onclick =
+    () => pollMonitor();
+}
+
+
+const monitorStart =
+  $('#monitorStart');
+
+if (monitorStart) {
+  monitorStart.onclick =
+    () =>
+      state.monitor.running
+        ? stopMonitor()
+        : startMonitor();
+}
+
+
+const monitorInterval =
+  $('#monitorInterval');
+
+if (monitorInterval) {
+  monitorInterval.onchange =
+    () => {
+      if (state.monitor.running) {
+        startMonitor();
+      }
+    };
+}
 document.addEventListener('click',e=>{
   const tg=e.target.closest('[data-monitor-toggle]');if(tg){const t=state.monitor.targets.find(x=>x.id===tg.dataset.monitorToggle);if(t){t.enabled=tg.checked;saveMonitor();renderMonitor()}return}
   const dl=e.target.closest('[data-monitor-del]');if(dl){state.monitor.targets=state.monitor.targets.filter(x=>x.id!==dl.dataset.monitorDel);saveMonitor();renderMonitor();return}
@@ -8889,7 +8872,10 @@ function setView(v){
   $('#tabWrap').classList.toggle('hidden',!main);
   $('#viewAccounts').classList.toggle('hidden',v!=='accounts');
   $('#viewGrowth').classList.toggle('hidden',v!=='growth');
-  $('#viewMonitor').classList.toggle('hidden',v!=='monitor');
+  $('#viewMonitor')?.classList.toggle(
+  'hidden',
+  v !== 'monitor'
+);
   $('#viewHistory').classList.toggle('hidden',v!=='history');
   $('#tabImage').classList.toggle('hidden',!main||state.tab!=='image');
   $('#tabVideo').classList.toggle('hidden',!main||state.tab!=='video');
