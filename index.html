@@ -3561,7 +3561,12 @@ async function growthPost(
   }
 }
 function growthOpen(text){const u='https://x.com/intent/post?text='+encodeURIComponent(text);window.open(u,'_blank','noopener');copyText(text)}
-$('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCandidates()});$('#growthGenerate').onclick=generateGrowthCandidates;
+$('#growthAccount').addEventListener(
+  'change',
+  () => {
+    renderGrowth();
+  }
+);
   
   $('#growthMainAccount').onchange =
   async () => {
