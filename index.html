@@ -618,7 +618,7 @@ tailwind.config={theme:{extend:{
   </div>
 
 </section>
-          <section class="glass p-5 sm:p-6"><div class="flex items-center justify-between mb-4"><div><div class="eyebrow mb-1">schedule</div><h3 class="text-[14px] font-bold">育成スケジュール</h3></div><span id="growthScheduleCount" class="tag text-ink-dim">0件</span></div><div id="growthSchedule" class="space-y-2"></div></section>
+          
         </div>
       </section>
     </div>
@@ -3531,7 +3531,113 @@ async function generateGrowthCandidates(){const id=$('#growthAccount').value,acc
 function renderGrowthCandidates(){const id=$('#growthAccount').value,arr=state.growth.candidates[id]||[];$('#growthCandidates').innerHTML=arr.length?arr.map((text,i)=>`<div class="glass-sub p-4"><textarea data-growth-text="${i}" class="inp w-full min-h-[110px] resize-y text-[12.5px] leading-relaxed">${esc(text)}</textarea><div class="flex flex-wrap gap-2 mt-3"><button data-growth-schedule="${i}" class="btn-ghost text-[11.5px] px-3 py-1.5 rounded-lg">今日の予定に追加</button><button data-growth-post="${i}" class="btn-primary text-[11.5px] px-3 py-1.5 rounded-lg">確認してXへ投稿</button></div></div>`).join(''):'<div class="glass-sub p-5 text-[12px] text-ink-dim">まだ候補がありません。</div>'}
 function growthEditedText(i){const el=document.querySelector(`[data-growth-text="${i}"]`);return el?el.value.trim():''}
 function addGrowthSchedule(text){const id=$('#growthAccount').value,acc=getAcc(id),plan=growthPlan(acc);if(!text)return;const now=new Date(),[hh,mm]=plan.time.split(':').map(Number);const at=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm);if(at<now)at.setDate(at.getDate()+1);state.growth.schedules.unshift({id:'g'+Date.now().toString(36),accountId:id,handle:acc.handle,text,scheduledAt:at.toISOString(),status:'scheduled'});saveGrowth();renderGrowthSchedule();toast('育成スケジュールに追加しました')}
-function renderGrowthSchedule(){const list=state.growth.schedules.slice().sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));$('#growthScheduleCount').textContent=`${list.length}件`;$('#growthSchedule').innerHTML=list.length?list.slice(0,30).map(x=>{const a=getAcc(x.accountId);return `<div class="glass-sub p-3 flex flex-wrap gap-3 items-start"><div class="min-w-0 flex-1"><div class="flex gap-2 items-center"><b class="text-[12px]">${esc(a?.name||x.handle)}</b><span class="tag text-ink-dim">${x.status==='posted'?'投稿済み':'予約'}</span><span class="tag text-ink-dim">${new Date(x.scheduledAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span></div><div class="text-[12px] leading-relaxed mt-1">${esc(x.text)}</div></div>${x.status!=='posted'?`<div class="flex gap-1.5"><button data-growth-schedule-post="${x.id}" class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg">投稿</button><button data-growth-schedule-open="${x.id}" class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg">開く</button></div>`:''}</div>`}).join(''):'<div class="text-[12px] text-ink-dim">予約はまだありません。</div>'}
+function renderGrowthSchedule() {
+
+  const countEl =
+    $('#growthScheduleCount');
+
+  const listEl =
+    $('#growthSchedule');
+
+  // スケジュールUIを削除済みなら何もしない
+  if (!countEl || !listEl) {
+    return;
+  }
+
+  const list =
+    state.growth.schedules
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(a.scheduledAt) -
+          new Date(b.scheduledAt)
+      );
+
+  countEl.textContent =
+    `${list.length}件`;
+
+  listEl.innerHTML =
+    list.length
+      ? list
+          .slice(0, 30)
+          .map(x => {
+
+            const a =
+              getAcc(x.accountId);
+
+            return `
+              <div class="glass-sub p-3 flex flex-wrap gap-3 items-start">
+
+                <div class="min-w-0 flex-1">
+
+                  <div class="flex gap-2 items-center">
+
+                    <b class="text-[12px]">
+                      ${esc(a?.name || x.handle)}
+                    </b>
+
+                    <span class="tag text-ink-dim">
+                      ${x.status === 'posted' ? '投稿済み' : '予約'}
+                    </span>
+
+                    <span class="tag text-ink-dim">
+                      ${
+                        new Date(
+                          x.scheduledAt
+                        ).toLocaleString(
+                          'ja-JP',
+                          {
+                            month: 'numeric',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }
+                        )
+                      }
+                    </span>
+
+                  </div>
+
+                  <div class="text-[12px] leading-relaxed mt-1">
+                    ${esc(x.text)}
+                  </div>
+
+                </div>
+
+                ${
+                  x.status !== 'posted'
+                    ? `
+                      <div class="flex gap-1.5">
+
+                        <button
+                          data-growth-schedule-post="${x.id}"
+                          class="btn-primary text-[11px] px-2.5 py-1.5 rounded-lg"
+                        >
+                          投稿
+                        </button>
+
+                        <button
+                          data-growth-schedule-open="${x.id}"
+                          class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg"
+                        >
+                          開く
+                        </button>
+
+                      </div>
+                    `
+                    : ''
+                }
+
+              </div>
+            `;
+          })
+          .join('')
+      : `
+        <div class="text-[12px] text-ink-dim">
+          予約はまだありません。
+        </div>
+      `;
+}
 async function growthPost(
   accountId,
   text,
