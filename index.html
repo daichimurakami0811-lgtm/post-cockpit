@@ -2100,8 +2100,25 @@ async function loadExternalPersonaAccounts(){
   }
 }
 function saveAccounts(){
-  const ok=Store.write(STORE.acc,state.accounts);
-  if(!ok) toast('保存できませんでした。JSONで書き出して控えを取ってください','warn');
+
+  const ok =
+    Store.write(
+      STORE.acc,
+      state.accounts
+    );
+
+  if(!ok){
+
+    toast(
+      '保存できませんでした。JSONで書き出して控えを取ってください',
+      'warn'
+    );
+  }
+
+  if(ok){
+    scheduleCloudSyncSave();
+  }
+
   return ok;
 }
 
@@ -2135,7 +2152,20 @@ function loadHistory(){
   const arr=Store.read(STORE.history,null);
   return Array.isArray(arr)?arr.filter(x=>x&&(x.url||x.kind==='delivery')):[];
 }
-function saveHistory(){ Store.write(STORE.history,state.history); }
+function saveHistory(){
+
+  const ok =
+    Store.write(
+      STORE.history,
+      state.history
+    );
+
+  if(ok){
+    scheduleCloudSyncSave();
+  }
+
+  return ok;
+}
 function recordDeliveryHistory(payload,label){
   const posts=(payload?.items||[]).filter(x=>x.type==='post');
   posts.forEach(item=>{
@@ -2485,7 +2515,31 @@ const GROWTH_KEY='postcockpit.growth.v1';
 const GROWTH_THEMES=[['daily','日常'],['learning','学び'],['work','仕事'],['hobby','趣味'],['market','マーケット'],['news','ニュース感想'],['question','問いかけ'],['reflection','振り返り']];
 function defaultGrowth(){return {plans:{},schedules:[],candidates:{}}}
 function loadGrowth(){try{const x=JSON.parse(localStorage.getItem('postcockpit.growth.v1')||'null');return x&&typeof x==='object'?{...defaultGrowth(),...x}:defaultGrowth()}catch(e){return defaultGrowth()}}
-function saveGrowth(){try{localStorage.setItem('postcockpit.growth.v1',JSON.stringify(state.growth));return true}catch(e){toast('育成データを保存できませんでした','warn');return false}}
+function saveGrowth(){
+
+  try {
+
+    localStorage.setItem(
+      GROWTH_KEY,
+      JSON.stringify(
+        state.growth
+      )
+    );
+
+    scheduleCloudSyncSave();
+
+    return true;
+
+  } catch(e) {
+
+    toast(
+      '育成データを保存できませんでした',
+      'warn'
+    );
+
+    return false;
+  }
+}
 function growthChildren(){return state.accounts.filter(a=>a.parentId&&a.active)}
 function growthPlan(acc){const p=state.growth.plans[acc.id]||{};return {themes:Array.isArray(p.themes)&&p.themes.length?p.themes:['daily','learning','hobby'],dailyCount:+p.dailyCount||1,time:p.time||'20:00'}}
 async function syncGrowthSettingToBackend(
@@ -4573,6 +4627,126 @@ const state={
     return false;
   }
 }
+
+let cloudSyncSaveTimer = null;
+
+
+async function saveCloudSyncState() {
+
+  try {
+
+    const base =
+      'https://post-cockpit-x-backend.onrender.com';
+
+
+    const payload = {
+      accounts:
+        Array.isArray(state.accounts)
+          ? state.accounts
+          : [],
+
+      growth:
+        state.growth &&
+        typeof state.growth === 'object'
+          ? state.growth
+          : defaultGrowth(),
+
+      history:
+        Array.isArray(state.history)
+          ? state.history
+          : []
+    };
+
+
+    const r =
+      await fetch(
+        base + '/api/sync/state',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              state: payload
+            })
+        }
+      );
+
+
+    const j =
+      await r.json();
+
+
+    if (
+      !r.ok ||
+      !j?.ok
+    ) {
+
+      throw new Error(
+        j?.error ||
+        'Cloud sync failed'
+      );
+    }
+
+
+    console.log(
+      '[CLOUD SYNC SAVED]',
+      {
+        accounts:
+          payload.accounts.length,
+
+        history:
+          payload.history.length,
+
+        growthPlans:
+          Object.keys(
+            payload.growth?.plans ||
+            {}
+          ).length,
+
+        updatedAt:
+          j.updatedAt
+      }
+    );
+
+
+    return true;
+
+
+  } catch (e) {
+
+    console.error(
+      '[CLOUD SYNC SAVE ERROR]',
+      e
+    );
+
+    return false;
+  }
+}
+
+
+function scheduleCloudSyncSave() {
+
+  clearTimeout(
+    cloudSyncSaveTimer
+  );
+
+
+  cloudSyncSaveTimer =
+    setTimeout(
+      () => {
+
+        saveCloudSyncState();
+
+      },
+      1000
+    );
+}
+  
 normalizeHierarchy();
 state.accounts.filter(a=>a.active&&isMainAccount(a)).slice(0,3).forEach(a=>{state.selected.add(a.id);state.vSelected.add(a.id)});
 let editingAvatar='';
