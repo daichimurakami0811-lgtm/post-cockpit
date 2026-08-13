@@ -3575,6 +3575,190 @@ $('#growthAccount').addEventListener(
 
     await loadGrowthLikeCandidatesForMain();
   };
+
+document.addEventListener(
+  'click',
+  async e => {
+
+    const openBtn =
+      e.target.closest(
+        '[data-growth-like-open]'
+      );
+
+    if (openBtn) {
+
+      const [
+        accountId,
+        indexText
+      ] =
+        String(
+          openBtn.dataset.growthLikeOpen || ''
+        ).split(':');
+
+      const candidateState =
+        growthLikeCandidatesByChild.get(
+          accountId
+        );
+
+      const post =
+        candidateState?.candidates?.[
+          Number(indexText)
+        ];
+
+      if (post?.url) {
+        window.open(
+          post.url,
+          '_blank',
+          'noopener'
+        );
+      }
+
+      return;
+    }
+
+
+    const likeBtn =
+      e.target.closest(
+        '[data-growth-like-action]'
+      );
+
+    if (!likeBtn) {
+      return;
+    }
+
+
+    const [
+      accountId,
+      indexText
+    ] =
+      String(
+        likeBtn.dataset.growthLikeAction || ''
+      ).split(':');
+
+
+    const acc =
+      getAcc(accountId);
+
+
+    const candidateState =
+      growthLikeCandidatesByChild.get(
+        accountId
+      );
+
+
+    const post =
+      candidateState?.candidates?.[
+        Number(indexText)
+      ];
+
+
+    if (
+      !acc ||
+      !post?.tweetId
+    ) {
+
+      toast(
+        '候補情報を取得できませんでした',
+        'warn'
+      );
+
+      return;
+    }
+
+
+    if (
+      state.api.xRequireConfirm !== false &&
+      !confirm(
+        [
+          `${acc.name}（${acc.handle}）から`,
+          'このPostへ「いいね」します。',
+          '',
+          post.text || '',
+          '',
+          '実行してよろしいですか？'
+        ].join('\n')
+      )
+    ) {
+      return;
+    }
+
+
+    const originalText =
+      likeBtn.textContent;
+
+
+    likeBtn.disabled =
+      true;
+
+    likeBtn.textContent =
+      '実行中…';
+
+
+    try {
+
+      await xFetch(
+        '/api/x/action',
+        {
+          method: 'POST',
+
+          body:
+            JSON.stringify({
+              accountId:
+                acc.id,
+
+              accountHandle:
+                acc.handle,
+
+              action:
+                'like',
+
+              tweetId:
+                post.tweetId
+            })
+        }
+      );
+
+
+      likeBtn.textContent =
+        '✓ いいね済み';
+
+
+      toast(
+        `${acc.name}からいいねしました`,
+        'ok'
+      );
+
+
+      log(
+        `${acc.name}：いいねを実行`,
+        'ok'
+      );
+
+
+    } catch (err) {
+
+      console.error(
+        '[GROWTH LIKE ERROR]',
+        err
+      );
+
+
+      likeBtn.disabled =
+        false;
+
+      likeBtn.textContent =
+        originalText;
+
+
+      toast(
+        'いいねに失敗：' +
+        err.message,
+        'err'
+      );
+    }
+  }
+);
+  
   document.addEventListener(
   'click',
   e => {
