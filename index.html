@@ -1499,7 +1499,142 @@ function loadGrowth(){try{const x=JSON.parse(localStorage.getItem('postcockpit.g
 function saveGrowth(){try{localStorage.setItem('postcockpit.growth.v1',JSON.stringify(state.growth));return true}catch(e){toast('育成データを保存できませんでした','warn');return false}}
 function growthChildren(){return state.accounts.filter(a=>a.parentId&&a.active)}
 function growthPlan(acc){const p=state.growth.plans[acc.id]||{};return {themes:Array.isArray(p.themes)&&p.themes.length?p.themes:['daily','learning','hobby'],dailyCount:+p.dailyCount||1,time:p.time||'20:00'}}
-function renderGrowthMainAccounts() {
+async function syncGrowthSettingToBackend(
+  accountId
+) {
+
+  const acc =
+    getAcc(accountId);
+
+  if (!acc) {
+    throw new Error(
+      '子アカウントが見つかりません'
+    );
+  }
+
+
+  const plan =
+    growthPlan(acc);
+
+
+  const parentAccountId =
+    String(
+      acc.parentId ||
+      acc.parentAccountId ||
+      ''
+    ).trim();
+
+
+  if (!parentAccountId) {
+
+    throw new Error(
+      '子アカウントではありません'
+    );
+  }
+
+
+  const persona =
+    acc.persona || {};
+
+
+  const payload = {
+
+    accountId:
+      acc.id,
+
+    parentAccountId,
+
+    handle:
+      acc.handle || '',
+
+
+    autoPost:
+      true,
+
+    postsPerDay:
+      1,
+
+    postTime:
+      plan.time || '20:00',
+
+
+    autoRepost:
+      true,
+
+    maxRepostsPerDay:
+      3,
+
+
+    likeCandidatesPerDay:
+      5,
+
+
+    themes:
+      Array.isArray(
+        plan.themes
+      )
+        ? plan.themes
+        : [],
+
+
+    persona: {
+
+      firstPerson:
+        persona.firstPerson || '',
+
+      emoji:
+        persona.emoji || '',
+
+      speaker:
+        persona.speaker || '',
+
+      tone:
+        persona.tone || '',
+
+      reader:
+        persona.reader || '',
+
+      ng:
+        persona.ng || '',
+
+      bio:
+        persona.bio || ''
+    }
+  };
+
+
+  const j =
+    await xFetch(
+      '/api/growth/settings',
+      {
+        method:
+          'POST',
+
+        body:
+          JSON.stringify(
+            payload
+          )
+      }
+    );
+
+
+  console.log(
+    '[GROWTH SETTING SYNCED]',
+    {
+      accountId:
+        acc.id,
+
+      handle:
+        acc.handle,
+
+      parentAccountId
+    }
+  );
+
+
+  return j;
+}
+  function renderGrowthMainAccounts() {
 
   const select =
     $('#growthMainAccount');
@@ -2451,7 +2586,79 @@ $('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCa
     }
   }
 );
-$('#growthSavePlan').onclick=()=>{const id=$('#growthAccount').value;if(!id)return;const themes=$$('#growthThemes [data-growth-theme]:checked').map(x=>x.dataset.growthTheme);state.growth.plans[id]={themes:themes.length?themes:['daily'],dailyCount:+$('#growthDailyCount').value,time:$('#growthTime').value};saveGrowth();renderGrowth();toast('育成設定を保存しました');log('育成設定を更新','act')};
+$('#growthSavePlan').onclick =
+  async () => {
+
+    const id =
+      $('#growthAccount').value;
+
+    if (!id) {
+      return;
+    }
+
+
+    const themes =
+      $$('#growthThemes [data-growth-theme]:checked')
+        .map(
+          x =>
+            x.dataset.growthTheme
+        );
+
+
+    state.growth.plans[
+      id
+    ] = {
+
+      themes:
+        themes.length
+          ? themes
+          : ['daily'],
+
+      // 1日1件固定
+      dailyCount:
+        1,
+
+      time:
+        $('#growthTime').value ||
+        '20:00'
+    };
+
+
+    saveGrowth();
+
+
+    try {
+
+      await syncGrowthSettingToBackend(
+        id
+      );
+
+      renderGrowth();
+
+      toast(
+        '育成設定をRenderへ保存しました',
+        'ok'
+      );
+
+      log(
+        '育成設定をバックエンドへ同期',
+        'ok'
+      );
+
+    } catch (e) {
+
+      console.error(
+        '[GROWTH SETTING SYNC ERROR]',
+        e
+      );
+
+      toast(
+        '育成設定の保存に失敗：' +
+        e.message,
+        'err'
+      );
+    }
+  };
 $('#growthExport').onclick=()=>downloadJSON(state.growth,`post-cockpit-growth-${new Date().toISOString().slice(0,10)}.json`);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-growth-schedule]');if(b){addGrowthSchedule(growthEditedText(+b.dataset.growthSchedule));return}const p=e.target.closest('[data-growth-post]');if(p){growthPost($('#growthAccount').value,growthEditedText(+p.dataset.growthPost));return}const o=e.target.closest('[data-growth-open]');if(o){growthOpen(growthEditedText(+o.dataset.growthOpen));return}const sp=e.target.closest('[data-growth-schedule-post]');if(sp){const x=state.growth.schedules.find(x=>x.id===sp.dataset.growthSchedulePost);if(x)growthPost(x.accountId,x.text,x.id);return}const so=e.target.closest('[data-growth-schedule-open]');if(so){const x=state.growth.schedules.find(x=>x.id===so.dataset.growthScheduleOpen);if(x)growthOpen(x.text)}});
 
