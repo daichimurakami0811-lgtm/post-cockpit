@@ -1162,136 +1162,6 @@ const ARCHETYPES={
 
   const CHILD_PERSONA_PRESETS = [
 
-    function renderPersonaPresets() {
-
-  const box =
-    $('#personaPresetPanel');
-
-  if (!box) {
-    return;
-  }
-
-  const categories =
-    [
-      ...new Set(
-        CHILD_PERSONA_PRESETS.map(
-          x => x.category
-        )
-      )
-    ];
-
-  box.innerHTML =
-    categories
-      .map(category => {
-
-        const items =
-          CHILD_PERSONA_PRESETS.filter(
-            x =>
-              x.category === category
-          );
-
-        return `
-          <div class="glass-sub overflow-hidden">
-
-            <button
-              type="button"
-              data-persona-category="${esc(category)}"
-              class="w-full flex items-center justify-between px-4 py-3 text-left"
-            >
-              <span class="text-[12px] font-bold">
-                ${esc(category)}
-              </span>
-
-              <span class="text-[10.5px] text-ink-dim">
-                ${items.length}種類 ▼
-              </span>
-            </button>
-
-            <div
-              data-persona-category-panel="${esc(category)}"
-              class="hidden px-3 pb-3"
-            >
-
-              <div class="grid sm:grid-cols-2 gap-2">
-
-                ${
-                  items
-                    .map(item => `
-
-                      <button
-                        type="button"
-                        data-persona-preset="${esc(item.name)}"
-                        class="btn-ghost text-left px-3 py-2.5 rounded-lg"
-                      >
-                        <div class="text-[11.5px] font-bold">
-                          ${esc(item.name)}
-                        </div>
-
-                        <div class="text-[10px] text-ink-dim mt-1 line-clamp-2">
-                          ${esc(item.persona.speaker)}
-                        </div>
-                      </button>
-
-                    `)
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          </div>
-        `;
-
-      })
-      .join('');
-}
-
-    function applyChildPersonaPreset(
-  presetName
-) {
-
-  const preset =
-    CHILD_PERSONA_PRESETS.find(
-      x =>
-        x.name === presetName
-    );
-
-  if (!preset) {
-    return;
-  }
-
-  const p =
-    preset.persona;
-
-  $('#pFirst').value =
-    p.firstPerson || '';
-
-  $('#pEmoji').value =
-    p.emoji ||
-    '控えめ（1つまで）';
-
-  $('#pSpeaker').value =
-    p.speaker || '';
-
-  $('#pTone').value =
-    p.tone || '';
-
-  $('#pReader').value =
-    p.reader || '';
-
-  $('#pNG').value =
-    p.ng || '';
-
-  $('#pBio').value =
-    p.bio || '';
-
-  toast(
-    `「${preset.name}」を反映しました`,
-    'ok'
-  );
-}
-
   // =====================================
   // 投資・FX
   // =====================================
@@ -2017,6 +1887,136 @@ const ARCHETYPES={
   }
 
 ];
+
+  function renderPersonaPresets() {
+
+  const box =
+    $('#personaPresetPanel');
+
+  if (!box) {
+    return;
+  }
+
+  const categories =
+    [
+      ...new Set(
+        CHILD_PERSONA_PRESETS.map(
+          x => x.category
+        )
+      )
+    ];
+
+  box.innerHTML =
+    categories
+      .map(category => {
+
+        const items =
+          CHILD_PERSONA_PRESETS.filter(
+            x =>
+              x.category === category
+          );
+
+        return `
+          <div class="glass-sub overflow-hidden">
+
+            <button
+              type="button"
+              data-persona-category="${esc(category)}"
+              class="w-full flex items-center justify-between px-4 py-3 text-left"
+            >
+              <span class="text-[12px] font-bold">
+                ${esc(category)}
+              </span>
+
+              <span class="text-[10.5px] text-ink-dim">
+                ${items.length}種類 ▼
+              </span>
+            </button>
+
+            <div
+              data-persona-category-panel="${esc(category)}"
+              class="hidden px-3 pb-3"
+            >
+
+              <div class="grid sm:grid-cols-2 gap-2">
+
+                ${
+                  items
+                    .map(item => `
+
+                      <button
+                        type="button"
+                        data-persona-preset="${esc(item.name)}"
+                        class="btn-ghost text-left px-3 py-2.5 rounded-lg"
+                      >
+                        <div class="text-[11.5px] font-bold">
+                          ${esc(item.name)}
+                        </div>
+
+                        <div class="text-[10px] text-ink-dim mt-1 line-clamp-2">
+                          ${esc(item.persona.speaker)}
+                        </div>
+                      </button>
+
+                    `)
+                    .join('')
+                }
+
+              </div>
+
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join('');
+}
+
+    function applyChildPersonaPreset(
+  presetName
+) {
+
+  const preset =
+    CHILD_PERSONA_PRESETS.find(
+      x =>
+        x.name === presetName
+    );
+
+  if (!preset) {
+    return;
+  }
+
+  const p =
+    preset.persona;
+
+  $('#pFirst').value =
+    p.firstPerson || '';
+
+  $('#pEmoji').value =
+    p.emoji ||
+    '控えめ（1つまで）';
+
+  $('#pSpeaker').value =
+    p.speaker || '';
+
+  $('#pTone').value =
+    p.tone || '';
+
+  $('#pReader').value =
+    p.reader || '';
+
+  $('#pNG').value =
+    p.ng || '';
+
+  $('#pBio').value =
+    p.bio || '';
+
+  toast(
+    `「${preset.name}」を反映しました`,
+    'ok'
+  );
+}
 
 const RISK_TERMS=['必ず','絶対','確実','保証','元本保証','儲かる','稼げる','ノーリスク','損しない','100%','一撃','爆益','誰でも'];
 const REVIEW_ROLES=[
