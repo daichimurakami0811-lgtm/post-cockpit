@@ -9178,63 +9178,119 @@ function registerMentionWatch(d){
   startMentionWatcher();
 }
 function restoreMentionWatches(){
-  if(state.api.autoReplyEnabled===false)return;
-  const stored=Store.read(STORE.autoReplyWatch,{})||{};
-  const recent=Object.entries(stored).filter(([_,v])=>v&&Date.now()-Number(v.createdAt||0)<1000*60*60*24*7);
-  for(const [tweetId,v] of recent) mentionWatch.posts.set(String(tweetId),v);
-  if(mentionWatch.posts.size) startMentionWatcher();
+
+  // 自動返信監視は廃止
+  mentionWatch.posts.clear();
+
+  mentionWatch.running =
+    false;
+
+  if (mentionWatch.timer) {
+
+    clearInterval(
+      mentionWatch.timer
+    );
+
+    mentionWatch.timer =
+      null;
+  }
 }
 function startMentionWatcher(){
-  if(state.api.autoReplyEnabled===false||!mentionWatch.posts.size||!xBackendUrl())return;
-  if(mentionWatch.running)return;
-  mentionWatch.running=true;
-  clearInterval(mentionWatch.timer);
-  mentionWatch.timer=setInterval(pollAutoReplies,Math.max(5,Number(state.api.autoReplyInterval||8))*1000);
-  pollAutoReplies();
-  log('メインアカウント宛ての手動子アカウントリプライ監視を開始','act');
+
+  mentionWatch.running = false;
+
+  if (mentionWatch.timer) {
+    clearInterval(mentionWatch.timer);
+    mentionWatch.timer = null;
+  }
+
+  return;
 }
-function normalizeHandle(v){return String(v||'').replace(/^@/,'').trim().toLowerCase();}
+
+
+function normalizeHandle(v){
+  return String(v || '')
+    .replace(/^@/, '')
+    .trim()
+    .toLowerCase();
+}
+
+
 async function pollAutoReplies(){
-  if(!mentionWatch.running||!mentionWatch.posts.size||!xBackendUrl())return;
-  try{
-    const j=await xFetch('/api/x/mentions?sinceId='+(mentionWatch.sinceId||''));
-    const items=Array.isArray(j.items)?j.items:[];
-    if(j.meta?.newest_id) mentionWatch.sinceId=j.meta.newest_id;
-    const seen=Store.read(STORE.autoReplySeen,{})||{};
-    for(const x of items){
-      const ref=(x.referenced_tweets||[]).find(r=>r.type==='replied_to');
-      const watch=ref?mentionWatch.posts.get(String(ref.id)):null;
-      if(!watch)continue;
-      if(String(x.author_id)===String(j.me?.id))continue;
-      const author=normalizeHandle(x.author_username);
-      // 登録済みの子アカウントだけを自動返信対象にする。
-      if(!watch.childHandles.length || !watch.childHandles.includes(author))continue;
-      if(watch.createdAt && x.created_at && new Date(x.created_at).getTime() < Number(watch.createdAt))continue;
-      const key='auto:'+x.id;
-      if(seen[key])continue;
-      if(!apiReady()){log('自動返信を実行できません：Anthropic API設定がありません','err');continue;}
-      const prompt=`あなたはメインアカウントの返信担当です。次の「手動で行われた子アカウントからの返信」に対して、元の投稿者として自然で短い返信を1件作ってください。\n\nルール：\n- 相手の返信内容に直接応答する\n- 元投稿にない事実、実績、第三者推薦を作らない\n- 過度な宣伝や購入誘導をしない\n- 1〜2文程度で自然にする\n- 返信本文だけを出力する\n\nメインアカウント：${watch.mainHandle||j.me?.username||''}\n子アカウント：@${author}\n子アカウントの返信：\n${x.text||''}`;
-      const r=await callAnthropicAPI(prompt,null,{max_tokens:300});
-      const text=String(r.text||'').trim().replace(/^```[a-z]*\s*/i,'').replace(/\s*```$/,'').trim();
-      if(!text)continue;
-      const post=await xFetch('/api/x/post',{method:'POST',body:JSON.stringify({text,replyToTweetId:String(x.id),accountHandle:j.me?.username?('@'+j.me.username):watch.mainHandle})});
-      seen[key]=Date.now();
-      seen['result:'+x.id]=String(post?.result?.data?.id||post?.data?.id||'');
-      Store.write(STORE.autoReplySeen,seen);
-      log(`@${author} の手動リプライを検知 → ${watch.mainHandle||'メイン'} が自動返信`,'ok');
-    }
-  }catch(e){log(`手動子リプライの自動返信失敗：${e.message}`,'err');}
+
+  // 自動返信機能は使用しない
+  return;
 }
+
 
 function bindXActionButtons(){}
-document.addEventListener('click',e=>{
-  const c=e.target.closest('[data-x-connect]'); if(c){connectXAccount(c.dataset.xConnect);return;}
-  const ex=e.target.closest('[data-x-execute]'); if(ex){const [i,id]=ex.dataset.xExecute.split('-');const d=state.drafts[+i];const act=(d?.actions||[]).find(x=>x.accountId===id);if(act)executeXAction(d,act);return;}
-  const sk=e.target.closest('[data-x-skip]'); if(sk){const [i,id]=sk.dataset.xSkip.split('-');const d=state.drafts[+i];const act=(d?.actions||[]).find(x=>x.accountId===id);if(act){act.status='skipped';renderLane();}}
-});
 
-// ページ再読込後も直近7日間の自動返信監視を復元
-setTimeout(()=>{try{restoreMentionWatches()}catch(e){console.warn('[auto-reply] restore failed',e)}},0);
+
+document.addEventListener('click',e=>{
+
+  const c =
+    e.target.closest('[data-x-connect]');
+
+  if(c){
+    connectXAccount(c.dataset.xConnect);
+    return;
+  }
+
+
+  const ex =
+    e.target.closest('[data-x-execute]');
+
+  if(ex){
+
+    const [i,id] =
+      ex.dataset.xExecute.split('-');
+
+    const d =
+      state.drafts[+i];
+
+    const act =
+      (d?.actions || [])
+        .find(
+          x =>
+            x.accountId === id
+        );
+
+    if(act){
+      executeXAction(d,act);
+    }
+
+    return;
+  }
+
+
+  const sk =
+    e.target.closest('[data-x-skip]');
+
+  if(sk){
+
+    const [i,id] =
+      sk.dataset.xSkip.split('-');
+
+    const d =
+      state.drafts[+i];
+
+    const act =
+      (d?.actions || [])
+        .find(
+          x =>
+            x.accountId === id
+        );
+
+    if(act){
+
+      act.status =
+        'skipped';
+
+      renderLane();
+    }
+  }
+
+});
 
 /* ============================================================
    9. アカウント管理
