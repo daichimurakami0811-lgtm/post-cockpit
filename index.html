@@ -2330,11 +2330,81 @@ function startMonitor(){
   state.monitor.running=true;saveMonitor();renderMonitor();pollMonitor();clearInterval(monitorTimer);monitorTimer=setInterval(pollMonitor,Math.max(5,+$('#monitorInterval').value||10)*1000);toast('新着監視を開始しました');log('新着監視を開始','act')
 }
 function stopMonitor(){state.monitor.running=false;saveMonitor();renderMonitor();clearInterval(monitorTimer);monitorTimer=null;toast('新着監視を停止しました');log('新着監視を停止','act')}
-$('#monitorAdd').onclick=()=>{const h=normalizeWatchHandle($('#monitorHandle').value);if(!h)return;const exists=state.monitor.targets.some(x=>x.handle.toLowerCase()===h.toLowerCase());if(exists){toast('そのアカウントは登録済みです','warn');return}state.monitor.targets.push({id:'mt_'+Date.now().toString(36),handle:h,name:h.replace(/^@/,''),enabled:true});$('#monitorHandle').value='';saveMonitor();renderMonitor();log(`${h}を監視対象に追加`,'act')};
+const monitorAdd =
+  $('#monitorAdd');
+
+if (monitorAdd) {
+
+  monitorAdd.onclick =
+    () => {
+
+      const handleEl =
+        $('#monitorHandle');
+
+      if (!handleEl) {
+        return;
+      }
+
+      const h =
+        normalizeWatchHandle(
+          handleEl.value
+        );
+
+      if (!h) {
+        return;
+      }
+
+      const exists =
+        state.monitor.targets.some(
+          x =>
+            x.handle
+              .toLowerCase() ===
+            h.toLowerCase()
+        );
+
+      if (exists) {
+
+        toast(
+          'そのアカウントは登録済みです',
+          'warn'
+        );
+
+        return;
+      }
+
+      state.monitor.targets.push({
+        id:
+          'mt_' +
+          Date.now().toString(36),
+
+        handle:
+          h,
+
+        name:
+          h.replace(/^@/, ''),
+
+        enabled:
+          true
+      });
+
+      handleEl.value = '';
+
+      saveMonitor();
+      renderMonitor();
+
+      log(
+        `${h}を監視対象に追加`,
+        'act'
+      );
+    };
+}
+
+
 const monitorRefresh =
   $('#monitorRefresh');
 
 if (monitorRefresh) {
+
   monitorRefresh.onclick =
     () => pollMonitor();
 }
@@ -2344,6 +2414,7 @@ const monitorStart =
   $('#monitorStart');
 
 if (monitorStart) {
+
   monitorStart.onclick =
     () =>
       state.monitor.running
@@ -2356,13 +2427,18 @@ const monitorInterval =
   $('#monitorInterval');
 
 if (monitorInterval) {
+
   monitorInterval.onchange =
     () => {
-      if (state.monitor.running) {
+
+      if (
+        state.monitor.running
+      ) {
         startMonitor();
       }
     };
 }
+
 document.addEventListener('click',e=>{
   const tg=e.target.closest('[data-monitor-toggle]');if(tg){const t=state.monitor.targets.find(x=>x.id===tg.dataset.monitorToggle);if(t){t.enabled=tg.checked;saveMonitor();renderMonitor()}return}
   const dl=e.target.closest('[data-monitor-del]');if(dl){state.monitor.targets=state.monitor.targets.filter(x=>x.id!==dl.dataset.monitorDel);saveMonitor();renderMonitor();return}
@@ -11921,7 +11997,6 @@ renderAccounts();
 renderGrowth();
 $('#navHistCount').textContent=state.history.length;
 renderLog();
-renderMonitor();
 log('デスクを起動しました');
 </script>
 
