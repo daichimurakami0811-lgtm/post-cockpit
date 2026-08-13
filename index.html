@@ -3568,16 +3568,6 @@ $('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCa
 
     renderGrowthChildren();
 
-    // ...
-
-    const likeBtn =
-      e.target.closest(
-        '[data-growth-like-action]'
-      );
-
-    // ...
-  }
-);
     await loadGrowthLikeCandidatesForMain();
   };
   document.addEventListener(
