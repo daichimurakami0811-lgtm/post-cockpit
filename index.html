@@ -421,6 +421,66 @@ tailwind.config={theme:{extend:{
       </section>
       <section class="grid lg:grid-cols-[340px_1fr] gap-5">
         <div class="glass p-5 sm:p-6">
+          <div class="mb-5">
+
+  <div class="eyebrow mb-2">
+    MAIN ACCOUNT
+  </div>
+
+  <label class="block">
+
+    <div class="text-[12px] font-bold text-ink-700 mb-1.5">
+      管理するメインアカウント
+    </div>
+
+    <select
+      id="growthMainAccount"
+      class="inp w-full"
+    >
+      <option value="">
+        メインアカウントを選択
+      </option>
+    </select>
+
+  </label>
+
+  <p class="text-[10.5px] text-ink-dim mt-2 leading-relaxed">
+    メインアカウントを選択すると、紐づいている子アカウントを一覧表示します。
+  </p>
+
+</div>
+          <div
+  id="growthChildrenPanel"
+  class="hidden"
+>
+
+  <div class="flex items-center justify-between gap-3 mb-3">
+
+    <div>
+      <div class="eyebrow mb-1">
+        CHILD ACCOUNTS
+      </div>
+
+      <div class="text-[13px] font-bold">
+        配下の子アカウント
+      </div>
+    </div>
+
+    <span
+      id="growthChildrenCount"
+      class="tag text-ink-dim"
+    >
+      0件
+    </span>
+
+  </div>
+
+  <div
+    id="growthChildrenList"
+    class="space-y-3"
+  ></div>
+
+</div>
           <div class="eyebrow mb-2">account</div><select id="growthAccount" class="inp w-full"></select>
           <div id="growthAccountMeta" class="glass-sub p-3 mt-3 text-[11.5px] leading-relaxed text-ink-mute"></div>
           <div class="mt-5 pt-5 border-t border-hair">
@@ -1439,7 +1499,294 @@ function loadGrowth(){try{const x=JSON.parse(localStorage.getItem('postcockpit.g
 function saveGrowth(){try{localStorage.setItem('postcockpit.growth.v1',JSON.stringify(state.growth));return true}catch(e){toast('育成データを保存できませんでした','warn');return false}}
 function growthChildren(){return state.accounts.filter(a=>a.parentId&&a.active)}
 function growthPlan(acc){const p=state.growth.plans[acc.id]||{};return {themes:Array.isArray(p.themes)&&p.themes.length?p.themes:['daily','learning','hobby'],dailyCount:+p.dailyCount||1,time:p.time||'20:00'}}
-function renderGrowth(){
+function renderGrowthMainAccounts() {
+
+  const select =
+    $('#growthMainAccount');
+
+  if (!select) {
+    return;
+  }
+
+  const mains =
+    state.accounts.filter(
+      acc =>
+        !String(
+          acc.parentId ||
+          acc.parentAccountId ||
+          ''
+        ).trim()
+    );
+
+  const current =
+    select.value;
+
+  select.innerHTML =
+    `
+      <option value="">
+        メインアカウントを選択
+      </option>
+    ` +
+    mains
+      .map(acc => `
+        <option value="${esc(acc.id)}">
+          ${esc(acc.name || '')}
+          ${acc.handle ? `（${esc(acc.handle)}）` : ''}
+        </option>
+      `)
+      .join('');
+
+
+  if (
+    current &&
+    mains.some(
+      acc =>
+        String(acc.id) ===
+        String(current)
+    )
+  ) {
+    select.value =
+      current;
+  }
+}
+  function growthChildrenOf(
+  mainId
+) {
+
+  const id =
+    String(
+      mainId || ''
+    ).trim();
+
+  if (!id) {
+    return [];
+  }
+
+  return state.accounts.filter(
+    acc => {
+
+      const parentId =
+        String(
+          acc.parentId ||
+          acc.parentAccountId ||
+          ''
+        ).trim();
+
+      return (
+        parentId === id
+      );
+    }
+  );
+}
+  function renderGrowthChildren() {
+
+  const mainId =
+    String(
+      $('#growthMainAccount')?.value ||
+      ''
+    ).trim();
+
+  const panel =
+    $('#growthChildrenPanel');
+
+  const list =
+    $('#growthChildrenList');
+
+  const count =
+    $('#growthChildrenCount');
+
+  if (
+    !panel ||
+    !list
+  ) {
+    return;
+  }
+
+
+  if (!mainId) {
+
+    panel.classList.add(
+      'hidden'
+    );
+
+    list.innerHTML = '';
+
+    if (count) {
+      count.textContent =
+        '0件';
+    }
+
+    return;
+  }
+
+
+  const children =
+    growthChildrenOf(
+      mainId
+    );
+
+
+  panel.classList.remove(
+    'hidden'
+  );
+
+
+  if (count) {
+    count.textContent =
+      `${children.length}件`;
+  }
+
+
+  if (!children.length) {
+
+    list.innerHTML = `
+      <div class="glass-sub p-4 text-[12px] text-ink-dim">
+        このメインアカウントに紐づく子アカウントはありません。
+      </div>
+    `;
+
+    return;
+  }
+
+
+  list.innerHTML =
+    children
+      .map(acc => {
+
+        const p =
+          acc.persona ||
+          {};
+
+
+        const personaSummary =
+          [
+            p.speaker,
+            p.reader,
+            p.bio
+          ]
+            .filter(Boolean)
+            .slice(0, 2)
+            .join(' ／ ');
+
+
+        return `
+          <div
+            class="glass-sub p-4"
+            data-growth-child="${esc(acc.id)}"
+          >
+
+            <div class="flex items-start justify-between gap-3">
+
+              <div class="min-w-0">
+
+                <div class="flex flex-wrap items-center gap-2">
+
+                  <b class="text-[13px]">
+                    ${esc(acc.name || '名称未設定')}
+                  </b>
+
+                  ${
+                    acc.handle
+                      ? `
+                        <span class="text-[11px] font-mono text-ink-dim">
+                          ${esc(acc.handle)}
+                        </span>
+                      `
+                      : ''
+                  }
+
+                </div>
+
+
+                <div class="text-[11px] text-ink-dim mt-1.5 leading-relaxed">
+
+                  ${
+                    personaSummary
+                      ? esc(personaSummary)
+                      : 'ペルソナ設定あり'
+                  }
+
+                </div>
+
+              </div>
+
+
+              <span class="tag text-ink-dim">
+                CHILD
+              </span>
+
+            </div>
+
+
+            <div class="grid grid-cols-3 gap-2 mt-4">
+
+              <div class="rounded-lg border border-hair p-2.5">
+
+                <div class="text-[10px] text-ink-dim">
+                  自動投稿
+                </div>
+
+                <div class="text-[12px] font-bold mt-1">
+                  1件 / 日
+                </div>
+
+              </div>
+
+
+              <div class="rounded-lg border border-hair p-2.5">
+
+                <div class="text-[10px] text-ink-dim">
+                  自動リポスト
+                </div>
+
+                <div class="text-[12px] font-bold mt-1">
+                  最大3件 / 日
+                </div>
+
+              </div>
+
+
+              <div class="rounded-lg border border-hair p-2.5">
+
+                <div class="text-[10px] text-ink-dim">
+                  いいね候補
+                </div>
+
+                <div class="text-[12px] font-bold mt-1">
+                  5件 / 日
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div class="flex flex-wrap gap-2 mt-3">
+
+              <button
+                data-growth-child-open="${esc(acc.id)}"
+                class="btn-primary text-[11px] px-3 py-1.5 rounded-lg"
+              >
+                育成管理
+              </button>
+
+              <button
+                data-growth-child-edit="${esc(acc.id)}"
+                class="btn-ghost text-[11px] px-3 py-1.5 rounded-lg"
+              >
+                ペルソナ編集
+              </button>
+
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join('');
+}
+  function renderGrowth(){
+    renderGrowthMainAccounts();
   const children=growthChildren();
   $('#navGrowthCount').textContent=state.growth.schedules.filter(x=>x.status!=='posted').length;
   const sel=$('#growthAccount');
@@ -2042,6 +2389,65 @@ $('#growthAccount').addEventListener('change',()=>{renderGrowth();renderGrowthCa
           'ok'
         );
       }
+    }
+  }
+);
+  $('#growthMainAccount').onchange =
+  () => {
+    renderGrowthChildren();
+  };
+  document.addEventListener(
+  'click',
+  e => {
+
+    const edit =
+      e.target.closest(
+        '[data-growth-child-edit]'
+      );
+
+    if (edit) {
+
+      const accountId =
+        edit.dataset.growthChildEdit;
+
+      openModal(
+        accountId
+      );
+
+      return;
+    }
+
+
+    const manage =
+      e.target.closest(
+        '[data-growth-child-open]'
+      );
+
+    if (manage) {
+
+      const accountId =
+        manage.dataset.growthChildOpen;
+
+      const oldSelect =
+        $('#growthAccount');
+
+      if (oldSelect) {
+
+        oldSelect.value =
+          accountId;
+
+        oldSelect.dispatchEvent(
+          new Event(
+            'change'
+          )
+        );
+      }
+
+
+      toast(
+        'この子アカウントを育成対象に選択しました',
+        'ok'
+      );
     }
   }
 );
