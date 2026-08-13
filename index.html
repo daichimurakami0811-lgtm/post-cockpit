@@ -481,59 +481,33 @@ tailwind.config={theme:{extend:{
   ></div>
 
 </div>
-          <div class="eyebrow mb-2">account</div><select id="growthAccount" class="inp w-full"></select>
-          <div id="growthAccountMeta" class="glass-sub p-3 mt-3 text-[11.5px] leading-relaxed text-ink-mute"></div>
-          <div class="mt-5 pt-5 border-t border-hair">
-
+          <div
+  id="growthChildSelectArea"
+  class="hidden mt-5"
+>
   <div class="eyebrow mb-2">
-    X ACTION TEST
+    CHILD ACCOUNT
   </div>
 
   <div class="text-[12px] font-bold text-ink-700 mb-1.5">
-    対象Post URL
+    育成する子アカウント
   </div>
 
-  <input
-    id="growthActionUrl"
-    class="inp w-full font-mono text-[11.5px]"
-    placeholder="https://x.com/xxxxx/status/123456789..."
+  <select
+    id="growthAccount"
+    class="inp w-full"
   >
-
-  <p class="text-[10.5px] text-ink-dim mt-1.5 leading-relaxed">
-    上で選択中の子アカウントから、このPostへアクションを実行します。
-  </p>
-
-  <div class="grid grid-cols-3 gap-2 mt-3">
-
-    <button
-      id="growthLikeBtn"
-      class="btn-ghost px-2 py-2 rounded-lg text-[11.5px] font-bold"
-    >
-      いいね
-    </button>
-
-    <button
-      id="growthRepostBtn"
-      class="btn-ghost px-2 py-2 rounded-lg text-[11.5px] font-bold"
-    >
-      リポスト
-    </button>
-
-    <button
-      id="growthBookmarkBtn"
-      class="btn-ghost px-2 py-2 rounded-lg text-[11.5px] font-bold"
-    >
-      保存
-    </button>
-
-  </div>
+    <option value="">
+      子アカウントを選択
+    </option>
+  </select>
 
   <div
-    id="growthActionResult"
-    class="tag text-ink-dim mt-3 hidden"
+    id="growthAccountMeta"
+    class="glass-sub p-3 mt-3 text-[11.5px] leading-relaxed text-ink-mute"
   ></div>
-
 </div>
+          
           <div class="eyebrow mt-5 mb-2">投稿テーマ</div><div id="growthThemes" class="grid grid-cols-2 gap-2"></div>
           <div class="flex items-center justify-between mt-4"><label class="text-[12px] text-ink-mute">1日の投稿数</label><select id="growthDailyCount" class="inp !w-24"><option value="1">1件</option><option value="2">2件</option><option value="3">3件</option></select></div>
           <div class="flex items-center justify-between mt-3"><label class="text-[12px] text-ink-mute">投稿時刻</label><input id="growthTime" type="time" value="20:00" class="inp !w-28"></div>
@@ -2417,6 +2391,95 @@ document.addEventListener('click',e=>{
   const cp=e.target.closest('[data-monitor-copy]');if(cp){const x=state.monitor.inbox[+cp.dataset.monitorCopy];const t=(document.querySelector(`[data-monitor-text="${cp.dataset.monitorCopy}"]`)||{}).value||x?.draft||'';if(t)copyText(t);return}
 });
 
+  document.addEventListener(
+  'click',
+  e => {
+
+    const toggle =
+      e.target.closest(
+        '[data-growth-like-toggle]'
+      );
+
+
+    if (!toggle) {
+      return;
+    }
+
+
+    const childId =
+      toggle.dataset
+        .growthLikeToggle;
+
+
+    const panel =
+      document.querySelector(
+        `[data-growth-like-panel="${CSS.escape(childId)}"]`
+      );
+
+
+    const arrow =
+      document.querySelector(
+        `[data-growth-like-arrow="${CSS.escape(childId)}"]`
+      );
+
+
+    if (!panel) {
+      return;
+    }
+
+
+    const isOpen =
+      !panel.classList.contains(
+        'hidden'
+      );
+
+
+    // 他の子アカウントを全部閉じる
+    document
+      .querySelectorAll(
+        '[data-growth-like-panel]'
+      )
+      .forEach(
+        el => {
+
+          el.classList.add(
+            'hidden'
+          );
+        }
+      );
+
+
+    document
+      .querySelectorAll(
+        '[data-growth-like-arrow]'
+      )
+      .forEach(
+        el => {
+
+          el.textContent =
+            '▼';
+        }
+      );
+
+
+    // 今押したものが閉じていた場合だけ開く
+    if (!isOpen) {
+
+      panel.classList.remove(
+        'hidden'
+      );
+
+
+      if (arrow) {
+
+        arrow.textContent =
+          '▲';
+      }
+    }
+
+  }
+);
+
 /* ============================================================
    6b. アカウント育成デスク
    ============================================================ */
@@ -3027,201 +3090,215 @@ function renderGrowthLikeCandidatesForMain() {
             );
 
 
-          if (
-            !state ||
-            state.loading
-          ) {
-
-            return `
-              <div class="glass-sub p-4">
-
-                <div class="flex items-center gap-2">
-
-                  <b class="text-[12.5px]">
-                    ${esc(child.name || '名称未設定')}
-                  </b>
-
-                  <span class="font-mono text-[10.5px] text-ink-dim">
-                    ${esc(child.handle || '')}
-                  </span>
-
-                  <span class="tag text-ink-dim ml-auto">
-                    読み込み中…
-                  </span>
-
-                </div>
-
-              </div>
-            `;
-          }
-
-
-          if (state.error) {
-
-            return `
-              <div class="glass-sub p-4">
-
-                <div class="flex items-center gap-2">
-
-                  <b class="text-[12.5px]">
-                    ${esc(child.name || '名称未設定')}
-                  </b>
-
-                  <span class="font-mono text-[10.5px] text-ink-dim">
-                    ${esc(child.handle || '')}
-                  </span>
-
-                </div>
-
-                <div class="text-[11px] mt-2 text-red-600">
-                  ${esc(state.error)}
-                </div>
-
-              </div>
-            `;
-          }
-
-
           const posts =
-            state.candidates ||
+            state?.candidates ||
             [];
 
 
+          const loading =
+            !state ||
+            state.loading;
+
+
+          const error =
+            state?.error ||
+            '';
+
+
           return `
-            <div class="glass-sub p-4">
+            <div
+              class="glass-sub overflow-hidden"
+              data-growth-like-accordion="${esc(child.id)}"
+            >
 
-              <div class="flex flex-wrap items-center gap-2 mb-3">
+              <button
+                type="button"
+                data-growth-like-toggle="${esc(child.id)}"
+                class="w-full flex items-center gap-3 p-4 text-left"
+              >
 
-                <b class="text-[13px]">
-                  ${esc(child.name || '名称未設定')}
-                </b>
+                <div class="min-w-0 flex-1">
 
-                <span class="font-mono text-[10.5px] text-ink-dim">
-                  ${esc(child.handle || '')}
+                  <div class="flex flex-wrap items-center gap-2">
+
+                    <b class="text-[13px]">
+                      ${esc(child.name || '名称未設定')}
+                    </b>
+
+                    <span class="font-mono text-[10.5px] text-ink-dim">
+                      ${esc(child.handle || '')}
+                    </span>
+
+                  </div>
+
+                  ${
+                    error
+                      ? `
+                        <div class="text-[10.5px] text-red-600 mt-1">
+                          候補取得エラー
+                        </div>
+                      `
+                      : ''
+                  }
+
+                </div>
+
+                <span class="tag text-ink-dim">
+                  ${
+                    loading
+                      ? '取得中…'
+                      : `${posts.length}件`
+                  }
                 </span>
 
-                <span class="tag text-ink-dim ml-auto">
-                  ${posts.length}件
+                <span
+                  data-growth-like-arrow="${esc(child.id)}"
+                  class="text-[12px] text-ink-dim ml-1"
+                >
+                  ▼
                 </span>
+
+              </button>
+
+
+              <div
+                data-growth-like-panel="${esc(child.id)}"
+                class="hidden border-t border-hair p-4"
+              >
+
+                ${
+                  loading
+
+                    ? `
+                      <div class="text-[11.5px] text-ink-dim">
+                        いいね候補を取得しています…
+                      </div>
+                    `
+
+                    : error
+
+                      ? `
+                        <div class="text-[11.5px] text-red-600">
+                          ${esc(error)}
+                        </div>
+                      `
+
+                      : posts.length
+
+                        ? `
+                          <div class="space-y-3">
+
+                            ${
+                              posts
+                                .map(
+                                  (post, index) => {
+
+                                    const username =
+                                      post.author?.username ||
+                                      '';
+
+
+                                    const name =
+                                      post.author?.name ||
+                                      username ||
+                                      'Xユーザー';
+
+
+                                    const metrics =
+                                      post.metrics ||
+                                      {};
+
+
+                                    return `
+                                      <div
+                                        class="rounded-xl border border-hair p-3.5"
+                                      >
+
+                                        <div class="flex flex-wrap items-center gap-2">
+
+                                          <b class="text-[11.5px]">
+                                            ${esc(name)}
+                                          </b>
+
+                                          ${
+                                            username
+                                              ? `
+                                                <span class="font-mono text-[10px] text-ink-dim">
+                                                  @${esc(username)}
+                                                </span>
+                                              `
+                                              : ''
+                                          }
+
+                                        </div>
+
+
+                                        <div class="text-[12px] leading-relaxed mt-2 whitespace-pre-wrap">
+                                          ${esc(post.text || '')}
+                                        </div>
+
+
+                                        <div class="flex flex-wrap gap-2 mt-2">
+
+                                          <span class="tag text-ink-dim">
+                                            ♥ ${Number(metrics.like_count || 0)}
+                                          </span>
+
+                                          <span class="tag text-ink-dim">
+                                            RP ${Number(metrics.retweet_count || 0)}
+                                          </span>
+
+                                        </div>
+
+
+                                        <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-hair">
+
+                                          ${
+                                            post.url
+                                              ? `
+                                                <button
+                                                  type="button"
+                                                  data-growth-like-open="${esc(child.id)}:${index}"
+                                                  class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg"
+                                                >
+                                                  Xで確認
+                                                </button>
+                                              `
+                                              : ''
+                                          }
+
+
+                                          <button
+                                            type="button"
+                                            data-growth-like-action="${esc(child.id)}:${index}"
+                                            class="btn-primary text-[11px] px-3 py-1.5 rounded-lg font-bold"
+                                          >
+                                            いいね
+                                          </button>
+
+                                        </div>
+
+                                      </div>
+                                    `;
+                                  }
+                                )
+                                .join('')
+                            }
+
+                          </div>
+                        `
+
+                        : `
+                          <div class="text-[11.5px] text-ink-dim">
+                            今日の候補はありません。
+                          </div>
+                        `
+                }
 
               </div>
 
-
-              ${
-                posts.length
-
-                  ? `
-                    <div class="space-y-3">
-
-                      ${
-                        posts
-                          .map(
-                            (post, index) => {
-
-                              const username =
-                                post.author?.username ||
-                                '';
-
-                              const name =
-                                post.author?.name ||
-                                username ||
-                                'Xユーザー';
-
-                              const metrics =
-                                post.metrics ||
-                                {};
-
-
-                              return `
-                                <div
-                                  class="rounded-xl border border-hair p-3.5"
-                                >
-
-                                  <div class="flex flex-wrap items-center gap-2">
-
-                                    <b class="text-[11.5px]">
-                                      ${esc(name)}
-                                    </b>
-
-                                    ${
-                                      username
-                                        ? `
-                                          <span class="font-mono text-[10px] text-ink-dim">
-                                            @${esc(username)}
-                                          </span>
-                                        `
-                                        : ''
-                                    }
-
-                                  </div>
-
-
-                                  <div class="text-[12px] leading-relaxed mt-2 whitespace-pre-wrap">
-                                    ${esc(post.text || '')}
-                                  </div>
-
-
-                                  <div class="flex flex-wrap gap-2 mt-2">
-
-                                    <span class="tag text-ink-dim">
-                                      ♥ ${Number(metrics.like_count || 0)}
-                                    </span>
-
-                                    <span class="tag text-ink-dim">
-                                      RP ${Number(metrics.retweet_count || 0)}
-                                    </span>
-
-                                  </div>
-
-
-                                  <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-hair">
-
-                                    ${
-                                      post.url
-                                        ? `
-                                          <button
-                                            type="button"
-                                            data-growth-like-open="${esc(child.id)}:${index}"
-                                            class="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg"
-                                          >
-                                            Xで確認
-                                          </button>
-                                        `
-                                        : ''
-                                    }
-
-
-                                    <button
-                                      type="button"
-                                      data-growth-like-action="${esc(child.id)}:${index}"
-                                      class="btn-primary text-[11px] px-3 py-1.5 rounded-lg font-bold"
-                                    >
-                                      いいね
-                                    </button>
-
-                                  </div>
-
-                                </div>
-                              `;
-
-                            }
-                          )
-                          .join('')
-                      }
-
-                    </div>
-                  `
-
-                  : `
-                    <div class="text-[11.5px] text-ink-dim">
-                      今日の候補はありません。
-                    </div>
-                  `
-              }
-
             </div>
           `;
-
         }
       )
       .join('');
@@ -3570,6 +3647,95 @@ $('#growthAccount').addEventListener(
   
   $('#growthMainAccount').onchange =
   async () => {
+
+    const mainId =
+      String(
+        $('#growthMainAccount')?.value ||
+        ''
+      ).trim();
+
+    const childArea =
+      $('#growthChildSelectArea');
+
+    const childSelect =
+      $('#growthAccount');
+
+
+    // メイン未選択
+    if (!mainId) {
+
+      if (childArea) {
+        childArea.classList.add(
+          'hidden'
+        );
+      }
+
+      if (childSelect) {
+        childSelect.innerHTML = `
+          <option value="">
+            子アカウントを選択
+          </option>
+        `;
+      }
+
+      renderGrowthChildren();
+      renderGrowthLikeCandidatesForMain();
+
+      return;
+    }
+
+
+    const children =
+      growthChildrenOf(
+        mainId
+      );
+
+
+    // 子アカウント選択肢を作る
+    if (childSelect) {
+
+      childSelect.innerHTML =
+        `
+          <option value="">
+            子アカウントを選択
+          </option>
+        ` +
+        children
+          .map(
+            child => `
+              <option value="${esc(child.id)}">
+                ${esc(child.name || '名称未設定')}
+                ${child.handle ? `（${esc(child.handle)}）` : ''}
+              </option>
+            `
+          )
+          .join('');
+    }
+
+
+    if (childArea) {
+
+      childArea.classList.toggle(
+        'hidden',
+        children.length === 0
+      );
+    }
+
+
+    // 子が1件だけなら自動選択
+    if (
+      childSelect &&
+      children.length === 1
+    ) {
+
+      childSelect.value =
+        children[0].id;
+
+      childSelect.dispatchEvent(
+        new Event('change')
+      );
+    }
+
 
     renderGrowthChildren();
 
