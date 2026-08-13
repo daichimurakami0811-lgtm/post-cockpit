@@ -8460,7 +8460,11 @@ function setView(v){
   if(main){ $('#headEyebrow').textContent='対象マーケット';
     $('#marketTitle').innerHTML=`${esc(m.label)} <span class="font-mono text-[13px] font-medium text-ink-mute">${esc(m.sym)}</span>`; }
   else if(v==='accounts'){ $('#headEyebrow').textContent='registry'; $('#marketTitle').textContent='アカウント管理'; renderAccounts(); }
-  else if(v==='growth'){ $('#headEyebrow').textContent='account growth'; $('#marketTitle').textContent='アカウント育成'; renderGrowth(); renderGrowthCandidates(); }
+  else if(v==='growth'){
+  $('#headEyebrow').textContent='account growth';
+  $('#marketTitle').textContent='アカウント育成';
+  renderGrowth();
+}
   else if(v==='monitor'){ $('#headEyebrow').textContent='realtime watch desk'; $('#marketTitle').textContent='新着監視デスク'; renderMonitor(); }
   else{ $('#headEyebrow').textContent='history'; $('#marketTitle').textContent='投稿履歴'; renderHistory(); }
   window.scrollTo({top:0,behavior:'smooth'}); closeNav();
