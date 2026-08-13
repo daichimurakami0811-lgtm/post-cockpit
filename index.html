@@ -4405,6 +4405,174 @@ const state={
   backgrounds:[], bgIndex:0, accountBg:{}, vSets:[],
   logs:[], editingId:null, search:'', actionGenerating:false, growth:loadGrowth()
 };
+  async function loadCloudSyncState() {
+
+  try {
+
+    const base =
+      'https://post-cockpit-x-backend.onrender.com';
+
+
+    const r =
+      await fetch(
+        base + '/api/sync/state',
+        {
+          cache: 'no-store'
+        }
+      );
+
+
+    const j =
+      await r.json();
+
+
+    if (
+      !r.ok ||
+      !j?.ok ||
+      !j?.state
+    ) {
+
+      console.warn(
+        '[CLOUD SYNC LOAD SKIPPED]',
+        j
+      );
+
+      return false;
+    }
+
+
+    const cloud =
+      j.state;
+
+
+    // -----------------------------
+    // アカウント
+    // -----------------------------
+
+    if (
+      Array.isArray(
+        cloud.accounts
+      ) &&
+      cloud.accounts.length
+    ) {
+
+      state.accounts =
+        cloud.accounts.map(
+          normalizeAccount
+        );
+
+      Store.write(
+        STORE.acc,
+        state.accounts
+      );
+    }
+
+
+    // -----------------------------
+    // 育成データ
+    // -----------------------------
+
+    if (
+      cloud.growth &&
+      typeof cloud.growth === 'object'
+    ) {
+
+      state.growth = {
+        ...defaultGrowth(),
+        ...cloud.growth
+      };
+
+      localStorage.setItem(
+        GROWTH_KEY,
+        JSON.stringify(
+          state.growth
+        )
+      );
+    }
+
+
+    // -----------------------------
+    // 投稿履歴
+    // -----------------------------
+
+    if (
+      Array.isArray(
+        cloud.history
+      )
+    ) {
+
+      state.history =
+        cloud.history;
+
+      Store.write(
+        STORE.history,
+        state.history
+      );
+    }
+
+
+    normalizeHierarchy();
+
+
+    state.selected =
+      new Set();
+
+    state.vSelected =
+      new Set();
+
+
+    state.accounts
+      .filter(
+        a =>
+          a.active &&
+          isMainAccount(a)
+      )
+      .slice(0, 3)
+      .forEach(
+        a => {
+
+          state.selected.add(
+            a.id
+          );
+
+          state.vSelected.add(
+            a.id
+          );
+        }
+      );
+
+
+    console.log(
+      '[CLOUD SYNC LOADED]',
+      {
+        accounts:
+          state.accounts.length,
+
+        history:
+          state.history.length,
+
+        growthPlans:
+          Object.keys(
+            state.growth?.plans ||
+            {}
+          ).length
+      }
+    );
+
+
+    return true;
+
+
+  } catch (e) {
+
+    console.error(
+      '[CLOUD SYNC LOAD ERROR]',
+      e
+    );
+
+    return false;
+  }
+}
 normalizeHierarchy();
 state.accounts.filter(a=>a.active&&isMainAccount(a)).slice(0,3).forEach(a=>{state.selected.add(a.id);state.vSelected.add(a.id)});
 let editingAvatar='';
@@ -11921,22 +12089,85 @@ $('#clock').textContent=fmtTime(new Date());
 if(window.innerWidth>=1024) $('#sidebar').classList.remove('-translate-x-full');
 
 state.history=loadHistory();
-loadExternalPersonaAccounts();
-const boot=loadSettings();
-applySettings(boot);
-if(!Store.available()) toast('このブラウザでは保存が使えません。JSONで書き出して控えを取ってください','warn');
-setMarket(MARKETS[boot.market]?boot.market:'usdjpy');
-setTab(boot.tab==='video'?'video':'image');
-setView('main');
-renderApiState();
-renderPicker();
-renderVPicker();
-renderBgGrid();
-renderAccounts();
-renderGrowth();
-$('#navHistCount').textContent=state.history.length;
-renderLog();
-log('デスクを起動しました');
+(async () => {
+
+  await loadCloudSyncState();
+
+
+  // クラウド側が空だった場合だけ
+  // 従来の外部ペルソナ読み込みを使う
+  if (
+    !state.accounts.length
+  ) {
+    await loadExternalPersonaAccounts();
+  }
+
+
+  const boot =
+    loadSettings();
+
+
+  applySettings(
+    boot
+  );
+
+
+  if (
+    !Store.available()
+  ) {
+
+    toast(
+      'このブラウザでは保存が使えません。JSONで書き出して控えを取ってください',
+      'warn'
+    );
+  }
+
+
+  setMarket(
+    MARKETS[boot.market]
+      ? boot.market
+      : 'usdjpy'
+  );
+
+
+  setTab(
+    boot.tab === 'video'
+      ? 'video'
+      : 'image'
+  );
+
+
+  setView(
+    'main'
+  );
+
+
+  renderApiState();
+  renderPicker();
+  renderVPicker();
+  renderBgGrid();
+  renderAccounts();
+  renderGrowth();
+
+
+  const histCount =
+    $('#navHistCount');
+
+  if (histCount) {
+
+    histCount.textContent =
+      state.history.length;
+  }
+
+
+  renderLog();
+
+
+  log(
+    'デスクを起動しました'
+  );
+
+})();
 </script>
 
 <script>
