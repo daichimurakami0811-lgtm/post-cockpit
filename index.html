@@ -3007,15 +3007,176 @@ async function syncGrowthSettingToBackend(
       })
       .join('');
 }
+
+  function renderGrowthAutomationStatus() {
+
+  const box =
+    $('#growthAutomationStatus');
+
+  const badge =
+    $('#growthAutomationStatusBadge');
+
+
+  if (!box) {
+    return;
+  }
+
+
+  const mainId =
+    $('#growthMainAccount')?.value ||
+    '';
+
+
+  if (!mainId) {
+
+    box.innerHTML = `
+      <div class="glass-sub p-5 text-[12px] text-ink-dim">
+        メインアカウントを選択すると、
+        子アカウントの自動運用状況を表示します。
+      </div>
+    `;
+
+    if (badge) {
+      badge.textContent =
+        '待機中';
+    }
+
+    return;
+  }
+
+
+  const children =
+    growthChildrenOf(
+      mainId
+    );
+
+
+  if (!children.length) {
+
+    box.innerHTML = `
+      <div class="glass-sub p-5 text-[12px] text-ink-dim">
+        このメインアカウントには
+        子アカウントがありません。
+      </div>
+    `;
+
+    if (badge) {
+      badge.textContent =
+        '0アカウント';
+    }
+
+    return;
+  }
+
+
+  box.innerHTML =
+    children
+      .map(
+        child => {
+
+          const plan =
+            growthPlan(
+              child
+            );
+
+
+          return `
+            <div class="glass-sub p-4">
+
+              <div class="flex items-center justify-between gap-3">
+
+                <div class="min-w-0">
+
+                  <div class="flex flex-wrap items-center gap-2">
+
+                    <b class="text-[13px]">
+                      ${esc(child.name || '名称未設定')}
+                    </b>
+
+                    <span class="font-mono text-[10.5px] text-ink-dim">
+                      ${esc(child.handle || '')}
+                    </span>
+
+                  </div>
+
+                </div>
+
+
+                <span
+                  class="tag"
+                  style="color:#0F766E"
+                >
+                  稼働対象
+                </span>
+
+              </div>
+
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
+
+                <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                  <div class="text-[10px] text-ink-dim mb-1">
+                    自動投稿
+                  </div>
+
+                  <div class="text-[12px] font-bold">
+                    稼働対象
+                  </div>
+
+                </div>
+
+
+                <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                  <div class="text-[10px] text-ink-dim mb-1">
+                    投稿時刻
+                  </div>
+
+                  <div class="text-[12px] font-bold font-mono">
+                    ${esc(plan.time || '20:00')}
+                  </div>
+
+                </div>
+
+
+                <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                  <div class="text-[10px] text-ink-dim mb-1">
+                    1日の投稿数
+                  </div>
+
+                  <div class="text-[12px] font-bold">
+                    ${Number(plan.dailyCount || 1)}件
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          `;
+        }
+      )
+      .join('');
+
+
+  if (badge) {
+
+    badge.textContent =
+      `${children.length}アカウント`;
+  }
+}
   function renderGrowth(){
     renderGrowthMainAccounts();
   const children=growthChildren();
   $('#navGrowthCount').textContent=state.growth.schedules.filter(x=>x.status!=='posted').length;
   const sel=$('#growthAccount');
-  if(!children.length){sel.innerHTML='<option value="">子アカウントがありません</option>';$('#growthAccountMeta').textContent='アカウント管理でメインアカウントの子を登録してください。';$('#growthCandidates').innerHTML='<div class="glass-sub p-5 text-[12px] text-ink-dim">子アカウントを登録するとここから育成投稿を作成できます。</div>';renderGrowthSchedule();return}
+  if(!children.length){sel.innerHTML='<option value="">子アカウントがありません</option>';$('#growthAccountMeta').textContent='アカウント管理でメインアカウントの子を登録してください。';$('#growthCandidates').innerHTML='<div class="glass-sub p-5 text-[12px] text-ink-dim">子アカウントを登録するとここから育成投稿を作成できます。</div>';renderGrowthSchedule();renderGrowthAutomationStatus();return}
   const prev=sel.value;sel.innerHTML=children.map(a=>`<option value="${esc(a.id)}">${esc(a.name)}（${esc(a.handle)}）</option>`).join('');sel.value=children.some(a=>a.id===prev)?prev:children[0].id;
   const acc=getAcc(sel.value),plan=growthPlan(acc);$('#growthAccountMeta').innerHTML=`<b>${esc(acc.name)}</b> ${esc(acc.handle)}<br><span class="text-ink-dim">親：${esc(parentAccount(acc)?.name||'未設定')} ・ ${esc(acc.voice||'')} ・ ${esc(acc.stance||'')}</span>`;
   $('#growthThemes').innerHTML=GROWTH_THEMES.map(([id,label])=>`<label class="glass-sub p-2.5 flex items-center gap-2 text-[11.5px] cursor-pointer"><input type="checkbox" data-growth-theme="${id}" ${plan.themes.includes(id)?'checked':''} class="w-3.5 h-3.5">${label}</label>`).join('');$('#growthDailyCount').value=String(plan.dailyCount);$('#growthTime').value=plan.time;renderGrowthSchedule();
+    renderGrowthAutomationStatus();
 }
 
   // ============================================================
@@ -3940,6 +4101,7 @@ $('#growthAccount').addEventListener(
 
 
     renderGrowthChildren();
+    renderGrowthAutomationStatus();
 
     await loadGrowthLikeCandidatesForMain();
   };
