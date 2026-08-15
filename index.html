@@ -3008,7 +3008,7 @@ async function syncGrowthSettingToBackend(
       .join('');
 }
 
-  function renderGrowthAutomationStatus() {
+  async function renderGrowthAutomationStatus() {
 
   const box =
     $('#growthAutomationStatus');
@@ -3023,8 +3023,10 @@ async function syncGrowthSettingToBackend(
 
 
   const mainId =
-    $('#growthMainAccount')?.value ||
-    '';
+    String(
+      $('#growthMainAccount')?.value ||
+      ''
+    ).trim();
 
 
   if (!mainId) {
@@ -3037,136 +3039,394 @@ async function syncGrowthSettingToBackend(
     `;
 
     if (badge) {
-      badge.textContent =
-        '待機中';
+      badge.textContent = '待機中';
     }
 
     return;
   }
 
 
-  const children =
-    growthChildrenOf(
-      mainId
-    );
-
-
-  if (!children.length) {
-
-    box.innerHTML = `
-      <div class="glass-sub p-5 text-[12px] text-ink-dim">
-        このメインアカウントには
-        子アカウントがありません。
-      </div>
-    `;
-
-    if (badge) {
-      badge.textContent =
-        '0アカウント';
-    }
-
-    return;
+  if (badge) {
+    badge.textContent = '更新中…';
   }
 
 
-  box.innerHTML =
-    children
-      .map(
-        child => {
+  try {
 
-          const plan =
-            growthPlan(
-              child
+    const result =
+      await xFetch(
+        '/api/growth/automation-status?' +
+        new URLSearchParams({
+          parentAccountId: mainId
+        }).toString()
+      );
+
+
+    const statuses =
+      Array.isArray(result?.accounts)
+        ? result.accounts
+        : [];
+
+
+    const children =
+      growthChildrenOf(mainId);
+
+
+    if (!children.length) {
+
+      box.innerHTML = `
+        <div class="glass-sub p-5 text-[12px] text-ink-dim">
+          このメインアカウントには
+          子アカウントがありません。
+        </div>
+      `;
+
+      if (badge) {
+        badge.textContent = '0アカウント';
+      }
+
+      return;
+    }
+
+
+    const statusMap =
+      new Map(
+        statuses.map(
+          x => [
+            String(x.accountId),
+            x
+          ]
+        )
+      );
+
+
+    const formatJapanTime =
+      iso => {
+
+        if (!iso) {
+          return '—';
+        }
+
+        try {
+
+          return new Date(iso)
+            .toLocaleTimeString(
+              'ja-JP',
+              {
+                timeZone: 'Asia/Tokyo',
+                hour: '2-digit',
+                minute: '2-digit'
+              }
             );
 
+        } catch {
 
-          return `
-            <div class="glass-sub p-4">
+          return '—';
+        }
+      };
 
-              <div class="flex items-center justify-between gap-3">
 
-                <div class="min-w-0">
+    const postLabel =
+      status => {
 
-                  <div class="flex flex-wrap items-center gap-2">
+        if (status === 'disabled') {
+          return 'OFF';
+        }
 
-                    <b class="text-[13px]">
-                      ${esc(child.name || '名称未設定')}
-                    </b>
+        if (status === 'posted') {
+          return '✓ 完了';
+        }
 
-                    <span class="font-mono text-[10.5px] text-ink-dim">
-                      ${esc(child.handle || '')}
+        if (status === 'ready') {
+          return '実行待ち';
+        }
+
+        return '待機中';
+      };
+
+
+    const repostLabel =
+      status => {
+
+        if (status === 'disabled') {
+          return 'OFF';
+        }
+
+        if (status === 'done') {
+          return '✓ 本日完了';
+        }
+
+        if (status === 'ready') {
+          return '実行可能';
+        }
+
+        return '待機中';
+      };
+
+
+    box.innerHTML =
+      children
+        .map(
+          child => {
+
+            const s =
+              statusMap.get(
+                String(child.id)
+              );
+
+
+            if (!s) {
+
+              return `
+                <div class="glass-sub p-4">
+
+                  <div class="flex items-center justify-between gap-3">
+
+                    <div>
+                      <b class="text-[13px]">
+                        ${esc(child.name || '名称未設定')}
+                      </b>
+
+                      <span class="font-mono text-[10.5px] text-ink-dim ml-2">
+                        ${esc(child.handle || '')}
+                      </span>
+                    </div>
+
+                    <span class="tag text-ink-dim">
+                      設定未同期
                     </span>
 
                   </div>
 
                 </div>
+              `;
+            }
 
 
-                <span
-                  class="tag"
-                  style="color:#0F766E"
-                >
-                  稼働対象
-                </span>
+            let nextRepost = '—';
+
+
+            if (
+              s.repostCountToday >=
+              s.maxRepostsPerDay
+            ) {
+
+              nextRepost =
+                '本日完了';
+
+            } else if (
+              s.repostStatus === 'ready'
+            ) {
+
+              nextRepost =
+                '実行可能';
+
+            } else if (
+              s.nextRepostAt
+            ) {
+
+              nextRepost =
+                formatJapanTime(
+                  s.nextRepostAt
+                ) + '〜';
+            }
+
+
+            return `
+              <div class="glass-sub p-4">
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+
+                  <div class="min-w-0">
+
+                    <div class="flex flex-wrap items-center gap-2">
+
+                      <b class="text-[13px]">
+                        ${esc(child.name || '名称未設定')}
+                      </b>
+
+                      <span class="font-mono text-[10.5px] text-ink-dim">
+                        ${esc(child.handle || '')}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+
+                  <span
+                    class="tag"
+                    style="color:${
+                      s.autoPost || s.autoRepost
+                        ? '#0F766E'
+                        : '#64748B'
+                    }"
+                  >
+                    ${
+                      s.autoPost || s.autoRepost
+                        ? '● 稼働中'
+                        : '停止中'
+                    }
+                  </span>
+
+                </div>
+
+
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-2 mt-4">
+
+
+                  <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                    <div class="text-[10px] text-ink-dim mb-1">
+                      本日の投稿
+                    </div>
+
+                    <div class="text-[12px] font-bold">
+                      ${postLabel(s.postStatus)}
+                    </div>
+
+                  </div>
+
+
+                  <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                    <div class="text-[10px] text-ink-dim mb-1">
+                      投稿時刻
+                    </div>
+
+                    <div class="text-[12px] font-bold font-mono">
+                      ${esc(s.postTime || '20:00')}
+                    </div>
+
+                  </div>
+
+
+                  <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                    <div class="text-[10px] text-ink-dim mb-1">
+                      自動RP
+                    </div>
+
+                    <div class="text-[12px] font-bold">
+                      ${repostLabel(s.repostStatus)}
+                    </div>
+
+                  </div>
+
+
+                  <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                    <div class="text-[10px] text-ink-dim mb-1">
+                      本日のRP
+                    </div>
+
+                    <div class="text-[12px] font-bold">
+                      ${Number(s.repostCountToday || 0)}
+                      /
+                      ${Number(s.maxRepostsPerDay || 3)}件
+                    </div>
+
+                  </div>
+
+
+                  <div class="rounded-lg border border-hair bg-white/60 p-3">
+
+                    <div class="text-[10px] text-ink-dim mb-1">
+                      次回RP
+                    </div>
+
+                    <div class="text-[12px] font-bold font-mono">
+                      ${esc(nextRepost)}
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                ${
+                  s.postedAt
+                    ? `
+                      <div class="text-[10.5px] text-ink-dim mt-3">
+                        本日投稿：
+                        ${formatJapanTime(s.postedAt)}
+                      </div>
+                    `
+                    : ''
+                }
 
               </div>
+            `;
+          }
+        )
+        .join('');
 
 
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
+    if (badge) {
 
-                <div class="rounded-lg border border-hair bg-white/60 p-3">
-
-                  <div class="text-[10px] text-ink-dim mb-1">
-                    自動投稿
-                  </div>
-
-                  <div class="text-[12px] font-bold">
-                    稼働対象
-                  </div>
-
-                </div>
+      badge.textContent =
+        `${children.length}アカウント・${result.time || ''}更新`;
+    }
 
 
-                <div class="rounded-lg border border-hair bg-white/60 p-3">
+  } catch (e) {
 
-                  <div class="text-[10px] text-ink-dim mb-1">
-                    投稿時刻
-                  </div>
-
-                  <div class="text-[12px] font-bold font-mono">
-                    ${esc(plan.time || '20:00')}
-                  </div>
-
-                </div>
+    console.error(
+      '[GROWTH AUTOMATION STATUS LOAD ERROR]',
+      e
+    );
 
 
-                <div class="rounded-lg border border-hair bg-white/60 p-3">
-
-                  <div class="text-[10px] text-ink-dim mb-1">
-                    1日の投稿数
-                  </div>
-
-                  <div class="text-[12px] font-bold">
-                    ${Number(plan.dailyCount || 1)}件
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-          `;
-        }
-      )
-      .join('');
+    box.innerHTML = `
+      <div class="glass-sub p-5 text-[12px] text-red-600">
+        自動運用ステータスの取得に失敗しました。
+        ${esc(e.message)}
+      </div>
+    `;
 
 
-  if (badge) {
-
-    badge.textContent =
-      `${children.length}アカウント`;
+    if (badge) {
+      badge.textContent = '取得エラー';
+    }
   }
 }
+
+let growthAutomationStatusTimer = null;
+
+
+function startGrowthAutomationStatusPolling() {
+
+  if (growthAutomationStatusTimer) {
+
+    clearInterval(
+      growthAutomationStatusTimer
+    );
+  }
+
+
+  growthAutomationStatusTimer =
+    setInterval(
+      () => {
+
+        const growthView =
+          $('#viewGrowth');
+
+
+        if (
+          growthView &&
+          !growthView.classList.contains(
+            'hidden'
+          )
+        ) {
+
+          renderGrowthAutomationStatus();
+        }
+
+      },
+      30000
+    );
+}
+  
   function renderGrowth(){
     renderGrowthMainAccounts();
   const children=growthChildren();
@@ -12528,6 +12788,7 @@ state.history=loadHistory();
   renderBgGrid();
   renderAccounts();
   renderGrowth();
+  startGrowthAutomationStatusPolling();
 
 
   const histCount =
