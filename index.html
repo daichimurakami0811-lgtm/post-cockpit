@@ -3912,6 +3912,439 @@ async function loadGrowthLikeCandidatesForMain() {
       '取得済み';
   }
 }
+
+async function loadGrowthAutomationStatus() {
+
+  const box =
+    $('#growthAutomationStatus');
+
+  const badge =
+    $('#growthAutomationStatusBadge');
+
+
+  if (!box) {
+    return;
+  }
+
+
+  const mainId =
+    String(
+      $('#growthMainAccount')
+        ?.value ||
+      ''
+    ).trim();
+
+
+  if (!mainId) {
+
+    if (badge) {
+      badge.textContent =
+        '待機中';
+    }
+
+
+    box.innerHTML = `
+      <div class="glass-sub p-5 text-[12px] text-ink-dim">
+        メインアカウントを選択すると、
+        子アカウントの自動運用状況を表示します。
+      </div>
+    `;
+
+    return;
+  }
+
+
+  if (badge) {
+    badge.textContent =
+      '取得中…';
+  }
+
+
+  try {
+
+    const j =
+      await xFetch(
+        '/api/growth/auto-status'
+      );
+
+
+    const all =
+      Array.isArray(
+        j?.accounts
+      )
+        ? j.accounts
+        : [];
+
+
+    // 選択中メイン配下だけ
+    const accounts =
+      all.filter(
+        x =>
+          String(
+            x.parentAccountId ||
+            ''
+          ) ===
+          mainId
+      );
+
+
+    if (!accounts.length) {
+
+      box.innerHTML = `
+        <div class="glass-sub p-5 text-[12px] text-ink-dim">
+          このメインアカウントには
+          自動運用対象の子アカウントがありません。
+        </div>
+      `;
+
+
+      if (badge) {
+        badge.textContent =
+          '0件';
+      }
+
+      return;
+    }
+
+
+    box.innerHTML =
+      accounts
+        .map(
+          item => {
+
+            const acc =
+              getAcc(
+                item.accountId
+              );
+
+
+            const name =
+              acc?.name ||
+              item.handle ||
+              '名称未設定';
+
+
+            const handle =
+              item.handle ||
+              acc?.handle ||
+              '';
+
+
+            const postCount =
+              Number(
+                item.post?.count ||
+                0
+              );
+
+
+            const postMax =
+              Number(
+                item.post?.max ||
+                1
+              );
+
+
+            const repostCount =
+              Number(
+                item.repost?.count ||
+                0
+              );
+
+
+            const repostMax =
+              Number(
+                item.repost?.max ||
+                3
+              );
+
+
+            const likeCount =
+              Number(
+                item.like?.count ||
+                0
+              );
+
+
+            const likeMax =
+              Number(
+                item.like?.max ||
+                3
+              );
+
+
+            const fmtActionTime =
+              value => {
+
+                if (!value) {
+                  return 'まだありません';
+                }
+
+
+                const d =
+                  new Date(
+                    value
+                  );
+
+
+                if (
+                  Number.isNaN(
+                    d.getTime()
+                  )
+                ) {
+                  return '-';
+                }
+
+
+                return d
+                  .toLocaleTimeString(
+                    'ja-JP',
+                    {
+                      timeZone:
+                        'Asia/Tokyo',
+
+                      hour:
+                        '2-digit',
+
+                      minute:
+                        '2-digit'
+                    }
+                  );
+              };
+
+
+            const postDone =
+              postCount >=
+              postMax;
+
+
+            return `
+              <div
+                class="glass-sub p-4"
+              >
+
+                <div
+                  class="flex flex-wrap items-start justify-between gap-3 mb-4"
+                >
+
+                  <div>
+
+                    <div
+                      class="flex flex-wrap items-center gap-2"
+                    >
+
+                      <b class="text-[13px]">
+                        ${esc(name)}
+                      </b>
+
+                      <span
+                        class="font-mono text-[10.5px] text-ink-dim"
+                      >
+                        ${esc(handle)}
+                      </span>
+
+                    </div>
+
+                    <div
+                      class="text-[10.5px] text-ink-dim mt-1"
+                    >
+                      最終アクション：
+                      ${esc(
+                        fmtActionTime(
+                          item.lastActionAt
+                        )
+                      )}
+                    </div>
+
+                  </div>
+
+
+                  <span
+                    class="tag"
+                    style="
+                      color:#0F766E;
+                      background:#ECFDF5;
+                    "
+                  >
+                    ● 正常稼働
+                  </span>
+
+                </div>
+
+
+                <div
+                  class="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                >
+
+                  <div
+                    class="rounded-xl border border-hair bg-white/70 p-3"
+                  >
+
+                    <div
+                      class="text-[10.5px] text-ink-dim mb-1"
+                    >
+                      自動投稿
+                    </div>
+
+                    <div
+                      class="flex items-center justify-between"
+                    >
+
+                      <b class="text-[13px]">
+                        ${postCount}
+                        /
+                        ${postMax}
+                      </b>
+
+                      <span
+                        class="text-[10.5px]"
+                        style="
+                          color:
+                          ${postDone
+                            ? '#0F766E'
+                            : '#6B7280'};
+                        "
+                      >
+                        ${
+                          item.post?.enabled
+                            ? (
+                                postDone
+                                  ? '完了'
+                                  : '待機'
+                              )
+                            : 'OFF'
+                        }
+                      </span>
+
+                    </div>
+
+                  </div>
+
+
+                  <div
+                    class="rounded-xl border border-hair bg-white/70 p-3"
+                  >
+
+                    <div
+                      class="text-[10.5px] text-ink-dim mb-1"
+                    >
+                      自動RP
+                    </div>
+
+                    <div
+                      class="flex items-center justify-between"
+                    >
+
+                      <b class="text-[13px]">
+                        ${repostCount}
+                        /
+                        ${repostMax}
+                      </b>
+
+                      <span
+                        class="text-[10.5px] text-ink-dim"
+                      >
+                        ${
+                          item.repost?.enabled
+                            ? 'ON'
+                            : 'OFF'
+                        }
+                      </span>
+
+                    </div>
+
+                  </div>
+
+
+                  <div
+                    class="rounded-xl border border-hair bg-white/70 p-3"
+                  >
+
+                    <div
+                      class="text-[10.5px] text-ink-dim mb-1"
+                    >
+                      自動いいね
+                    </div>
+
+                    <div
+                      class="flex items-center justify-between"
+                    >
+
+                      <b class="text-[13px]">
+                        ${likeCount}
+                        /
+                        ${likeMax}
+                      </b>
+
+                      <span
+                        class="text-[10.5px] text-ink-dim"
+                      >
+                        ${
+                          item.like?.enabled
+                            ? 'ON'
+                            : 'OFF'
+                        }
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            `;
+          }
+        )
+        .join('');
+
+
+    if (badge) {
+
+      badge.textContent =
+        `${accounts.length}アカウント稼働中`;
+    }
+
+
+    console.log(
+      '[GROWTH AUTOMATION STATUS]',
+      {
+        date:
+          j.date,
+
+        time:
+          j.time,
+
+        accounts
+      }
+    );
+
+
+  } catch (e) {
+
+    console.error(
+      '[GROWTH AUTOMATION STATUS ERROR]',
+      e
+    );
+
+
+    if (badge) {
+      badge.textContent =
+        '取得エラー';
+    }
+
+
+    box.innerHTML = `
+      <div class="glass-sub p-5 text-[12px]" style="color:#B91C1C">
+        自動運用ステータスの取得に失敗しました。
+        ${esc(
+          e?.message ||
+          String(e)
+        )}
+      </div>
+    `;
+  }
+}
+  
 function growthThemeLabels(ids){return ids.map(id=>GROWTH_THEMES.find(x=>x[0]===id)?.[1]||id)}
 function growthPrompt(
   acc,
@@ -4302,6 +4735,7 @@ $('#growthAccount').addEventListener(
       }
 
       renderGrowthChildren();
+      await loadGrowthAutomationStatus();
       renderGrowthLikeCandidatesForMain();
 
       return;
@@ -4361,7 +4795,7 @@ $('#growthAccount').addEventListener(
 
 
     renderGrowthChildren();
-    renderGrowthAutomationStatus();
+    await loadGrowthAutomationStatus();
 
     await loadGrowthLikeCandidatesForMain();
   };
